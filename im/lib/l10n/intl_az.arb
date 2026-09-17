@@ -1,0 +1,19 @@
+{
+    "repeatPassword": "Şifrəni təkrarlayın",
+    "notAnImage": "Şəkil faylı deyil.",
+    "remove": "çıxarın",
+    "@remove": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "importNow": "İndi idxal edin",
+    "importEmojis": "Emojiləri idxal edin",
+    "importFromZipFile": ".zip faylından idxal edin",
+    "exportEmotePack": "Emote paketini .zip formatında ixrac edin",
+    "replace": "Əvəz et",
+    "matrixId": "İstifadəçi adı",
+    "changeAccountProvider": "Hesab təminatçısını dəyişin",
+    "@changeAccountProvider": {
+        "description": "Label for the button to change the account provider (homeserver)."
+    }
+}

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=FluffyChat
+GenericName=Matrix Client
+Comment=Chat with your friends
+Exec=bitjarvis
+Icon=${SNAP}/meta/gui/bitjarvis.png
+Terminal=false
+Type=Application
+Categories=Network;Chat;InstantMessaging;

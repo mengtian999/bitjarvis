@@ -1,0 +1,22 @@
+[Unit]
+Description=Jarvis AppService self-registration (as-registrar)
+Documentation=https://github.com/your-org/bitjarvis/blob/main/server/as-registrar/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/as-registrar
+EnvironmentFile=/etc/as-registrar/env
+ExecStart=/usr/bin/node /opt/as-registrar/index.ts
+Restart=on-failure
+RestartSec=3
+# 安全收紧
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/as-registrar
+
+[Install]
+WantedBy=multi-user.target

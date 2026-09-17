@@ -1,0 +1,58 @@
+{
+  "schema": 2,
+  "entries": [
+    {
+      "schemaVersion": 1,
+      "tag": "v0.0.1",
+      "version": "0.0.1",
+      "previousTag": "v0.0.0",
+      "generatedAt": "2026-08-19T00:00:00.000Z",
+      "noUserFacingChanges": false,
+      "summary": {
+        "zh": "全新应用首发。更新源、插件市场与发布产物全部切换到新仓库（mengtian999/Bitjarvis），应用内更新历史自本版本起重新记录。",
+        "en": "Initial release under the new project identity. The update feed, plugin marketplace and release artifacts now point to the new repository (mengtian999/Bitjarvis), and in-app update history restarts from this version."
+      },
+      "counts": {
+        "feature": 1,
+        "fix": 0,
+        "improvement": 0,
+        "migration": 0
+      },
+      "source": {
+        "owner": "mengtian999",
+        "repo": "Bitjarvis",
+        "commitRange": "v0.0.0..v0.0.1",
+        "releaseUrl": "https://github.com/mengtian999/Bitjarvis/releases/tag/v0.0.1",
+        "releaseNotes": ""
+      },
+      "items": [
+        {
+          "id": "initial-release",
+          "kind": "feature",
+          "importance": "high",
+          "title": {
+            "zh": "以全新身份发布的首个版本",
+            "en": "First release under the new identity"
+          },
+          "summary": {
+            "zh": "项目以 Bit Jarvis 名义独立发布：自动更新、插件市场与发布下载全部指向新仓库地址，更新历史从这里重新开始。",
+            "en": "The project ships independently as Bit Jarvis: auto-update, the plugin marketplace and release downloads all point to the new repository, and the update history starts over from here."
+          },
+          "details": [
+            {
+              "zh": "后续版本将在此基础上继续演进，此条目作为全新版本历史的起点。",
+              "en": "This entry is the starting point of the brand-new release history; future versions build on top of it."
+            }
+          ],
+          "sources": [
+            {
+              "type": "release-notes",
+              "ref": "v0.0.1",
+              "title": "Initial release"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+function t(){typeof loadSavedTheme=="function"&&loadSavedTheme(),typeof loadSavedFont=="function"&&loadSavedFont(),typeof loadSavedPaperTexture=="function"&&loadSavedPaperTexture()}function n(){document.addEventListener("dragover",e=>e.preventDefault()),document.addEventListener("drop",e=>e.preventDefault())}export{n as a,t as i};

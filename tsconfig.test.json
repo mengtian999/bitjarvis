@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "baseUrl": ".",
+    "paths": {
+      "@jarvis/plugin-protocol": ["packages/plugin-protocol/src/index.ts"],
+      "@jarvis/plugin-sdk": ["packages/plugin-sdk/src/index.ts"],
+      "@jarvis/plugin-runtime": ["packages/plugin-runtime/src/index.ts"],
+      "@jarvis/plugin-components": ["packages/plugin-components/src/index.ts"],
+      "@/*": ["desktop/src/react/*"]
+    }
+  },
+  "include": [
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "desktop/src/global.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

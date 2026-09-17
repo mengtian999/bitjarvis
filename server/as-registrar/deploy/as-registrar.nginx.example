@@ -1,0 +1,17 @@
+# 把 as-registrar 反代成 https（生产推荐，避免明文 + 端口暴露）
+# 假设 Tuwunel 已由 nginx 在 bitjarvis.chat 提供 TLS；这里加一个独立 location 或子域名。
+#
+# 方式 A：子路径（与 Tuwunel 同域）
+#   https://bitjarvis.chat/as-registrar/_jarvis/appservice/register
+location /as-registrar/ {
+    # 去掉前缀，转给监听 127.0.0.1:8797 的 as-registrar
+    rewrite ^/as-registrar/(.*)$ /$1 break;
+    proxy_pass http://127.0.0.1:8797;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+# 注意：as-registrar 的健康检查路径是 /healthz，
+#       Jarvis 调的是 /_jarvis/appservice/register，故 Registrar URL 填：
+#       https://bitjarvis.chat/as-registrar   （客户端拼 /_jarvis/appservice/register）

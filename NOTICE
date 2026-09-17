@@ -1,0 +1,45 @@
+BitJarvis
+Copyright 2026 mengtian999
+
+This product is a derivative work of the following open source project,
+distributed under the Apache License 2.0:
+
+    openhanako
+    Copyright 2025 liliMozi
+    https://github.com/liliMozi/openhanako
+
+The LICENSE file at the root of this distribution is the Apache License 2.0
+applicable to this derivative work. Per Apache License 2.0 Section 4(c),
+the upstream copyright notice is preserved above; per Section 4(b),
+modification notices are carried in individual modified files.
+
+License topology for this distribution is documented in LEGAL.md.
+
+-------------------------------------------------------------------------------
+
+Third-party components bundled with this distribution:
+
+    im/  - Matrix protocol client (FluffyChat fork)
+           Copyright (c) 2019-2025 FluffyChat contributors
+           Licensed under the GNU Affero General Public License v3.0 or later.
+           Shipped as a compiled web application inside the desktop package;
+           not imported into the TypeScript source tree.
+           See im/LICENSE and im/licenses.yaml.
+
+    (The companion OpenMinis mobile application, previously kept under mobile/
+     in this repository, is distributed from a separate repository and is not
+     part of this distribution. See LEGAL.md section 5.)
+
+-------------------------------------------------------------------------------
+
+Acknowledgements:
+
+    tw93/kami
+    The progressive-disclosure structure of the HTML aesthetic specification
+    used by the beautify plugin is inspired by tw93/kami.
+    https://github.com/tw93/kami
+
+-------------------------------------------------------------------------------
+
+This file is provided for informational purposes only and does not modify
+the Apache License 2.0. See Apache License 2.0 Section 4(d).

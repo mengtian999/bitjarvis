@@ -1,0 +1,15 @@
+// SPDX-FileCopyrightText: 2019-Present Christian Kußowski
+// SPDX-FileCopyrightText: 2019-Present Contributors to FluffyChat
+//
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import 'package:bitjarvis/pages/sign_in/view_model/model/public_homeserver_data.dart';
+import 'package:flutter/material.dart';
+
+class SignInState {
+  PublicHomeserverData? selectedHomeserver;
+  AsyncSnapshot<List<PublicHomeserverData>> publicHomeservers =
+      const AsyncSnapshot.nothing();
+  List<PublicHomeserverData> filteredPublicHomeservers = [];
+  AsyncSnapshot<bool> loginLoading = const AsyncSnapshot.nothing();
+}

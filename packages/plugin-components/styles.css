@@ -1,0 +1,531 @@
+.jarvis-plugin-theme {
+  --jarvis-plugin-bg: var(--bg, #F8F5ED);
+  --jarvis-plugin-bg-card: var(--bg-card, #FCFAF5);
+  --jarvis-plugin-accent: var(--accent, #537D96);
+  --jarvis-plugin-accent-hover: var(--accent-hover, #456A80);
+  --jarvis-plugin-accent-light: var(--accent-light, rgba(83, 125, 150, 0.08));
+  --jarvis-plugin-text: var(--text, #3B3D3F);
+  --jarvis-plugin-text-light: var(--text-light, #6B6F73);
+  --jarvis-plugin-text-muted: var(--text-muted, #8E9196);
+  --jarvis-plugin-border: var(--border, rgba(83, 125, 150, 0.22));
+  --jarvis-plugin-danger: var(--danger, #8B3A3A);
+  --jarvis-plugin-radius-input: var(--radius-input, 4px);
+  --jarvis-plugin-radius-card: var(--radius-card, 8px);
+  --jarvis-plugin-font-ui: var(--font-ui, Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif);
+  --jarvis-plugin-font-serif: var(--font-serif, "Songti SC", "STSong", serif);
+  --jarvis-plugin-font-mono: var(--font-mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+  display: block;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--jarvis-plugin-bg);
+  color: var(--jarvis-plugin-text);
+  font-family: var(--jarvis-plugin-font-ui);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.jarvis-plugin-theme *,
+.jarvis-plugin-theme *::before,
+.jarvis-plugin-theme *::after {
+  box-sizing: border-box;
+}
+
+.jarvis-plugin-button,
+.jarvis-plugin-icon-button,
+.jarvis-plugin-select-trigger,
+.jarvis-plugin-select-option,
+.jarvis-plugin-switch {
+  font-family: inherit;
+  -webkit-app-region: no-drag;
+}
+
+.jarvis-plugin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs, 0.25rem);
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--jarvis-plugin-radius-input);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1;
+  transition:
+    background var(--duration-fast, 0.15s) var(--ease-out, ease),
+    color var(--duration-fast, 0.15s) var(--ease-out, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-out, ease),
+    opacity var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-button:focus-visible,
+.jarvis-plugin-icon-button:focus-visible,
+.jarvis-plugin-select-trigger:focus-visible,
+.jarvis-plugin-select-option:focus-visible,
+.jarvis-plugin-switch:focus-visible,
+.jarvis-plugin-input:focus-visible,
+.jarvis-plugin-textarea:focus-visible {
+  outline: 2px solid var(--jarvis-plugin-accent);
+  outline-offset: 2px;
+}
+
+.jarvis-plugin-button:disabled,
+.jarvis-plugin-icon-button:disabled,
+.jarvis-plugin-select-trigger:disabled,
+.jarvis-plugin-select-option:disabled,
+.jarvis-plugin-switch:disabled,
+.jarvis-plugin-input:disabled,
+.jarvis-plugin-textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.jarvis-plugin-button-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.7rem;
+}
+
+.jarvis-plugin-button-md {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.jarvis-plugin-button-lg {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+}
+
+.jarvis-plugin-button-primary {
+  background: var(--jarvis-plugin-accent);
+  color: #fff;
+  border-color: var(--jarvis-plugin-accent);
+}
+
+.jarvis-plugin-button-primary:hover:not(:disabled) {
+  background: var(--jarvis-plugin-accent-hover);
+  border-color: var(--jarvis-plugin-accent-hover);
+}
+
+.jarvis-plugin-button-secondary {
+  background: var(--overlay-subtle, rgba(0, 0, 0, 0.03));
+  color: var(--jarvis-plugin-text);
+}
+
+.jarvis-plugin-button-secondary:hover:not(:disabled) {
+  background: var(--overlay-medium, rgba(0, 0, 0, 0.08));
+}
+
+.jarvis-plugin-button-ghost {
+  background: transparent;
+  color: var(--jarvis-plugin-text-muted);
+}
+
+.jarvis-plugin-button-ghost:hover:not(:disabled) {
+  background: var(--overlay-subtle, rgba(0, 0, 0, 0.03));
+  color: var(--jarvis-plugin-text);
+}
+
+.jarvis-plugin-button-danger {
+  background: var(--jarvis-plugin-danger);
+  color: #fff;
+  border-color: var(--jarvis-plugin-danger);
+}
+
+.jarvis-plugin-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--jarvis-plugin-radius-input);
+  background: transparent;
+  color: var(--jarvis-plugin-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast, 0.15s) var(--ease-out, ease),
+    color var(--duration-fast, 0.15s) var(--ease-out, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-icon-button-sm {
+  width: 28px;
+  height: 28px;
+}
+
+.jarvis-plugin-icon-button-md {
+  width: 34px;
+  height: 34px;
+}
+
+.jarvis-plugin-icon-button-lg {
+  width: 40px;
+  height: 40px;
+}
+
+.jarvis-plugin-icon-button:hover:not(:disabled) {
+  background: var(--overlay-subtle, rgba(0, 0, 0, 0.03));
+  color: var(--jarvis-plugin-text);
+}
+
+.jarvis-plugin-spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: jarvis-plugin-spin 0.8s linear infinite;
+}
+
+.jarvis-plugin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jarvis-plugin-field-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--jarvis-plugin-text);
+}
+
+.jarvis-plugin-field-hint,
+.jarvis-plugin-field-error {
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.jarvis-plugin-field-hint {
+  color: var(--jarvis-plugin-text-muted);
+}
+
+.jarvis-plugin-field-error {
+  color: var(--jarvis-plugin-danger);
+}
+
+.jarvis-plugin-input,
+.jarvis-plugin-textarea,
+.jarvis-plugin-select-trigger {
+  width: 100%;
+  min-width: 0;
+  color: var(--jarvis-plugin-text);
+  background: var(--jarvis-plugin-bg-card);
+  border: 1px solid var(--jarvis-plugin-border);
+  border-radius: var(--jarvis-plugin-radius-input);
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition:
+    border-color var(--duration-fast, 0.15s) var(--ease-out, ease),
+    background var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-input {
+  height: 34px;
+  padding: 0 var(--space-sm, 0.5rem);
+}
+
+.jarvis-plugin-textarea {
+  resize: vertical;
+  min-height: 92px;
+  padding: var(--space-sm, 0.5rem);
+  line-height: 1.5;
+}
+
+.jarvis-plugin-input:hover:not(:disabled),
+.jarvis-plugin-textarea:hover:not(:disabled),
+.jarvis-plugin-select-trigger:hover:not(:disabled) {
+  border-color: var(--jarvis-plugin-accent);
+}
+
+.jarvis-plugin-select {
+  position: relative;
+  width: 100%;
+}
+
+.jarvis-plugin-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 var(--space-sm, 0.5rem);
+  cursor: pointer;
+  text-align: left;
+}
+
+.jarvis-plugin-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jarvis-plugin-select-placeholder {
+  color: var(--jarvis-plugin-text-muted);
+}
+
+.jarvis-plugin-select-arrow {
+  color: var(--jarvis-plugin-text-muted);
+  margin-left: var(--space-sm, 0.5rem);
+}
+
+.jarvis-plugin-select-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--space-xs, 0.25rem) 0;
+  background: var(--jarvis-plugin-bg-card);
+  border: 1px solid var(--jarvis-plugin-border);
+  border-radius: var(--jarvis-plugin-radius-input);
+  animation: jarvis-plugin-fade-up var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-select-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.45rem var(--space-sm, 0.5rem);
+  border: 0;
+  background: transparent;
+  color: var(--jarvis-plugin-text-light);
+  cursor: pointer;
+  text-align: left;
+}
+
+.jarvis-plugin-select-option:hover:not(:disabled) {
+  background: var(--jarvis-plugin-accent-light);
+}
+
+.jarvis-plugin-select-option-selected {
+  color: var(--jarvis-plugin-accent);
+  background: var(--jarvis-plugin-accent-light);
+  font-weight: 600;
+}
+
+.jarvis-plugin-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+}
+
+.jarvis-plugin-switch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--jarvis-plugin-border);
+  border-radius: var(--jarvis-plugin-radius-input);
+  background: var(--jarvis-plugin-bg-card);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast, 0.15s) var(--ease-out, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--jarvis-plugin-text-muted);
+  transition:
+    transform var(--duration-fast, 0.15s) var(--ease-out, ease),
+    background var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.jarvis-plugin-switch-on {
+  background: var(--jarvis-plugin-accent);
+  border-color: var(--jarvis-plugin-accent);
+}
+
+.jarvis-plugin-switch-on .jarvis-plugin-switch-thumb {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.jarvis-plugin-switch-label {
+  font-size: 0.9rem;
+  color: var(--jarvis-plugin-text-muted);
+}
+
+.jarvis-plugin-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--jarvis-plugin-bg-card);
+  border: 1px solid var(--jarvis-plugin-border);
+  border-radius: var(--jarvis-plugin-radius-card);
+}
+
+.jarvis-plugin-card-header,
+.jarvis-plugin-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md, 1rem);
+  padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+}
+
+.jarvis-plugin-card-header {
+  border-bottom: 1px solid var(--jarvis-plugin-border);
+}
+
+.jarvis-plugin-card-heading {
+  min-width: 0;
+}
+
+.jarvis-plugin-card-title {
+  margin: 0;
+  color: var(--jarvis-plugin-text);
+  font-family: var(--jarvis-plugin-font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.jarvis-plugin-card-description {
+  margin: 2px 0 0;
+  color: var(--jarvis-plugin-text-muted);
+  font-size: 0.7rem;
+}
+
+.jarvis-plugin-card-actions {
+  flex-shrink: 0;
+}
+
+.jarvis-plugin-card-body {
+  padding: var(--space-md, 1rem);
+}
+
+.jarvis-plugin-card-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--jarvis-plugin-border);
+}
+
+.jarvis-plugin-setting-row {
+  display: flex;
+  gap: var(--space-md, 1rem);
+  padding: var(--space-sm, 0.5rem) 0;
+}
+
+.jarvis-plugin-setting-row-inline {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jarvis-plugin-setting-row-stacked {
+  flex-direction: column;
+}
+
+.jarvis-plugin-setting-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jarvis-plugin-setting-label {
+  color: var(--jarvis-plugin-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.jarvis-plugin-setting-hint {
+  color: var(--jarvis-plugin-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.jarvis-plugin-setting-control {
+  flex-shrink: 0;
+}
+
+.jarvis-plugin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jarvis-plugin-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+  min-width: 0;
+  padding: var(--space-sm, 0.5rem) 0;
+}
+
+.jarvis-plugin-list-item + .jarvis-plugin-list-item {
+  border-top: 1px solid var(--jarvis-plugin-border);
+}
+
+.jarvis-plugin-list-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.jarvis-plugin-list-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm, 0.5rem);
+}
+
+.jarvis-plugin-list-title {
+  color: var(--jarvis-plugin-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.jarvis-plugin-list-meta,
+.jarvis-plugin-list-description {
+  color: var(--jarvis-plugin-text-muted);
+  font-size: 0.7rem;
+}
+
+.jarvis-plugin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs, 0.25rem);
+  padding: var(--space-lg, 1.5rem) var(--space-md, 1rem);
+  color: var(--jarvis-plugin-text-muted);
+  text-align: center;
+}
+
+.jarvis-plugin-empty-title {
+  color: var(--jarvis-plugin-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.jarvis-plugin-empty-description {
+  max-width: 32rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+@keyframes jarvis-plugin-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jarvis-plugin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

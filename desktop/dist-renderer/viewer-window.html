@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: file:; media-src 'self' data: blob:">
+    <title>Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .viewer-toolbar {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 6px;
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--border);
+            -webkit-app-region: drag;
+        }
+        .viewer-title {
+            flex: 1;
+            min-width: 0;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-light);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .viewer-close-btn {
+            -webkit-app-region: no-drag;
+            width: 24px; height: 24px;
+            border: none; background: transparent;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: default;
+            color: var(--text-muted);
+            transition: background 0.12s, color 0.12s;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .viewer-close-btn:hover { background: rgba(255, 59, 48, 0.12); color: #FF3B30; }
+        .viewer-close-btn:active { background: rgba(255, 59, 48, 0.2); }
+        .viewer-close-btn svg { width: 12px; height: 12px; }
+        .viewer-body {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+        }
+        .viewer-readonly-badge {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            font-size: 10px;
+            color: var(--text-muted);
+            padding: 2px 6px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+    </style>
+  <script type="module" crossorigin src="./assets/viewer-window-CmJ23X05.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/index-BbHlmgKX.js">
+  <link rel="modulepreload" crossorigin href="./assets/index-C1UCtx7x.js">
+  <link rel="modulepreload" crossorigin href="./assets/index-Vcq4gwWv.js">
+  <link rel="modulepreload" crossorigin href="./assets/preload-helper-PPVm8Dsz.js">
+  <link rel="modulepreload" crossorigin href="./assets/theme-registry-BktXEwFU.js">
+  <link rel="modulepreload" crossorigin href="./assets/katex-bUPn0yR0.js">
+  <link rel="modulepreload" crossorigin href="./assets/preview-document-refresh-Bps-Kix7.js">
+  <link rel="modulepreload" crossorigin href="./assets/app-file-drag-AMIBJAC_.js">
+  <link rel="modulepreload" crossorigin href="./assets/PreviewEditor-DqKx0fK5.js">
+  <link rel="stylesheet" crossorigin href="./assets/theme-registry-Dc34YRUR.css">
+  <link rel="stylesheet" crossorigin href="./assets/warm-paper-2IVUPM-w.css">
+</head>
+<body>
+    <div id="react-root" style="display:flex;flex-direction:column;height:100%;width:100%;"></div>
+</body>
+</html>

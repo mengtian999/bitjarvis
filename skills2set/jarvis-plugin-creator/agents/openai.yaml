@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jarvis Plugin Creator"
+  short_description: "Plan Jarvis plugins with UI, Session, Agent, model, and media APIs"
+  default_prompt: "Help me create a Jarvis plugin. Start with the right beginner or developer flow, then choose the needed plugin capabilities."

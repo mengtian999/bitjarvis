@@ -1,0 +1,426 @@
+/* ========================================
+   Voice Dictation — CSS Module
+   设计: 文字 pill / 图标按钮 + 输入框覆盖层
+   颜色: 全由 var(--accent) 驱动
+   ======================================== */
+
+/* ── 语音按钮(文字 pill 变体) ── */
+.voicePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid rgba(var(--accent-rgb, 128, 128, 128), 0.18);
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: default;
+  transition: all 0.15s ease;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.voicePill:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb, 128, 128, 128), 0.3);
+}
+
+.voicePill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.voicePill.active {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb, 128, 128, 128), 0.1);
+  border-color: rgba(var(--accent-rgb, 128, 128, 128), 0.32);
+}
+
+/* ── 语音按钮(图标变体) ── */
+.voiceIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 18px;
+  border: 1px solid rgba(var(--accent-rgb, 128, 128, 128), 0.18);
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: default;
+  transition: all 0.15s ease;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.voiceIcon:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb, 128, 128, 128), 0.3);
+}
+
+.voiceIcon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.voiceIcon.active {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb, 128, 128, 128), 0.1);
+  border-color: rgba(var(--accent-rgb, 128, 128, 128), 0.32);
+}
+
+/* ── 脉冲点(按钮激活态) ── */
+.voiceDot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: voiceDotPulse 1.2s ease-in-out infinite;
+}
+
+/* pill 内的圆点(文字变体) */
+.voicePill .voiceDot {
+  position: static;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}
+
+@keyframes voiceDotPulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* ── 输入框语音覆盖层 ── */
+.overlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 1px 0 4px;
+  min-height: 26px;
+}
+
+.overlay.mini {
+  min-height: 20px;
+  padding: 0 0 2px;
+}
+
+/* ── 状态条(单行): 状态标签 + 半句预览 + 波形(同行右侧) ── */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 状态标签: 不收缩,保持完整 */
+.statusRow .statusTag {
+  flex-shrink: 0;
+}
+
+/* 当前半句预览: 占据中间剩余空间,超出截断 */
+.statusRow .interimText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 波形(同行右侧): 固定宽度不收缩 */
+.waveformInline {
+  flex-shrink: 0;
+  height: 8px;
+  width: 64px;
+  display: block;
+}
+
+.waveformInline rect {
+  animation: wavePulse 1.8s ease-in-out infinite;
+}
+
+/* ── 状态标签 ── */
+.statusTag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.statusTag .hintText {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 3px;
+  white-space: nowrap;
+}
+
+/* ── 实时转写文字 ── */
+.interimText {
+  font-size: 11px;
+  color: var(--accent);
+  font-style: italic;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interimText .hl {
+  color: var(--text);
+  background: rgba(var(--accent-rgb, 128, 128, 128), 0.1);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-style: normal;
+}
+
+/* ── 已录入状态(听写完成) ── */
+.doneTag {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.doneText {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 全屏模式: 状态条波形加宽 ── */
+.fs .waveformInline {
+  width: 96px;
+  height: 16px;
+}
+
+.fs .waveformInline rect {
+  animation-duration: 1.4s;
+}
+
+.fs .waveformInline rect:nth-child(3n) {
+  animation-delay: 0.1s;
+}
+.fs .waveformInline rect:nth-child(3n+1) {
+  animation-delay: 0.2s;
+}
+.fs .waveformInline rect:nth-child(3n+2) {
+  animation-delay: 0.3s;
+}
+
+/* ── 波形条(独立占位,旧布局) ── */
+.waveform {
+  width: 100%;
+  height: 8px;
+  padding: 2px 0;
+}
+
+.waveform svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.waveform rect {
+  animation: wavePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes wavePulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ── 错误信息 ── */
+.errorText {
+  color: var(--color-error, #ef4444);
+  opacity: 0.9;
+  font-size: 10px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ════════════════════════════════════════
+   旧式独立条样式 (for ChannelsPanel 默认导出)
+   ════════════════════════════════════════ */
+
+.bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.modeSwitch {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  overflow: hidden;
+}
+
+.modeTab {
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.65;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.2;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.modeTab:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.modeTab:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.modeTabActive {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  opacity: 1;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button.active {
+  border-color: var(--accent, currentColor);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.button.active .dot {
+  opacity: 1;
+  animation: voiceDotPulse 1.2s ease-in-out infinite;
+}
+
+.button.active .dot,
+.button.active {
+  color: var(--accent, currentColor);
+}
+
+.hint {
+  opacity: 0.7;
+}
+
+/* ════════════════════════════════════════
+   全屏模式 — 尺寸显著放大
+   ════════════════════════════════════════ */
+
+/* 全屏语音按钮(图标变体) */
+.fs .voiceIcon {
+  width: 34px;
+  height: 24px;
+  border-radius: 5px;
+}
+
+/* 全屏语音按钮(文字 pill 变体) */
+.fs .voicePill {
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 5px;
+}
+
+/* 全屏语音覆盖层 */
+.fs .overlay {
+  min-height: 56px;
+  padding: 4px 0 10px;
+  gap: 5px;
+}
+
+.fs .overlay.mini {
+  min-height: 42px;
+  padding: 2px 0 8px;
+}
+
+.fs .statusTag {
+  font-size: 12px;
+}
+
+.fs .statusTag .hintText {
+  font-size: 11px;
+}
+
+.fs .interimText {
+  font-size: 14px;
+}
+
+.fs .doneTag {
+  font-size: 12px;
+}
+
+.fs .doneText {
+  font-size: 14px;
+}
+
+.fs .waveform {
+  height: 16px;
+  padding: 4px 0;
+}
+
+.fs .waveform rect {
+  animation-duration: 1.4s;
+}
+
+.fs .waveform rect:nth-child(3n) {
+  animation-delay: 0.1s;
+}
+.fs .waveform rect:nth-child(3n+1) {
+  animation-delay: 0.2s;
+}
+.fs .waveform rect:nth-child(3n+2) {
+  animation-delay: 0.3s;
+}
+
+.fs .errorText {
+  font-size: 12px;
+}

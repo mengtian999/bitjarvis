@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+build/
+dist/
+dist-renderer-artifact/
+dist-sandbox/
+dist-server/
+dist-server-artifact/
+dist-server-bundle/
+dist-standalone/
+$extractDir/
+vodozemac/
+im/build/
+im/.dart_tool/
+im/.flutter-plugins-dependencies
+
+# Cache & temp dirs
+.cache/
+.build-logs/
+.smoke*/
+.tt/
+.preview/
+
+# Tests
+tests/
+
+# Environment & secrets
+.env*
+.env2.txt
+.keys.txt
+.sign-key.pem
+.sign-keyset.json
+keys/
+
+# Root-level temp/debug files (dot-prefixed build scripts, logs, probes)
+.*.ps1
+.*.log
+.*.txt
+.*.cjs
+.*.mjs
+.*.js
+.*.pid
+.*.exitcode.txt
+.*.part
+.*.cmd
+.*.err
+.*.bak*
+
+# Binary & archive files
+*.exe
+*.obj
+*.tar.gz
+*.lnk
+*.zip
+7z2603-x64.exe
+cl.exe
+tools/nsis/nsis-3.04.zip
+tools/nsis/nsis.zip
+
+# Logs
+*.log
+flutter_web_run*.log
+wasm_build*.log
+
+# Misc temp
+{1}
+dist-server-artifact.lnk
+
+# Vendor binaries (sherpa-onnx models)
+vendor/
+
+# Keys & certificates
+keys/
