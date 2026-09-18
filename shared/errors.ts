@@ -31,6 +31,9 @@ export const ERROR_DEFS = Object.freeze({
   DB_ERROR:            { severity: 'critical', category: 'filesystem', i18nKey: 'error.dbError',           retryable: false, httpStatus: 500 },
   SERVER_AUTH_FAILED:  { severity: 'degraded', category: 'auth',       i18nKey: 'error.serverAuthFailed',  retryable: false, httpStatus: 403 },
   UNKNOWN:             { severity: 'degraded', category: 'unknown',    i18nKey: 'error.unknown',           retryable: false, httpStatus: 500 },
+  GATEWAY_QUOTA_EXCEEDED: { severity: 'degraded', category: 'llm', i18nKey: 'error.gatewayQuotaExceeded', retryable: false, httpStatus: 429 },
+  GATEWAY_UNAVAILABLE:   { severity: 'degraded', category: 'network', i18nKey: 'error.gatewayUnavailable', retryable: true, httpStatus: 503 },
+
 });
 
 export class AppError extends Error {

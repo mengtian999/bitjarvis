@@ -459,6 +459,12 @@ export const ImView = memo(function ImView() {
         key={themeInfo.isDark ? 'dark' : 'light'}
         ref={iframeRef}
         src={iframeSrc}
+        // 关键：向 iframe 委托摄像头/麦克风等能力。打包模式下主窗口运行在 file:// 源上，
+        // 而 IM iframe 是 http://127.0.0.1:{port}/im/（跨源）。Permissions Policy 中
+        // camera/microphone 默认仅对与顶层同源的 frame 放行，缺少 allow 属性时
+        // iframe 内的 getUserMedia 会被直接拒绝（NotAllowedError），导致 IM 发起
+        // 通话报“哎呀，出了点差错…”、来电因 _getUserMedia 失败而无法弹接听界面。
+        allow="camera; microphone; display-capture; autoplay"
         title="FluffyChat IM"
         onLoad={handleIframeLoad}
         style={{

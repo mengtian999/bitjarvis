@@ -2439,11 +2439,11 @@
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
     },
-    "appSubtitle": "你的對話，只有你和對方可讀",
+    "appSubtitle": "端到端加密，去中心化",
     "@appSubtitle": {
         "description": "Home page tagline."
     },
-    "appDescription": "端到端加密，去中心化網路，沒有訊息伺服器，沒有第三雙眼睛。",
+    "appDescription": "你們的對話，只有你們能讀，沒有第三雙眼睛。",
     "@appDescription": {
         "description": "Home page tagline."
     }

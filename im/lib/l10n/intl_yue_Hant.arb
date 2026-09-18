@@ -1891,11 +1891,11 @@
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
     },
-    "appSubtitle": "你的對話，只有你和對方可讀",
+    "appSubtitle": "端到端加密，去中心化",
     "@appSubtitle": {
         "description": "Home page tagline."
     },
-    "appDescription": "端到端加密，去中心化網絡，冇訊息伺服器，冇第三對眼。",
+    "appDescription": "你哋嘅對話，只有你哋讀得到，冇第三對眼。",
     "@appDescription": {
         "description": "Home page tagline."
     }
