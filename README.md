@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://bitjarvis.chat">官网</a>
+  <a href="https://www.bitjarvis.chat">官网</a>
 </p>
 
 <h1 align="center">Bit Jarvis</h1>
