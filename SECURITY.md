@@ -1,6 +1,5 @@
 # Security Policy
 
-This project is now branded as Jarvis.
 
 ## Reporting a Vulnerability
 
