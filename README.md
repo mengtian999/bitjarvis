@@ -148,7 +148,7 @@ npm run dist:linux     # 打包 Linux（AppImage / deb）
 
 ## 致谢
 
-- [OpenHanako]((https://github.com/liliMozi/openhanako))：桌面端的上游项目。
+- [OpenHanako](https://github.com/liliMozi/openhanako)：桌面端的上游项目。
 - [tw93/kami](https://github.com/tw93/kami)：beautify 插件 HTML 美学规范的「路由器 + 平级章节按需获取」渐进披露结构受其启发。
 
 ## 许可证
