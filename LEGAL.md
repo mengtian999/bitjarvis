@@ -13,7 +13,6 @@ file of the specific subtree governs that subtree.
 |---|---|---|
 | `.`, `core/`, `lib/`, `server/`, `desktop/`, `hub/`, `shared/`, `cli/`, `plugins/`, `skills2set/`, `packages/`, `tools/`, `scripts/`, `tests/`, `vendor/` | **Apache-2.0** | `LICENSE` |
 | `im/` | **AGPL-3.0-or-later** | `im/LICENSE` (+ `im/licenses.yaml`) |
-| `node_modules/` | various, per package | `<pkg>/LICENSE*` |
 
 
 ---
@@ -59,26 +58,9 @@ copyright notice, removing the upstream attribution, which would violate
 ---
 
 
----
 
-## 8. Third-party components of note
 
-| Path | License | Notes |
-|---|---|---|
-| `vendor/mingit/` | see `vendor/mingit/LICENSE.txt` | bundled vendored tool |
-| `skills2set/skill-creator/` | see `skills2set/skill-creator/LICENSE.txt` | bundled skill |
-| `node_modules/` | mixed (MIT / ISC / Apache-2.0 / BSD / others) | per-package LICENSE files retained |
-| `build/web/assets/NOTICES` | generated | produced by the build; verify it ships in releases |
-| `dist/win-unpacked/LICENSES.chromium.html` | Chromium | bundled by Electron |
-| `dist/win-unpacked/LICENSE.electron.txt` | MIT | bundled by Electron |
-
-The Chromium/Electron notice files are already emitted into the packaged build.
-Verify the release pipeline preserves them alongside `LICENSE`, `NOTICE`, and
-`LEGAL.md` — the packaging script controls this.
-
----
-
-## 9. Acknowledgements
+## 4. Acknowledgements
 
 - **openhanako** (liliMozi) — upstream project this fork derives from.
 - **FluffyChat** contributors — `im/`.
@@ -90,7 +72,7 @@ separate OpenMinis mobile repository, which carries `mobile/deps/`.
 
 ---
 
-## 10. Not covered here
+## 5. Not covered here
 
 This document does not address:
 
