@@ -26,9 +26,6 @@ Third-party components bundled with this distribution:
            not imported into the TypeScript source tree.
            See im/LICENSE and im/licenses.yaml.
 
-    (The companion OpenMinis mobile application, previously kept under mobile/
-     in this repository, is distributed from a separate repository and is not
-     part of this distribution. See LEGAL.md section 5.)
 
 -------------------------------------------------------------------------------
 
