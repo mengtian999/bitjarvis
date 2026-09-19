@@ -148,7 +148,7 @@ npm run dist:linux     # Package Linux (AppImage / deb)
 
 ## Acknowledgments
 
-- [OpenHanako](https://openhanako.com): the upstream project of the desktop.
+- [OpenHanako](https://github.com/liliMozi/openhanako): the upstream project of the desktop.
 - [tw93/kami](https://github.com/tw93/kami): the progressive-disclosure structure of the beautify plugin's HTML aesthetic guide (a router entry with flat on-demand sections) was inspired by this project.
 
 ## License
