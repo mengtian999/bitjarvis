@@ -34,10 +34,13 @@ class UrlLauncher {
   Future<void> launchUrl() async {
     final l10n = L10n.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    if (url!.toLowerCase().startsWith(AppConfig.deepLinkPrefix) ||
-        url!.toLowerCase().startsWith(AppConfig.inviteLinkPrefix) ||
+    final lower = url!.toLowerCase();
+    if (lower.startsWith(AppConfig.deepLinkPrefix.toLowerCase()) ||
+        AppConfig.allInvitePrefixes.any((p) => lower.startsWith(p.toLowerCase())) ||
+        lower.startsWith(AppConfig.inviteLinkPrefix.toLowerCase()) ||
+        lower.startsWith(AppConfig.legacyInvitePrefix.toLowerCase()) ||
         {'#', '@', '!', '+', '\$'}.contains(url![0]) ||
-        url!.toLowerCase().startsWith(AppConfig.schemePrefix)) {
+        lower.startsWith(AppConfig.schemePrefix.toLowerCase())) {
       return openMatrixToUrl();
     }
     final uri = Uri.tryParse(url!);
@@ -125,18 +128,48 @@ class UrlLauncher {
 
   Future<void> openMatrixToUrl() async {
     final matrix = Matrix.of(context);
-    final url = this.url!.replaceFirst(
+    var url = this.url!;
+
+    // 1. Check if URL carries the Matrix ID in ?id= or ?user= (e.g. https://www.bitjarvis.chat/invite.html?id=@user:server)
+    final parsedUri = Uri.tryParse(url);
+    if (parsedUri != null) {
+      final queryId = parsedUri.queryParameters['id'] ?? parsedUri.queryParameters['user'];
+      if (queryId != null && queryId.isNotEmpty) {
+        url = queryId;
+      }
+    }
+
+    // 2. Strip known prefixes to get the bare identifier:
+    for (final prefix in [
       AppConfig.deepLinkPrefix,
+      ...AppConfig.allInvitePrefixes,
       AppConfig.inviteLinkPrefix,
-    );
+      AppConfig.legacyInvitePrefix,
+    ]) {
+      if (url.toLowerCase().startsWith(prefix.toLowerCase())) {
+        url = url.substring(prefix.length);
+        break;
+      }
+    }
+
+    // Hash URLs: extract the fragment.
+    final hashIdx = url.indexOf('#');
+    if (hashIdx >= 0) {
+      url = url.substring(hashIdx + 1);
+    }
+
+    // Strip leading slash and any trailing query string.
+    if (url.startsWith('/')) url = url.substring(1);
+    final queryIdx = url.indexOf('?');
+    if (queryIdx >= 0) url = url.substring(0, queryIdx);
 
     // The identifier might be a matrix.to url and needs escaping. Or, it might have multiple
     // identifiers (room id & event id), or it might also have a query part.
     // All this needs parsing.
     final identityParts =
         url.parseIdentifierIntoParts() ??
-        Uri.tryParse(url)?.host.parseIdentifierIntoParts() ??
-        Uri.tryParse(url)?.pathSegments
+        Uri.tryParse(this.url!)?.host.parseIdentifierIntoParts() ??
+        Uri.tryParse(this.url!)?.pathSegments
             .lastWhereOrNull((_) => true)
             ?.parseIdentifierIntoParts();
     if (identityParts == null) {

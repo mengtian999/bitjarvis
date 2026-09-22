@@ -343,6 +343,56 @@ function throwAbortOrTimeout(err, signal, modelId): never {
   throw err;
 }
 
+const MAX_UTILITY_RETRIES = 2; // 额外重试次数（总尝试 = 1 + 2 = 3）
+const RETRY_BASE_DELAY_MS = 750;
+const RETRY_MAX_DELAY_MS = 10_000;
+
+/**
+ * 判断一次 utility LLM 调用失败是否值得幂等重试：429 / 5xx / 网络错误。
+ * 调用方在 fetch 前先做过 timeout/abort 归一化，这里不会再看到 AbortError。
+ */
+function isRetryableAttemptError(err) {
+  if (err instanceof AppError) {
+    if (err.code === "LLM_RATE_LIMITED") return true;
+    if (err.code === "UNKNOWN") {
+      const status = err.context?.status;
+      return typeof status === "number" && status >= 500 && status <= 599;
+    }
+    return false;
+  }
+  // 非 AppError 的原始错误（ECONNRESET / socket hang up / 连接失败等）按网络错误重试。
+  return true;
+}
+
+/** 指数退避 + 抖动。 */
+function retryBackoffMs(attempt) {
+  const delay = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+  return delay + Math.floor(Math.random() * 250);
+}
+
+/** 可中断的退避睡眠：期间 signal abort 会抛 AbortError。 */
+function sleepWithAbort(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createUserAbortError());
+      return;
+    }
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(createUserAbortError());
+    };
+    signal?.addEventListener?.("abort", onAbort, { once: true });
+    function cleanup() {
+      signal?.removeEventListener?.("abort", onAbort);
+    }
+  });
+}
+
 function convertContentForApi(content, api) {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return typeof content === "undefined" ? "" : JSON.stringify(content);
@@ -556,7 +606,7 @@ export async function callText({
     outputBudgetSource,
   }));
 
-  // ── 4. 发送请求 ──
+  // ── 4. 发送请求（429 / 5xx / 网络错误做幂等自动重试）──
   const usageRequest = usageLedger?.start?.({
     model: { provider, modelId, api },
     usageContext,
@@ -565,65 +615,88 @@ export async function callText({
   let observedUsagePayload = null;
   let usageRequestClosed = false;
   try {
-  const SLOW_THRESHOLD_MS = 15_000;
-  const slowTimer = setTimeout(() => {
-    errorBus.report(new AppError('LLM_SLOW_RESPONSE', {
-      context: { model: modelId, provider, elapsed: SLOW_THRESHOLD_MS },
-    }));
-  }, SLOW_THRESHOLD_MS);
+    const SLOW_THRESHOLD_MS = 15_000;
+    let res;
+    let rawText;
+    let data;
+    let attempt = 0;
+    const maxAttempts = 1 + MAX_UTILITY_RETRIES;
+    while (true) {
+      attempt += 1;
+      const slowTimer = setTimeout(() => {
+        errorBus.report(new AppError('LLM_SLOW_RESPONSE', {
+          context: { model: modelId, provider, elapsed: SLOW_THRESHOLD_MS },
+        }));
+      }, SLOW_THRESHOLD_MS);
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: combinedSignal,
-  }).catch(err => {
-    clearTimeout(slowTimer);
-    throwAbortOrTimeout(err, signal, modelId);
-  });
+      try {
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+          signal: combinedSignal,
+        }).catch(err => {
+          clearTimeout(slowTimer);
+          throwAbortOrTimeout(err, signal, modelId);
+        });
 
-  // ── 5. 解析响应 ──
-  let rawText;
-  let data;
-  try {
-    if (res.ok && api === "openai-codex-responses" && res.body && typeof res.body.getReader === "function") {
-      data = await readCodexResponsesStream(res.body);
-      rawText = JSON.stringify(data);
-    } else {
-      rawText = await res.text();
-    }
-  } catch (err) {
-    clearTimeout(slowTimer);
-    throwAbortOrTimeout(err, signal, modelId);
-  }
-  clearTimeout(slowTimer);
-  if (!data) {
-    try {
-      data = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      throw new Error(`LLM returned invalid JSON (status=${res.status})`);
-    }
-  }
-  observedUsagePayload = data?.usage ?? null;
+        // ── 5. 解析响应 ──
+        rawText = undefined;
+        data = undefined;
+        try {
+          if (res.ok && api === "openai-codex-responses" && res.body && typeof res.body.getReader === "function") {
+            data = await readCodexResponsesStream(res.body);
+            rawText = JSON.stringify(data);
+          } else {
+            rawText = await res.text();
+          }
+        } catch (err) {
+          clearTimeout(slowTimer);
+          throwAbortOrTimeout(err, signal, modelId);
+        }
+        clearTimeout(slowTimer);
+        if (!data) {
+          try {
+            data = rawText ? JSON.parse(rawText) : null;
+          } catch {
+            throw new Error(`LLM returned invalid JSON (status=${res.status})`);
+          }
+        }
+        observedUsagePayload = data?.usage ?? null;
 
-  if (!res.ok) {
-    const message = providerErrorMessage(data, rawText, res.status);
-    const context = providerErrorContext({
-      data,
-      rawText,
-      modelId,
-      provider,
-      api,
-      status: res.status,
-    });
-    if (res.status === 401 || res.status === 403) {
-      throw new AppError('LLM_AUTH_FAILED', { message, context });
+        if (!res.ok) {
+          const message = providerErrorMessage(data, rawText, res.status);
+          const context = providerErrorContext({
+            data,
+            rawText,
+            modelId,
+            provider,
+            api,
+            status: res.status,
+          });
+          if (res.status === 401 || res.status === 403) {
+            throw new AppError('LLM_AUTH_FAILED', { message, context });
+          }
+          if (res.status === 429) {
+            throw new AppError('LLM_RATE_LIMITED', { message, context });
+          }
+          throw new AppError('UNKNOWN', { message, context });
+        }
+      } catch (err) {
+        clearTimeout(slowTimer);
+        if (err?.name === "AbortError" || err?.name === "TimeoutError") {
+          throwAbortOrTimeout(err, signal, modelId);
+        }
+        if (attempt >= maxAttempts || !isRetryableAttemptError(err)) {
+          throw err;
+        }
+        await sleepWithAbort(retryBackoffMs(attempt), combinedSignal).catch((se) => {
+          throwAbortOrTimeout(se, signal, modelId);
+        });
+        continue;
+      }
+      break;
     }
-    if (res.status === 429) {
-      throw new AppError('LLM_RATE_LIMITED', { message, context });
-    }
-    throw new AppError('UNKNOWN', { message, context });
-  }
 
   // ── 6. 提取文本 ──
   let text = "";

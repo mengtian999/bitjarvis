@@ -2352,6 +2352,49 @@ export class JarvisEngine {
     this._configCoord.normalizeUtilityApiPreferences();
     this._sessionCoord.refreshAllSessionsModels();
   }
+
+  /**
+   * 网关模型组后台同步（技术方案 §2.1：模型列表服务端下发，上下架不发版）。
+   * 不阻塞启动：网络不可达时保留既有 provider 配置；成功后走 onProviderChanged 全量刷新。
+   * 新用户（agent 从未配置 models.chat）把默认模型指向 jarvis-gateway/auto。
+   */
+  async _syncGatewayModels(log: any = () => {}) {
+    try {
+      const { GatewayClient } = await import("./gateway/gateway-client.ts");
+      const {
+        syncGatewayModels,
+        ensureGatewayProviderRegistered,
+        GATEWAY_PROVIDER_ID,
+      } = await import("./gateway/gateway-sync.ts");
+      const client = new GatewayClient({ jarvisHome: this.jarvisHome, appVersion: this.appVersion });
+      ensureGatewayProviderRegistered({
+        providerRegistry: this._models.providerRegistry,
+        baseUrl: client.chatBaseUrl,
+      });
+      const result = await syncGatewayModels({ client, providerRegistry: this._models.providerRegistry });
+      if (result.ok === false) {
+        log(`[gateway] 模型同步跳过：${result.error}`);
+        return;
+      }
+      log(`[gateway] 已同步 ${result.models.length} 个网关模型：${result.models.join(", ")}` +
+        (result.imageModels.length > 0
+          ? `；图片档位：${result.imageModels.join(", ")}`
+          : ""));
+      await this.onProviderChanged();
+      const chatRef = this.agent?.config?.models?.chat;
+      const hasChat = typeof chatRef === "object" && !!chatRef?.id && !!chatRef?.provider;
+      if (!hasChat) {
+        try {
+          await this._configCoord.setDefaultModel(result.defaultModelId || "auto", GATEWAY_PROVIDER_ID);
+          log(`[gateway] 新用户默认模型指向 ${GATEWAY_PROVIDER_ID}/${result.defaultModelId || "auto"}`);
+        } catch (err) {
+          moduleLog.warn(`[gateway] 设置默认模型失败: ${(err as any)?.message}`);
+        }
+      }
+    } catch (err) {
+      moduleLog.warn(`[gateway] sync failed: ${(err as any)?.message}`);
+    }
+  }
   getRegistryModelsForProvider(name) { return this._models.getRegistryModelsForProvider(name); }
 
   static SHARED_MODEL_KEYS = SHARED_MODEL_KEYS;
@@ -2651,6 +2694,9 @@ export class JarvisEngine {
         }
       }
     }
+
+    // 4b. 网关模型组后台同步（不阻塞启动；网络不可达时保留既有配置，成功后全量刷新）
+    void this._syncGatewayModels(log);
 
     // 5. Sync skills + watch skillsDir
     this._syncAllAgentSkills();

@@ -51,6 +51,8 @@ export function inferMediaProtocolId(providerId, capability, modelId, provider: 
   if (key === "imageGeneration") {
     // 内置 provider 的显式规则
     if (providerId === "openai-codex-oauth") return "openai-codex-responses-image";
+    // Jarvis Cloud 网关：图片档位（standard/…）经 /v1/media/jobs 执行（§5.4）
+    if (providerId === "jarvis-gateway") return "gateway-images";
     if (providerId === "openai" && (id.startsWith("gpt-image") || id.startsWith("dall-e"))) return "openai-images";
     if (providerId === "volcengine" && id.includes("seedream")) return "volcengine-images";
     if (providerId === "dashscope" && id.startsWith("wan")) return "dashscope-wan-images";
@@ -61,6 +63,13 @@ export function inferMediaProtocolId(providerId, capability, modelId, provider: 
     // 用户自定义 provider：OpenAI 兼容网关的图片模型按 OpenAI Images API 执行（#1627）。
     // 仅对 sourceKind === "user" 生效，内置 / 插件 provider 行为不变。
     if (provider.sourceKind === "user" && OPENAI_COMPATIBLE_APIS.has(provider.api)) return "openai-images";
+    return "";
+  }
+
+  if (key === "videoGeneration") {
+    // Jarvis Cloud 网关：视频档位（standard/…）经 /v1/media/jobs 执行（§5.4）
+    if (providerId === "jarvis-gateway") return "gateway-videos";
+    if (providerId === "agnes") return "agnes-videos";
     return "";
   }
 

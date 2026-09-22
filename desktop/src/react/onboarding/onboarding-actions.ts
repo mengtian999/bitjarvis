@@ -290,9 +290,23 @@ export async function saveProvider({
   if (apiKey) recordRequiredAgentSecret(verificationPlan, ['providers', providerName, 'api_key']);
 }
 
-// ── Save Jarvis provider + pre-select models (skip ModelStep) ──
+// ── Gateway default (onboarding Jarvis 路径) ──
+// 网关凭证（设备 token）由服务端 catalog overlay 管理，agent config 只写
+// api.provider + models.chat；不再硬编码 provider / 模型 / key。
 
-export async function saveJarvisProviderAndModels({
+export async function testGateway({ jarvisFetch }: { jarvisFetch: JarvisFetch }): Promise<TestResult> {
+  const res = await jarvisFetch('/api/gateway/sync', { method: 'POST' });
+  const data = await readJson(res);
+  if (res.ok === true && isObject(data) && data.ok === true) {
+    return { ok: true, text: t('onboarding.provider.testSuccess') };
+  }
+  const message = isObject(data) && typeof data.error === 'string' && data.error.trim()
+    ? data.error
+    : t('onboarding.provider.testFailed');
+  return { ok: false, text: message };
+}
+
+export async function applyGatewayDefaultModels({
   jarvisFetch,
   agentId,
   verificationPlan,
@@ -301,37 +315,37 @@ export async function saveJarvisProviderAndModels({
   agentId: string;
   verificationPlan?: OnboardingVerificationPlan;
 }): Promise<void> {
-  // Save provider config
-  const providerPatch = {
-    api: { provider: 'jarvis' },
-    providers: {
-      jarvis: {
-        base_url: 'https://apihub.agnes-ai.cn/v1',
-        api_key: 'sk-nw9D7i0wjKKzhZeg4Iqos2FgrdOPEMVs5TOq5L7pAR74Bzad',
-        api: 'openai-completions',
-      },
+  // 1. 同步网关：设备注册 + 档位下发，取默认档
+  const res = await jarvisFetch('/api/gateway/sync', { method: 'POST' });
+  const sync = await requireMutation(res, 'Syncing gateway models');
+
+  const providerId = isObject(sync) && typeof sync.providerId === 'string' && sync.providerId.trim()
+    ? sync.providerId.trim()
+    : 'jarvis-gateway';
+  const defaultModelId = isObject(sync) && typeof sync.defaultModelId === 'string' && sync.defaultModelId.trim()
+    ? sync.defaultModelId.trim()
+    : 'auto';
+
+  // 2. agent config：默认 provider + 聊天模型
+  const agentPatch = {
+    api: { provider: providerId },
+    models: { chat: { id: defaultModelId, provider: providerId } },
+  };
+  const agentRes = await jarvisFetch(agentConfigPath(agentId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(agentPatch),
+  });
+  await requireMutation(agentRes, 'Saving gateway default model');
+  recordAgentConfig(verificationPlan, agentPatch);
+
+  // 3. 全局偏好：utility 模型档
+  const utilityPatch = {
+    models: {
+      utility: { id: defaultModelId, provider: providerId },
+      utility_large: { id: defaultModelId, provider: providerId },
     },
   };
-  const providerRes = await jarvisFetch(agentConfigPath(agentId), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(providerPatch),
-  });
-  await requireMutation(providerRes, 'Saving Jarvis provider');
-  recordAgentConfig(verificationPlan, providerPatch);
-  recordRequiredAgentSecret(verificationPlan, ['providers', 'jarvis', 'api_key']);
-
-  // Pre-select agnes-3.0-flash for all model slots
-  const modelPatch = { models: { chat: { id: 'agnes-3.0-flash', provider: 'jarvis' } } };
-  const modelRes = await jarvisFetch(agentConfigPath(agentId), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(modelPatch),
-  });
-  await requireMutation(modelRes, 'Saving chat model');
-  recordAgentConfig(verificationPlan, modelPatch);
-
-  const utilityPatch = { models: { utility: { id: 'agnes-3.0-flash', provider: 'jarvis' }, utility_large: { id: 'agnes-3.0-flash', provider: 'jarvis' } } };
   const utilRes = await jarvisFetch('/api/preferences/models', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

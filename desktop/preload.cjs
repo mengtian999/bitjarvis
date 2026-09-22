@@ -64,6 +64,11 @@ contextBridge.exposeInMainWorld("jarvis", {
     return () => ipcRenderer.removeListener("train-fallback-notice", handler);
   },
   ackTrainFallbackNotice: () => ipcRenderer.invoke("train-fallback-notice-ack"),
+  onImOpen: (cb) => {
+    const handler = (_, data) => cb(data);
+    ipcRenderer.on("im/open", handler);
+    return () => ipcRenderer.removeListener("im/open", handler);
+  },
   onTrainUpdateProgress: (cb) => {
     const handler = (_, progress) => cb(progress);
     ipcRenderer.on("train-update-progress", handler);

@@ -2504,7 +2504,7 @@
     },
     "provider": {
       "title": "選擇AI供應商",
-      "subtitle": "選擇一個 AI 模型供應商來啟動你的 Jarvis。\n\n推薦選擇內建的 Jarvis(賈維斯)，它已預配置好，開箱即用且完全免費。\n\n請點擊測試連線，確保它在你的區域可用。\n\n你也可以點擊下拉選擇本地模型或你常用的供應商並填入 API Key。",
+      "subtitle": "選擇一個 AI 模型供應商來啟動你的 Jarvis。\n\n推薦選擇 賈維斯（通用），即網關預設模型檔，開箱即用且完全免費。\n\n它會自動同步連線；你也可以點擊下拉選擇本地模型或你常用的供應商並填入 API Key。",
       "selectPlaceholder": "選擇供應商",
       "searchPlaceholder": "搜尋供應商...",
       "empty": "未找到供應商",
@@ -3162,6 +3162,7 @@
     "stopTaskDone": "已終止任務 {taskId}",
     "detailShow": "詳情",
     "detailHide": "收合",
+    "turnStallWarning": "回覆生成中長時間沒有輸出，仍在等待模型回應；若持續無回應可手動停止後重試。",
     "turnInterrupted": "任務已中斷：助手這一輪沒有完成，可以重試或讓它繼續。",
     "retryTurn": "重試",
     "continueTask": "繼續任務",

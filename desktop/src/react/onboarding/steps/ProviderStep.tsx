@@ -1,16 +1,16 @@
 /**
  * ProviderStep.tsx — Step 2: Provider selection
  *
- * 默认选中 Jarvis(贾维斯)，预填内置 API Key（仅显示星号）。
- * 点击"下一步"自动完成供应商配置 + 模型预设，直接进入工作台步骤。
+ * 默认选中 贾维斯(通用)（网关 preset，凭证为设备 token，进页即后台 sync）。
+ * 点击"下一步"自动完成网关默认档写入，直接进入工作台步骤。
  * 若用户选择其他供应商，则走原有连接测试流程。
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PROVIDER_PRESETS } from '../constants';
 import type { ProviderPreset } from '../constants';
 import { getProviderPresetLabel } from '../../utils/provider-presets';
-import { describeOnboardingError, testConnection, saveProvider as saveProviderAction, saveJarvisProviderAndModels } from '../onboarding-actions';
+import { describeOnboardingError, testConnection, testGateway as testGatewayAction, saveProvider as saveProviderAction, applyGatewayDefaultModels } from '../onboarding-actions';
 import type { JarvisFetch, OnboardingVerificationPlan } from '../onboarding-actions';
 import { StepContainer, Multiline } from '../onboarding-ui';
 
@@ -44,11 +44,11 @@ interface ProviderStepProps {
 export function ProviderStep({
   preview, jarvisFetch, agentId, verificationPlan, goToStep, showError, onProviderReady, onJarvisSelected,
 }: ProviderStepProps) {
-  const [selectedPreset, setSelectedPreset] = useState<string | null>('jarvis');
-  const [providerName, setProviderName] = useState('jarvis');
-  const [providerUrl, setProviderUrl] = useState('https://apihub.agnes-ai.cn/v1');
+  const [selectedPreset, setSelectedPreset] = useState<string | null>('jarvis-gateway');
+  const [providerName, setProviderName] = useState('jarvis-gateway');
+  const [providerUrl, setProviderUrl] = useState('https://gateway.bitjarvis.chat/v1');
   const [providerApi, setProviderApi] = useState('openai-completions');
-  const [apiKey, setApiKey] = useState('sk-nw9D7i0wjKKzhZeg4Iqos2FgrdOPEMVs5TOq5L7pAR74Bzad');
+  const [apiKey, setApiKey] = useState('');
   const [isLocalProvider, setIsLocalProvider] = useState(false);
   const [connectionTested, setConnectionTested] = useState(false);
   const [testStatus, setTestStatus] = useState<{ type: '' | 'loading' | 'success' | 'error'; text: string }>({ type: '', text: '' });
@@ -61,7 +61,7 @@ export function ProviderStep({
   const [customUrl, setCustomUrl] = useState('');
   const [customApi, setCustomApi] = useState('openai-completions');
 
-  const isJarvis = selectedPreset === 'jarvis';
+  const isJarvis = selectedPreset === 'jarvis-gateway';
 
   const providerLabel = useCallback((preset: ProviderPreset) => (
     preset.custom ? t('onboarding.provider.custom') : getProviderPresetLabel(preset, i18n.locale)
@@ -95,10 +95,8 @@ export function ProviderStep({
       setProviderUrl(preset.url);
       setProviderApi(preset.api);
       setIsLocalProvider(!!preset.local);
-      if (preset.local) {
+      if (preset.local || preset.value === 'jarvis-gateway') {
         setApiKey('');
-      } else if (preset.value === 'jarvis') {
-        setApiKey('sk-nw9D7i0wjKKzhZeg4Iqos2FgrdOPEMVs5TOq5L7pAR74Bzad');
       } else {
         setApiKey('');
       }
@@ -127,8 +125,31 @@ export function ProviderStep({
     setTestStatus({ type: '', text: '' });
   }, []);
 
+  // ── Jarvis 路径：进入即同步网关（设备注册 + 档位下发），成功则免手动测试 ──
+  useEffect(() => {
+    if (preview || !isJarvis) return;
+    let cancelled = false;
+    (async () => {
+      setTestStatus({ type: 'loading', text: t('onboarding.provider.testing') });
+      try {
+        const result = await testGatewayAction({ jarvisFetch });
+        if (cancelled) return;
+        if (result.ok) {
+          setTestStatus({ type: 'success', text: result.text });
+          setConnectionTested(true);
+        } else {
+          setTestStatus({ type: 'error', text: result.text });
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setTestStatus({ type: 'error', text: err instanceof Error ? err.message : String(err) });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [preview, isJarvis, jarvisFetch]);
+
   // ── Button states ──
-  const hasKey = !!apiKey || isLocalProvider;
+  const hasKey = isJarvis || !!apiKey || isLocalProvider;
   const hasProvider = !!providerName;
   const hasUrl = !!providerUrl;
   const testBtnDisabled = preview ? false : !(hasProvider && hasUrl && hasKey);
@@ -143,7 +164,9 @@ export function ProviderStep({
     }
     setTestStatus({ type: 'loading', text: t('onboarding.provider.testing') });
     try {
-      const result = await testConnection({ jarvisFetch, providerUrl, providerApi, apiKey });
+      const result = isJarvis
+        ? await testGatewayAction({ jarvisFetch })
+        : await testConnection({ jarvisFetch, providerUrl, providerApi, apiKey });
       if (result.ok) {
         setTestStatus({ type: 'success', text: result.text });
         setConnectionTested(true);
@@ -156,7 +179,7 @@ export function ProviderStep({
       setTestStatus({ type: 'error', text: msg });
       setConnectionTested(false);
     }
-  }, [preview, jarvisFetch, providerUrl, providerApi, apiKey]);
+  }, [preview, isJarvis, jarvisFetch, providerUrl, providerApi, apiKey]);
 
   // ── Next ──
   const onNext = useCallback(async () => {
@@ -164,11 +187,11 @@ export function ProviderStep({
 
     if (isJarvis) {
       try {
-        await saveJarvisProviderAndModels({ jarvisFetch, agentId, verificationPlan });
+        await applyGatewayDefaultModels({ jarvisFetch, agentId, verificationPlan });
         onJarvisSelected();
         goToStep(4);
       } catch (err) {
-        console.error('[onboarding] save Jarvis failed:', err);
+        console.error('[onboarding] save gateway default failed:', err);
         showError(describeOnboardingError(err, t('onboarding.provider.testFailed')));
       }
       return;
@@ -268,14 +291,11 @@ export function ProviderStep({
         </div>
       )}
 
-      {/* API Key — Jarvis 内置密钥，不展示任何输入框或提示文案 */}
+      {/* API Key — Jarvis 走网关设备凭证，不展示输入框 */}
       {!isLocalProvider && !isJarvis && (
         <>
           <div className="ob-key-header">
             <span className="ob-field-label">{t('onboarding.provider.keyLabel')}</span>
-            {isJarvis && (
-              <span className="ob-key-hint">{t('onboarding.provider.keyHint')}</span>
-            )}
           </div>
           <div className="ob-key-row">
             <input

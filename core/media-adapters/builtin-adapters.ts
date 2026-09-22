@@ -1,5 +1,6 @@
 import { agnesImageAdapter, agnesVideoAdapter } from "./agnes.ts";
 import { dashscopeImageAdapter } from "./dashscope.ts";
+import { gatewayImageAdapter, gatewayVideoAdapter } from "./gateway.ts";
 import { geminiImageAdapter } from "./gemini.ts";
 import { minimaxImageAdapter } from "./minimax.ts";
 import { openaiCodexImageAdapter } from "./openai-codex.ts";
@@ -15,4 +16,7 @@ export const builtinImageGenAdapters = Object.freeze([
   geminiImageAdapter,
   agnesImageAdapter,
   agnesVideoAdapter,
+  gatewayImageAdapter,
+  gatewayVideoAdapter,
 ]);
+

@@ -9,7 +9,8 @@ export interface ProviderPreset {
 }
 
 export const API_PROVIDER_PRESETS: ProviderPreset[] = [
-  { value: 'jarvis',         label: 'Jarvis(贾维斯)',          labelZh: 'Jarvis(贾维斯)',  url: 'https://apihub.agnes-ai.cn/v1', api: 'openai-completions' },
+  // Jarvis 网关 preset：value 即 GATEWAY_PROVIDER_ID（凭证为网关设备 token，由 POST /api/gateway/sync 下发），url 仅填充 state，不参与请求
+  { value: 'jarvis-gateway', label: '贾维斯(通用)',          labelZh: '贾维斯(通用)',  url: 'https://gateway.bitjarvis.chat/v1', api: 'openai-completions' },
   { value: 'ollama',      label: 'Ollama (Local)',       labelZh: 'Ollama (本地)',       url: 'http://localhost:11434/v1', api: 'openai-completions', local: true },
   { value: 'dashscope',   label: 'DashScope (Qwen)',     url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', api: 'openai-completions' },
   { value: 'openai',      label: 'OpenAI',               url: 'https://api.openai.com/v1', api: 'openai-completions' },

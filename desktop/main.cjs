@@ -222,6 +222,28 @@ async function applyDesktopNetworkProxy(config, { reason = "runtime" } = {}) {
   return normalized;
 }
 
+/**
+ * 安装媒体权限处理器（IM 通话所需）。
+ *
+ * 背景：IM（FluffyChat Flutter Web）以 iframe 嵌入 http://127.0.0.1:{port}/im/，
+ * 发起/接听通话需要 getUserMedia（麦克风/摄像头）。打包模式下主窗口运行在
+ * file:// 源上，与 iframe 跨源；Chromium 的 Permissions Policy 拦截由 renderer
+ * 侧（ImView.tsx 的 iframe allow 属性）解决，这里在 session 层显式放行媒体
+ * 权限请求作为兜底，防止默认行为（或未来 Electron 版本变更）拒绝媒体权限，
+ * 导致 IM 通话报"哎呀，出了点差错…"或来电无法接听。
+ */
+function applyMediaPermissions() {
+  const ses = session.defaultSession;
+  if (!ses) return;
+  // 与此前"未设置 handler 时默认全部放行"的行为保持一致，仅显式化，
+  // 避免收窄权限造成其它功能回归。
+  ses.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(true);
+  });
+  ses.setPermissionCheckHandler((_wc, _permission, _origin) => true);
+  console.log("[desktop] media permission handlers installed");
+}
+
 function parseElectronProxyList(proxyList) {
   const first = String(proxyList || "")
     .split(";")
@@ -6055,6 +6077,31 @@ wrapIpcBestEffortHandler("app-ready", (event) => {
 // ── App 生命周期 ──
 app.whenReady().then(async () => {
   try {
+    // 0. 注册 jarvis:// 与 im.bitjarvis:// 协议，让浏览器/其他 app 能唤起 BitJarvis 桌面端。
+    //    Windows 通过 electron-builder 写注册表，macOS 自动写 Info.plist。
+    if (app.isPackaged) {
+      app.setAsDefaultProtocolClient('jarvis');
+      app.setAsDefaultProtocolClient('im.bitjarvis');
+    }
+    function routeImUrl(u) {
+      let mx = (u || '').trim();
+      if (mx.startsWith('jarvis://im/')) {
+        mx = mx.replace(/^jarvis:\/\/im\//, '');
+      } else if (mx.startsWith('im.bitjarvis://chat/')) {
+        mx = mx.replace(/^im\.bitjarvis:\/\/chat\//, '');
+      } else {
+        return;
+      }
+      if (!mx) return;
+      BrowserWindow.getAllWindows().forEach(w =>
+        w.webContents.send('im/open', { mxid: mx }));
+    }
+    app.on('second-instance', (_, argv) => {
+      const u = argv.find(a => a.startsWith('jarvis://') || a.startsWith('im.bitjarvis://'));
+      if (u) routeImUrl(u);
+    });
+    app.on('open-url', e => { e.preventDefault(); routeImUrl(e.data); }); // macOS
+
     // 0. `--repair-artifacts` 命令行旗标：跟托盘
     // "修复组件…"走同一份清理实现，但不需要确认对话框——能敲这个旗标的人
     // 知道自己在干什么。必须在 startServer()/resolvePackagedArtifactBoot()
@@ -6069,6 +6116,9 @@ app.whenReady().then(async () => {
     }
 
     _startHiddenAtLogin = getAutoLaunchStatus({ app }).openedAtLogin === true && isSetupComplete();
+
+    // 0.5 在任何窗口创建之前安装媒体权限处理器（IM 通话 getUserMedia 所需，见函数注释）。
+    applyMediaPermissions();
 
     // 1. 立刻显示启动窗口，同时异步获取 login shell PATH。登录项后台启动时跳过 splash。
     if (!_startHiddenAtLogin) {

@@ -65,6 +65,16 @@ export class GatewayClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
+  /** OpenAI 兼容端点（provider 配置的 base_url 用它）。 */
+  get chatBaseUrl(): string {
+    return `${this.baseUrl}/v1`;
+  }
+
+  /** 当前已注册身份（未注册返回 null，不触发网络请求）。 */
+  get identity(): GatewayIdentity | null {
+    return loadGatewayIdentity(this.jarvisHome);
+  }
+
   /** 有 token 直接用；没有则注册（install_id 幂等，重复注册换发新 token）。 */
   async ensureDevice(): Promise<GatewayIdentity> {
     const cached = loadGatewayIdentity(this.jarvisHome);
@@ -218,11 +228,8 @@ export class GatewayClient {
   }
 
   private assertConfigured() {
-    if (!this.appSecret) {
-      throw new AppError("GATEWAY_UNAVAILABLE", {
-        message: "网关未配置 appSecret（构造参数或 JARVIS_GATEWAY_APP_SECRET 环境变量）",
-      });
-    }
+    // D 路线：appSecret 为空 = 桌面端无签名兼容模式（网关侧允许并记 compat 指标）。
+    // 有 secret 就签名（移动端/CLI 可配），绝不因缺 secret 阻断请求。
   }
 
   /** 签名 + 发送。只有注册不需要设备 token，其余都走 authedFetch。 */
@@ -233,10 +240,9 @@ export class GatewayClient {
     extraHeaders: Record<string, string>,
     signal?: AbortSignal,
   ): Promise<Response> {
-    this.assertConfigured();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...this.sign(bodyString),
+      ...(this.appSecret ? this.sign(bodyString) : {}),
       ...extraHeaders,
     };
     if (this.line) headers["X-Line"] = this.line;

@@ -27,9 +27,11 @@ interface WorkspaceStepProps {
   verificationPlan: OnboardingVerificationPlan;
   goToStep: (index: number) => void;
   showError: (msg: string) => void;
+  /** 返回按钮目标步（跳过了模型步时为 2，默认 3） */
+  backStep?: number;
 }
 
-export function WorkspaceStep({ preview, jarvisFetch, agentId, verificationPlan, goToStep, showError }: WorkspaceStepProps) {
+export function WorkspaceStep({ preview, jarvisFetch, agentId, verificationPlan, goToStep, showError, backStep = 3 }: WorkspaceStepProps) {
   const previewPath = useMemo(() => `~/Desktop/${DEFAULT_WORKSPACE_DIRNAME}`, []);
   const [defaultPath, setDefaultPath] = useState(preview ? previewPath : '');
   const [selectedPath, setSelectedPath] = useState('');
@@ -106,7 +108,7 @@ export function WorkspaceStep({ preview, jarvisFetch, agentId, verificationPlan,
       </div>
 
       <div className="onboarding-actions">
-        <button className="ob-btn ob-btn-secondary" onClick={() => goToStep(3)}>
+        <button className="ob-btn ob-btn-secondary" onClick={() => goToStep(backStep)}>
           {t('onboarding.workspace.back')}
         </button>
         <button

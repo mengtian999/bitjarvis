@@ -2504,7 +2504,7 @@
     },
     "provider": {
       "title": "AI 공급업체 선택",
-      "subtitle": "Jarvis를 시작하기 위해 AI 모델 공급업체를 선택해 주세요.\n\n사전 설정되어 있어 바로 사용할 수 있고 완전히 무료인 내장된 Jarvis(자비스)를 추천합니다.\n\n연결 테스트를 클릭하여 해당 지역에서 사용 가능한지 확인해 주세요.\n\n드롭다운을 클릭하여 로컬 모델이나 자주 사용하는 공급업체를 선택하고 API Key를 입력할 수도 있습니다.",
+      "subtitle": "Jarvis를 시작하기 위해 AI 모델 공급업체를 선택해 주세요.\n\n게이트웨이 기본 모델 티어인 “Jarvis Cloud”를 추천합니다. 바로 사용할 수 있고 완전히 무료예요.\n\n연결은 자동으로 동기화돼요. 드롭다운을 클릭하여 로컬 모델이나 자주 사용하는 공급업체를 선택하고 API Key를 입력할 수도 있습니다.",
       "selectPlaceholder": "Provider 선택",
       "searchPlaceholder": "Provider 검색...",
       "empty": "Provider를 찾지 못했어요",
@@ -3162,6 +3162,7 @@
     "stopTaskDone": "태스크 {taskId}를 종료했어요",
     "detailShow": "자세히",
     "detailHide": "접기",
+    "turnStallWarning": "응답 생성 중 오랫동안 출력이 없습니다. 모델이 아직 응답 중입니다. 계속 응답이 없으면 중지 후 다시 시도할 수 있어요.",
     "turnInterrupted": "작업이 중단됐어요: 이번 턴을 끝내지 못했습니다. 다시 시도하거나 계속 진행하도록 지시할 수 있어요.",
     "retryTurn": "다시 시도",
     "continueTask": "작업 계속",

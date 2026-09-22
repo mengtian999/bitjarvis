@@ -323,6 +323,7 @@ export function toAgentActivityWsMessage(event: any, sessionPath: any) {
 
 export const DEFAULT_DISCONNECT_ABORT_GRACE_MS = 5 * 60_000;
 export const DEFAULT_TURN_STALL_ABORT_MS = 20 * 60_000;
+export const DEFAULT_TURN_STALL_WARN_GRACE_MS = 2 * 60_000;
 
 export function resolveDisconnectAbortGraceMs(value = process.env.JARVIS_WS_DISCONNECT_ABORT_GRACE_MS) {
   if (value === undefined || value === null || value === "") return DEFAULT_DISCONNECT_ABORT_GRACE_MS;
@@ -333,7 +334,7 @@ export function resolveDisconnectAbortGraceMs(value = process.env.JARVIS_WS_DISC
 
 export const DEFAULT_DISCONNECT_ABORT_ENABLED = false;
 
-export function resolveDisconnectAbortEnabled(value = process.env.JARVIS_WS_DISCONNECT_ABORT_ENABLED) {
+export function resolveDisconnectAbortEnabled(value: string | boolean | undefined = process.env.JARVIS_WS_DISCONNECT_ABORT_ENABLED) {
   if (value === undefined || value === null || value === "") return DEFAULT_DISCONNECT_ABORT_ENABLED;
   if (typeof value === "boolean") return value;
   return value === "1" || String(value).toLowerCase() === "true";
@@ -346,6 +347,13 @@ export function resolveTurnStallAbortMs(value = process.env.JARVIS_TURN_STALL_AB
   return Math.floor(parsed);
 }
 
+export function resolveTurnStallWarnGraceMs(value = process.env.JARVIS_TURN_STALL_WARN_GRACE_MS) {
+  if (value === undefined || value === null || value === "") return DEFAULT_TURN_STALL_WARN_GRACE_MS;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_TURN_STALL_WARN_GRACE_MS;
+  return Math.floor(parsed);
+}
+
 export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any) {
   const restRoute = new Hono();
   const wsRoute = new Hono();
@@ -355,6 +363,7 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
   const disconnectAbortEnabled = resolveDisconnectAbortEnabled();
   const disconnectAbortGraceMs = resolveDisconnectAbortGraceMs();
   const turnStallAbortMs = resolveTurnStallAbortMs();
+  const turnStallWarnGraceMs = resolveTurnStallWarnGraceMs();
   const sessionState = new Map(); // sessionId || legacy sessionPath -> shared stream state
 
   function cancelDisconnectAbort() {
@@ -494,6 +503,7 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
         pendingTurnCompletionNotification: null,
         pendingPhaseTextByIndex: new Map(),
         turnStallTimer: null,
+        turnStallWarned: false,
         lastStreamActivityAt: 0,
         lastAccessed: Date.now(),
         ...createSessionStreamState(),
@@ -727,6 +737,7 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
     ss.activeToolCount = 0;
     ss.titleRequested = false;
     ss.titlePreview = "";
+    ss.turnStallWarned = false;
     const statusStreamId = beginSessionStream(ss, streamId);
     scheduleTurnStallWatchdog(sessionPath, ss);
     return statusStreamId;
@@ -955,15 +966,20 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
     ss.turnStallTimer = null;
   }
 
+  function turnStallWindow(ss) {
+    return ss.turnStallWarned ? turnStallWarnGraceMs : turnStallAbortMs;
+  }
+
   function scheduleTurnStallWatchdog(sessionPath, ss) {
     if (!sessionPath || !ss || turnStallAbortMs === 0) return;
     clearTurnStallWatchdog(ss);
     const lastActivity = ss.lastStreamActivityAt || Date.now();
-    const delay = Math.max(0, turnStallAbortMs - (Date.now() - lastActivity));
+    const windowMs = turnStallWindow(ss);
+    const delay = Math.max(0, windowMs - (Date.now() - lastActivity));
     ss.turnStallTimer = setTimeout(() => {
       ss.turnStallTimer = null;
       const idleFor = Date.now() - (ss.lastStreamActivityAt || 0);
-      if (idleFor < turnStallAbortMs) {
+      if (idleFor < turnStallWindow(ss)) {
         scheduleTurnStallWatchdog(sessionPath, ss);
         return;
       }
@@ -973,6 +989,21 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
       // 还在干活的 turn 直接 abort。工具执行层自身的单工具超时另行处理。
       if ((ss.activeToolCount || 0) > 0) {
         ss.lastStreamActivityAt = Date.now();
+        scheduleTurnStallWatchdog(sessionPath, ss);
+        return;
+      }
+      // 首次停滞先广播 warning 并给一个宽限窗口，不直接杀：长 LLM 思考期间也可能
+      // 20 分钟无 delta，直接 abort 会误杀仍在生成的任务。宽限窗口内恢复活动即自愈，
+      // 宽限结束仍无活动才判为流已死，执行 abort。
+      if (!ss.turnStallWarned) {
+        ss.turnStallWarned = true;
+        ss.lastStreamActivityAt = Date.now();
+        broadcast({
+          type: "turn_stall_warning",
+          sessionPath,
+          sessionId: sessionIdForPath(sessionPath),
+          detail: "turn_stall_timeout",
+        });
         scheduleTurnStallWatchdog(sessionPath, ss);
         return;
       }
@@ -1674,7 +1705,9 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
       }
       if (event.message?.stopReason === "error") {
         ss.hasError = true;
-        broadcast({ type: "error", message: event.message.errorMessage || "Unknown error", sessionPath });
+        // code=turn_interrupted 对齐 desktop TURN_INTERRUPTED_ERROR_CODE：让模型流
+        // 错误也走「重试 / 继续任务」中断提示，而不是只有「关闭」的普通错误条。
+        broadcast({ type: "error", code: "turn_interrupted", message: event.message.errorMessage || "Unknown error", sessionPath });
       }
       if (event.message?.role === "assistant" && typeof event.message.stopReason === "string") {
         ss.assistantStopReason = normalizeStopReason(event.message.stopReason);
@@ -1704,7 +1737,7 @@ export function createChatRoute(engine: any, hub: any, { upgradeWebSocket }: any
         || thinkingOnlyVisibleResult;
       if (emptyReply && !ss.hasError && !turnWasAborted) {
         ss.hasError = true;
-        broadcast({ type: "error", message: t("error.modelNoResponse"), sessionPath });
+        broadcast({ type: "error", code: "turn_interrupted", message: t("error.modelNoResponse"), sessionPath });
       }
       const turnWasSuccessful = !turnWasAborted && !ss.hasError && (ss.hasOutput || ss.hasToolCall || ss.hasThinking);
 

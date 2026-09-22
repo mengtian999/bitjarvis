@@ -964,6 +964,7 @@
     height: 6px;
     border-radius: 50%;
     background: #c08080;
+    flex-shrink: 0;
     animation: jarvis-pulse 1.2s ease-in-out infinite;
 }
 
@@ -1013,6 +1014,8 @@
 .slash-error-text {
     flex: 1;
     min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .slash-error-toggle {
@@ -1022,6 +1025,7 @@
     background: none;
     color: inherit;
     font-size: var(--fs-caption);
+    white-space: nowrap;
     opacity: 0.72;
     cursor: pointer;
     text-decoration: underline;
@@ -1056,10 +1060,14 @@
     opacity: 0.72;
 }
 
-/* 中断提示条的动作区（重试 / 继续任务 / 关闭），左缘跟正文对齐 */
+/* 中断提示条的动作区（重试 / 继续任务 / 关闭），左缘跟正文对齐。
+   作为 column flex 的子项，必须 0 收缩并把可换行交给 wrap，否则长正文会把
+   按钮区挤到不可见（这正是「只有错误文本、看不到按钮」的根因）。 */
 .slash-error-actions {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
     gap: var(--space-12);
     padding-left: calc(var(--space-6) + var(--space-8));
 }

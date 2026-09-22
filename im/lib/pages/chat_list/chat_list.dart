@@ -58,12 +58,14 @@ class ChatList extends StatefulWidget {
   final String? activeChat;
   final String? activeSpace;
   final bool displayNavigationRail;
+  final List<ShareItem>? shareItems;
 
   const ChatList({
     super.key,
     required this.activeChat,
     this.activeSpace,
     this.displayNavigationRail = false,
+    this.shareItems,
   });
 
   @override
@@ -82,6 +84,30 @@ class ChatListController extends State<ChatList>
   String? _activeSpaceId;
 
   String? get activeSpaceId => _activeSpaceId;
+
+  List<ShareItem>? _lastHandledShareItems;
+
+  void _handleShareItems() {
+    final items = widget.shareItems;
+    if (items == null || items.isEmpty || items == _lastHandledShareItems) return;
+    _lastHandledShareItems = items;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showScaffoldDialog(
+        context: context,
+        builder: (context) => ShareScaffoldDialog(items: items),
+      );
+    });
+  }
+
+  @override
+  void didUpdateWidget(ChatList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.shareItems != oldWidget.shareItems) {
+      _handleShareItems();
+    }
+  }
 
   Future<void> setActiveSpace(String spaceId) async {
     await Matrix.of(context).client.getRoomById(spaceId)!.postLoad();
@@ -377,6 +403,7 @@ class ChatListController extends State<ChatList>
   @override
   void initState() {
     _initReceiveSharingIntent();
+    _handleShareItems();
     _activeSpaceId = widget.activeSpace;
 
     scrollController.addListener(_onScroll);

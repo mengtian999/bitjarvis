@@ -231,6 +231,10 @@
       "category": "public.app-category.productivity",
       "icon": "desktop/src/icon.icns",
       "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
+      "protocols": [{
+        "name": "Jarvis",
+        "schemes": ["jarvis", "im.bitjarvis"]
+      }],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "desktop/entitlements.mac.plist",
@@ -271,6 +275,10 @@
       "executableName": "BitJarvis",
       "artifactName": "${productName}-${version}-Windows-${arch}.${ext}",
       "requestedExecutionLevel": "asInvoker",
+      "protocols": [{
+        "name": "Jarvis",
+        "schemes": ["jarvis", "im.bitjarvis"]
+      }],
       "extraResources": [
         {
           "from": "vendor/mingit",

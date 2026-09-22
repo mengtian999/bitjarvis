@@ -2,8 +2,10 @@ import { sessionScopedKey } from './session-slice';
 import type { PresentedError } from '../errors/error-presenter';
 
 /**
- * 系统性中止（turn_stall_timeout / 断线宽限 abort 等）写入 inline error 时用的
- * code。InputStatusBars 看到这个 code 会渲染「重试 / 继续任务」按钮。
+ * turn 未完成时写入 inline error 用的 code，来源有两类：
+ *   1. 系统性中止（turn_stall_timeout / 断线宽限 abort / 关机 abort_all 等）；
+ *   2. 模型流错误导致本轮失败（stopReason=error / 空回复）。
+ * InputStatusBars 看到这个 code 会渲染「重试 / 继续任务」按钮。
  */
 export const TURN_INTERRUPTED_ERROR_CODE = 'turn_interrupted';
 

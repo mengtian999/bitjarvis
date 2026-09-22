@@ -139,6 +139,9 @@ abstract class AppRoutes {
                 mainView: ChatList(
                   activeChat: state.pathParameters['roomid'],
                   activeSpace: state.uri.queryParameters['spaceId'],
+                  shareItems: state.extra is List<ShareItem>
+                      ? state.extra as List<ShareItem>
+                      : null,
                   displayNavigationRail:
                       state.path?.startsWith('/rooms/settings') != true,
                 ),
@@ -158,6 +161,9 @@ abstract class AppRoutes {
                 : ChatList(
                     activeChat: state.pathParameters['roomid'],
                     activeSpace: state.uri.queryParameters['spaceId'],
+                    shareItems: state.extra is List<ShareItem>
+                        ? state.extra as List<ShareItem>
+                        : null,
                   ),
           ),
           routes: [

@@ -50,19 +50,33 @@ declare function t(key: string, vars?: Record<string, string>): any;
  * （用户本来就知道），其余视为「任务被系统中断」，写一条持久 inline error，
  * 由 InputStatusBars 渲染成带「重试 / 继续任务」按钮的中断条。
  */
+function turnInterruptedText(): string {
+  const globalT = typeof window !== 'undefined' ? (window as any).t : null;
+  return typeof globalT === 'function'
+    ? String(globalT('error.turnInterrupted'))
+    : '任务已中断：助手本轮没有完成，可以重试或让它继续。';
+}
+
+function turnStallWarningText(): string {
+  const globalT = typeof window !== 'undefined' ? (window as any).t : null;
+  return typeof globalT === 'function'
+    ? String(globalT('error.turnStallWarning'))
+    : '回复生成中长时间没有输出，仍在等待模型响应；若持续无响应可手动停止后重试。';
+}
+
+/** 写入一条「turn 未完成、可重试 / 继续」的中断提示，由 InputStatusBars 渲染。 */
+function writeTurnInterruptedNotice(sessionPath: string, detail: string | null): void {
+  useStore.getState().setInlineError(sessionPath, {
+    text: turnInterruptedText(),
+    detail,
+    code: TURN_INTERRUPTED_ERROR_CODE,
+  }, 0);
+}
+
 function applyTurnInterruptedNotice(sessionPath: string, msg: any): void {
   if (msg?.aborted !== true) return;
   if (isUserAbortRecent(sessionPath, nonEmptyString(msg.streamId))) return;
-  const reason = nonEmptyString(msg.reason);
-  const globalT = typeof window !== 'undefined' ? (window as any).t : null;
-  const text = typeof globalT === 'function'
-    ? String(globalT('error.turnInterrupted'))
-    : '任务已中断：助手本轮没有完成，可以重试或让它继续。';
-  useStore.getState().setInlineError(sessionPath, {
-    text,
-    detail: reason,
-    code: TURN_INTERRUPTED_ERROR_CODE,
-  }, 0);
+  writeTurnInterruptedNotice(sessionPath, nonEmptyString(msg.reason));
 }
 
 let requestContextUsage: (sessionPath: string) => void = () => {};
@@ -1027,11 +1041,11 @@ export function handleServerMessage(msg: any): void {
 
     case 'error': {
       const { sessionPath: sp } = sessionIdentityFromMessage(msg);
-      const presented = presentError(errorWithCode(
-        String(msg.message ?? ''),
-        typeof msg.code === 'string' ? msg.code : null,
-      ));
       if (!sp) {
+        const presented = presentError(errorWithCode(
+          String(msg.message ?? ''),
+          typeof msg.code === 'string' ? msg.code : null,
+        ));
         if (msg.code === 'session_identity_unresolved' || msg.code === 'session_identity_mismatch') {
           useStore.getState().addToast(presented.text, 'error', 6000, { errorCode: msg.code });
         } else {
@@ -1039,6 +1053,16 @@ export function handleServerMessage(msg: any): void {
         }
         break;
       }
+      // turn 级失败（模型流错误 / 空回复）：服务端带 code=turn_interrupted，
+      // 复用中断提示，让 InputStatusBars 渲染「重试 / 继续任务」按钮。
+      if (msg.code === TURN_INTERRUPTED_ERROR_CODE) {
+        writeTurnInterruptedNotice(sp, nonEmptyString(msg.message));
+        break;
+      }
+      const presented = presentError(errorWithCode(
+        String(msg.message ?? ''),
+        typeof msg.code === 'string' ? msg.code : null,
+      ));
       // 持久展示（ttl=0）：turn 级失败不该 5 秒就消失，用户可手动关闭，
       // 或在下一轮 turn 开始时自动清除。
       useStore.getState().setInlineError(sp, presented, 0);
@@ -1110,6 +1134,19 @@ export function handleServerMessage(msg: any): void {
       const streamId = typeof msg.streamId === 'string' && msg.streamId.trim() ? msg.streamId.trim() : null;
       const applied = applyStreamingStatus(false, sp, { streamId }, { force: !streamId });
       if (sp && applied) streamBufferManager.finishTurn(sp, sid);
+      break;
+    }
+
+    case 'turn_stall_warning': {
+      // 停滞看门狗在 abort 前广播的预警：turn 仍可能活着（长思考），只写一条带
+      // TTL 的非中断提示，不渲染「重试 / 继续任务」按钮，避免误导用户。
+      const sp = msg.sessionPath || null;
+      if (!sp) { console.warn('[ws] event missing sessionPath:', msg.type); break; }
+      useStore.getState().setInlineError(sp, {
+        text: turnStallWarningText(),
+        detail: nonEmptyString(msg.detail),
+        code: null,
+      }, 30_000);
       break;
     }
 

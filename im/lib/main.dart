@@ -23,8 +23,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_html/universal_html.dart' as web;
 
 import 'config/setting_keys.dart';
+import 'utils/agent_bridge.dart';
 import 'utils/background_push.dart';
 import 'widgets/fluffy_chat_app.dart';
+import 'widgets/share_scaffold_dialog.dart';
 
 ReceivePort? mainIsolateReceivePort;
 
@@ -64,6 +66,28 @@ void main(List<String> args) async {
     final appLinks = AppLinks();
     appLinks.getInitialLink().then(_handleDeepLink);
     appLinks.uriLinkStream.listen(_handleDeepLink);
+  }
+
+  // [T-im-deeplink] Embedded (Agent host) deep link & share handling:
+  if (!kIsWeb && await AgentBridge.isEmbedded()) {
+    AgentBridge.startDeepLinkReceiver();
+    AgentBridge.onDeepLink.listen((uri) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FluffyChatApp.router.go('/rooms/newprivatechat#$uri');
+      });
+    });
+    AgentBridge.onShare.listen((content) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final nav = FluffyChatApp.router.routerDelegate.navigatorKey.currentState;
+        while (nav?.canPop() == true) {
+          nav?.pop();
+        }
+        FluffyChatApp.router.go(
+          '/rooms',
+          extra: [TextShareItem(content)],
+        );
+      });
+    });
   }
 
   final store = await AppSettings.init();

@@ -23,6 +23,7 @@ import { createModelsRoute } from "../routes/models.ts";
 import { createConfigRoute } from "../routes/config.ts";
 import { createUploadRoute } from "../routes/upload.ts";
 import { createProvidersRoute } from "../routes/providers.ts";
+import { createGatewayRoute } from "../routes/gateway.ts";
 import { createAgentsRoute } from "../routes/agents.ts";
 import { createDevicesRoute } from "../routes/devices.ts";
 import { createSkillsRoute } from "../routes/skills.ts";
@@ -105,6 +106,7 @@ export function registerOpenRoutes(app: Hono, ctx: CompositionContext): void {
   app.route("/api", createConfigRoute(engine));
   app.route("/api", createUploadRoute(engine));
   app.route("/api", createProvidersRoute(engine));
+  app.route("/api", createGatewayRoute(engine));
   app.route("/api", createAgentsRoute(engine));
   app.route("/api", createDevicesRoute(engine));
   app.route("/api", createStudioWorkspacesRoute(engine));

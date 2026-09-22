@@ -213,6 +213,15 @@ export const ImView = memo(function ImView() {
     return () => observer.disconnect();
   }, []);
 
+  // 监听主进程发来的 jarvis://im/{mxid} 深链，转发给 iframe 并切到 IM 视图。
+  // 主进程通过 ipcMain 'im/open' 发送，preload 转发到 window.jarvis.onImOpen。
+  useEffect(() => {
+    const unsub = window.jarvis?.onImOpen?.((data: { mxid: string }) => {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'im/open', mxid: data.mxid }, '*');
+    });
+    return () => unsub?.();
+  }, []);
+
   const host = window.location.hostname || '127.0.0.1';
   const port = serverPort || (window.location.port && window.location.port !== '5173' ? window.location.port : '44848');
 

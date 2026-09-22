@@ -9,15 +9,17 @@ import '@testing-library/jest-dom/vitest';
 
 const mocks = vi.hoisted(() => ({
   testConnection: vi.fn(),
+  testGateway: vi.fn(),
   saveProvider: vi.fn(),
-  saveJarvisProviderAndModels: vi.fn(),
+  applyGatewayDefaultModels: vi.fn(),
 }));
 
 vi.mock('../../onboarding-actions', () => ({
   describeOnboardingError: (_error: unknown, fallback: string) => fallback,
   testConnection: (...args: unknown[]) => mocks.testConnection(...args),
+  testGateway: (...args: unknown[]) => mocks.testGateway(...args),
   saveProvider: (...args: unknown[]) => mocks.saveProvider(...args),
-  saveJarvisProviderAndModels: (...args: unknown[]) => mocks.saveJarvisProviderAndModels(...args),
+  applyGatewayDefaultModels: (...args: unknown[]) => mocks.applyGatewayDefaultModels(...args),
 }));
 
 import { ProviderStep } from '../ProviderStep';
@@ -28,7 +30,9 @@ describe('ProviderStep', () => {
     vi.stubGlobal('t', (key: string) => key);
     vi.stubGlobal('i18n', { locale: 'en' });
     mocks.testConnection.mockResolvedValue({ ok: true, text: 'ok' });
+    mocks.testGateway.mockResolvedValue({ ok: true, text: 'ok' });
     mocks.saveProvider.mockResolvedValue(undefined);
+    mocks.applyGatewayDefaultModels.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -55,7 +59,7 @@ describe('ProviderStep', () => {
 
     expect(screen.queryByText('OpenRouter')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.provider.selectPlaceholder' }));
+    fireEvent.click(screen.getByRole('button', { name: '贾维斯(通用)' }));
 
     expect(screen.getByRole('button', { name: 'Kimi Coding Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'OpenRouter' })).toBeInTheDocument();
@@ -112,16 +116,20 @@ describe('ProviderStep', () => {
     );
 
     // Jarvis should be pre-selected by default
-    expect(screen.getByRole('button', { name: 'Jarvis(贾维斯)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '贾维斯(通用)' })).toBeInTheDocument();
     // No eye toggle button (hidden for Jarvis)
     expect(screen.queryByRole('button', { name: '' })).not.toBeInTheDocument();
 
-    // Next button should be enabled without manual test (auto-skips)
+    // Next auto-unlocks after the background gateway sync succeeds (no manual test click)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'onboarding.provider.next' })).toBeEnabled();
+    });
+
     const nextBtn = screen.getByRole('button', { name: 'onboarding.provider.next' });
     fireEvent.click(nextBtn);
 
     await waitFor(() => {
-      expect(mocks.saveJarvisProviderAndModels).toHaveBeenCalled();
+      expect(mocks.applyGatewayDefaultModels).toHaveBeenCalled();
     });
     expect(onJarvisSelected).toHaveBeenCalled();
     expect(goToStep).toHaveBeenCalledWith(4);

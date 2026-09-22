@@ -2504,7 +2504,7 @@
     },
     "provider": {
       "title": "Select AI Provider",
-      "subtitle": "Select an AI model provider to launch your Jarvis.\n\nWe recommend using the built-in Jarvis, which is pre-configured, ready to use out of the box, and completely free.\n\nPlease click Test Connection to ensure it is available in your region.\n\nYou can also click the dropdown to select a local model or your preferred provider and enter your API Key.",
+      "subtitle": "Select an AI model provider to launch your Jarvis.\n\nWe recommend Jarvis Cloud, the gateway's default model tier — ready to use out of the box and completely free.\n\nIt syncs automatically; you can also open the dropdown to pick a local model or your preferred provider and enter your API Key.",
       "selectPlaceholder": "Choose provider",
       "searchPlaceholder": "Search providers...",
       "empty": "No providers found",
@@ -3168,6 +3168,7 @@
     "regionUnavailable": "This area is temporarily unavailable",
     "detailShow": "Details",
     "detailHide": "Hide",
+    "turnStallWarning": "The reply has been quiet for a while. The model is still responding; you can stop and retry if it stays unresponsive.",
     "turnInterrupted": "Task interrupted: the assistant did not finish this turn. You can retry or ask it to continue.",
     "retryTurn": "Retry",
     "continueTask": "Continue task",

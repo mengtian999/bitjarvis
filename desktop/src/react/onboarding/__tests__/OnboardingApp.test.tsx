@@ -212,13 +212,12 @@ describe('OnboardingApp locale switching', () => {
     expect(await screen.findByRole('heading', { name: 'onboarding.provider.title' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'onboarding.provider.next' }));
-    expect(await screen.findByRole('heading', { name: 'onboarding.model.title' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.model.next' }));
+    // Jarvis 默认走网关：跳过模型步，直接进工作台步
     expect(await screen.findByRole('heading', { name: 'onboarding.workspace.title' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'onboarding.theme.title' })).not.toBeInTheDocument();
     expect(container.querySelectorAll('.onboarding-dot')[4]).toHaveClass('active');
 
+    // preview 下可经 back 回看模型步（backStep 默认 3）
     fireEvent.click(screen.getByRole('button', { name: 'onboarding.workspace.back' }));
     expect(await screen.findByRole('heading', { name: 'onboarding.model.title' })).toBeInTheDocument();
 

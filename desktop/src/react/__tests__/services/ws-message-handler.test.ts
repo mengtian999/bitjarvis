@@ -1779,4 +1779,44 @@ describe('ws-message-handler · 系统性中断提示', () => {
 
     expect(inlineErrorFor('/session/a.jsonl')).toBeNull();
   });
+
+  it('error 事件带 code=turn_interrupted（模型流错误）写入带重试/继续的中断提示', () => {
+    handleServerMessage({
+      type: 'error',
+      code: TURN_INTERRUPTED_ERROR_CODE,
+      message: 'connection reset by peer',
+      sessionPath: '/session/a.jsonl',
+    });
+
+    const entry = inlineErrorFor('/session/a.jsonl');
+    expect(entry?.code).toBe(TURN_INTERRUPTED_ERROR_CODE);
+    expect(entry?.detail).toBe('connection reset by peer');
+  });
+
+  it('error 事件无 code 仍走普通错误条（不产生中断提示）', () => {
+    handleServerMessage({
+      type: 'error',
+      message: 'session is busy right now',
+      sessionPath: '/session/a.jsonl',
+    });
+
+    const entry = inlineErrorFor('/session/a.jsonl');
+    expect(entry?.code).toBeNull();
+  });
+
+  it('turn_stall_warning 写入带 TTL 的非中断提示（不渲染重试/继续）', () => {
+    handleServerMessage({
+      type: 'turn_stall_warning',
+      sessionPath: '/session/a.jsonl',
+      detail: 'turn_stall_timeout',
+    });
+
+    const entry = inlineErrorFor('/session/a.jsonl');
+    expect(entry?.code).toBeNull();
+    expect(entry?.detail).toBe('turn_stall_timeout');
+    expect(typeof entry?.text).toBe('string');
+
+    // 清理 TTL 定时器。
+    useStore.getState().clearInlineError('/session/a.jsonl');
+  });
 });

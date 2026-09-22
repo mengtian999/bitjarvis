@@ -84,6 +84,7 @@ export function OnboardingApp({ preview, skipToTutorial }: OnboardingAppProps) {
     setProviderUrl(url);
     setProviderApi(api);
     setApiKey(key);
+    setSkippedModelStep(false);
   }, []);
 
   const onJarvisSelected = useCallback(() => {
@@ -155,7 +156,7 @@ export function OnboardingApp({ preview, skipToTutorial }: OnboardingAppProps) {
       {activeStep === 1 && <NameStep key={`step-1-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} goToStep={goToStep} showError={showError} />}
       {activeStep === 2 && <ProviderStep key={`step-2-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} goToStep={goToStep} showError={showError} onProviderReady={onProviderReady} onJarvisSelected={onJarvisSelected} />}
       {activeStep === 3 && <ModelStep key={`step-3-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} providerName={providerName} providerUrl={providerUrl} providerApi={providerApi} apiKey={apiKey} goToStep={goToStep} showError={showError} />}
-      {activeStep === 4 && <WorkspaceStep key={`step-4-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} goToStep={goToStep} showError={showError} />}
+      {activeStep === 4 && <WorkspaceStep key={`step-4-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} goToStep={goToStep} showError={showError} backStep={skippedModelStep ? 2 : 3} />}
       {activeStep === 5 && <TutorialStep key={`step-5-${stepKey}`} preview={preview} jarvisFetch={jarvisFetch} agentId={agentId} verificationPlan={verificationPlan} showError={showError} />}
 
       {visibleError && (
