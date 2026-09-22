@@ -40,6 +40,7 @@ import {
   providerPluginToCatalogDefinition,
   splitLocalProviderConfig,
 } from "./local-provider-plugin-store.ts";
+import { loadGatewayIdentity } from "./gateway/gateway-store.ts";
 
 const _defaultModels = JSON.parse(
   fs.readFileSync(fromRoot("lib", "default-models.json"), "utf-8"),
@@ -397,7 +398,6 @@ import { mimoTokenPlanPlugin } from "../lib/providers/mimo-token-plan.ts";
 import { systemSpeechPlugin } from "../lib/providers/system-speech.ts";
 import { microsoftSpeechPlugin } from "../lib/providers/microsoft-speech.ts";
 import { sherpaSpeechPlugin } from "../lib/providers/sherpa-speech.ts";
-import { jarvisPlugin } from "../lib/providers/jarvis.ts";
 // 国际
 import { groqPlugin } from "../lib/providers/groq.ts";
 import { togetherPlugin } from "../lib/providers/together.ts";
@@ -457,8 +457,6 @@ const BUILTIN_PLUGINS = [
   kimiCodingPlugin,
   volcegineCodingPlugin,
   zhipuCodingPlugin,
-  // Jarvis
-  jarvisPlugin,
 ];
 
 // ── Types (JSDoc) ─────────────────────────────────────────────────────────────
@@ -1450,6 +1448,7 @@ export class ProviderRegistry {
     const plugin = this._plugins.get(providerId);
     const hasCatalogEntry = Object.prototype.hasOwnProperty.call(userConfig, providerId);
     const hasLocalPlugin = isLocalProviderPlugin(plugin);
+    if (providerId === "jarvis-gateway" && !hasLocalPlugin) return;
     if (!hasCatalogEntry && !hasLocalPlugin) return;
     if (hasCatalogEntry) delete userConfig[providerId];
     if (hasLocalPlugin) {
@@ -1545,7 +1544,8 @@ export class ProviderRegistry {
     const uc = configId ? userConfig[configId] : null;
     const plugin = this._plugins.get(entry?.id || providerId);
     const authType = normalizeProviderAuthType(uc?.auth_type || entry?.authType || plugin?.authType);
-    if (!uc && authType !== "oauth") return null;
+    const isGateway = providerId === "jarvis-gateway" || entry?.id === "jarvis-gateway";
+    if (!uc && authType !== "oauth" && !isGateway) return null;
 
     let apiKey = uc?.api_key || "";
     let oauthBaseUrl = "";
@@ -1559,6 +1559,13 @@ export class ProviderRegistry {
         apiKey = oauth.token;
         oauthBaseUrl = oauth.resourceUrl;
         oauthAccountId = oauth.accountId;
+      } else if (isGateway) {
+        try {
+          const identity = loadGatewayIdentity(this._jarvisHome);
+          if (identity?.token) apiKey = identity.token;
+        } catch {
+          // ignore
+        }
       }
     }
 

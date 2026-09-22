@@ -1624,7 +1624,9 @@
       "addCustom": "新增自訂供應商",
       "noKey": "未設定",
       "remove": "移除",
-      "deleteConfirm": "確定刪除供應商 {name}？相關模型將一併清除。"
+      "deleteConfirm": "確定刪除供應商 {name}？相關模型將一併清除。",
+      "managedGatewayUrl": "Jarvis智慧路由（已加密傳輸）",
+      "managedGatewayKey": "●●●●●●●●（系統雲端自動託管）"
     },
     "usage": {
       "title": "用量統計",

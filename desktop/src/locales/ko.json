@@ -1624,7 +1624,9 @@
       "addCustom": "커스텀 Provider 추가",
       "noKey": "미설정",
       "remove": "제거",
-      "deleteConfirm": "Provider {name}을(를) 삭제할까요? 연결된 모델도 함께 제거돼요."
+      "deleteConfirm": "Provider {name}을(를) 삭제할까요? 연결된 모델도 함께 제거돼요.",
+      "managedGatewayUrl": "Jarvis 지능형 라우팅 (암호화 전송)",
+      "managedGatewayKey": "●●●●●●●● (시스템 클라우드 자동 관리)"
     },
     "usage": {
       "title": "사용량",

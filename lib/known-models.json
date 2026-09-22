@@ -12,14 +12,48 @@
       }
     }
   },
-  "jarvis": {
-    "agnes-3.0-flash": {
-      "name": "Jarvis(贾维斯)",
+  "jarvis-gateway": {
+    "auto": {
+      "name": "贾维斯（通用）",
       "context": 500000,
       "maxOutput": 65500,
       "image": true,
-      "video": true,
-      "audio": true,
+      "reasoning": true,
+      "toolUse": {
+        "supportsTools": true,
+        "dialect": "openai",
+        "toolResultFormat": "message"
+      }
+    },
+    "office": {
+      "name": "办公友好",
+      "context": 500000,
+      "maxOutput": 65500,
+      "image": true,
+      "reasoning": true,
+      "toolUse": {
+        "supportsTools": true,
+        "dialect": "openai",
+        "toolResultFormat": "message"
+      }
+    },
+    "coding": {
+      "name": "编程友好",
+      "context": 500000,
+      "maxOutput": 65500,
+      "image": true,
+      "reasoning": true,
+      "toolUse": {
+        "supportsTools": true,
+        "dialect": "openai",
+        "toolResultFormat": "message"
+      }
+    },
+    "role": {
+      "name": "角色友好",
+      "context": 500000,
+      "maxOutput": 65500,
+      "image": true,
       "reasoning": true,
       "toolUse": {
         "supportsTools": true,

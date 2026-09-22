@@ -49,7 +49,19 @@ export class MediaAdapterRegistry {
     this._adapterKeys.delete(canonicalId);
   }
 
-  get(adapterId: any) {
+  get(adapterId: any, type?: any) {
+    if (type) {
+      const exact = this._adapters.get(adapterId);
+      if (exact && Array.isArray(exact.types) && exact.types.includes(type)) {
+        return exact;
+      }
+      for (const adapter of this._adapters.values()) {
+        const matches = adapter.id === adapterId || adapter.aliases?.includes?.(adapterId);
+        if (matches && Array.isArray(adapter.types) && adapter.types.includes(type)) {
+          return adapter;
+        }
+      }
+    }
     return this._adapters.get(adapterId) || null;
   }
 

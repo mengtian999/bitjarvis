@@ -325,6 +325,7 @@ export function createConfigRoute(engine: any) {
         const rawProviders = engine.providerRegistry.getAllProvidersRaw?.() || {};
         for (const [name, data] of Object.entries(agentPartial.providers)) {
           if (data === null) {
+            if (name === "jarvis-gateway") continue;
             engine.providerRegistry.removeProvider(name);
           } else {
             const resolvedPatch = resolveSecretPatch({

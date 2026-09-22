@@ -20,7 +20,7 @@ export function ProviderDetail({ providerId, summary, providerConfig, isPresetSe
     <div className={styles['pv-detail-inner']}>
       <div className={styles['pv-detail-header']}>
         <h2 className={styles['pv-detail-title']}>{summary.display_name || providerId}</h2>
-        {summary.can_delete && !isPresetSetup && (
+        {summary.can_delete && providerId !== 'jarvis-gateway' && !isPresetSetup && (
           <ProviderDeleteButton providerId={providerId} onRefresh={onRefresh} />
         )}
       </div>

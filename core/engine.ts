@@ -2382,7 +2382,7 @@ export class JarvisEngine {
           : ""));
       await this.onProviderChanged();
       const chatRef = this.agent?.config?.models?.chat;
-      const hasChat = typeof chatRef === "object" && !!chatRef?.id && !!chatRef?.provider;
+      const hasChat = typeof chatRef === "object" && !!chatRef?.id && !!chatRef?.provider && chatRef.provider !== "jarvis";
       if (!hasChat) {
         try {
           await this._configCoord.setDefaultModel(result.defaultModelId || "auto", GATEWAY_PROVIDER_ID);
@@ -2484,30 +2484,68 @@ export class JarvisEngine {
       this._models.providerRegistry.seedDefaultApiKeys(log);
     }, log);
 
-    // 设置默认的媒体生成模型为 Jarvis(贾维斯) 的 Agnes 模型
+    // 设置默认的媒体生成模型为 Jarvis Cloud 网关模型，并清理旧版 jarvis 供应商残留
     runBestEffortStartupMigrationStep("media-default-model-seed", () => {
       const imageConfig = this._prefs.getImageGenerationConfig();
       const videoConfig = this._prefs.getVideoGenerationConfig();
       let changed = false;
       const nextPrefs = this._prefs._mutableCopy();
-      if (!imageConfig.defaultImageModel || imageConfig.defaultImageModel.provider !== "jarvis") {
+      if (!imageConfig.defaultImageModel || imageConfig.defaultImageModel.provider === "jarvis") {
         nextPrefs.imageGeneration = {
           ...imageConfig,
-          defaultImageModel: { provider: "jarvis", id: "agnes-image-2.5-flash" },
+          defaultImageModel: { provider: "jarvis-gateway", id: "standard" },
         };
         changed = true;
-        log(`[media-default] set default image model to jarvis/agnes-image-2.5-flash`);
+        log(`[media-default] set default image model to jarvis-gateway/standard`);
       }
-      if (!videoConfig.defaultVideoModel || videoConfig.defaultVideoModel.provider !== "jarvis") {
+      if (!videoConfig.defaultVideoModel || videoConfig.defaultVideoModel.provider === "jarvis") {
         nextPrefs.videoGeneration = {
           ...videoConfig,
-          defaultVideoModel: { provider: "jarvis", id: "agnes-video-2.5-flash" },
+          defaultVideoModel: { provider: "jarvis-gateway", id: "standard" },
         };
         changed = true;
-        log(`[media-default] set default video model to jarvis/agnes-video-2.5-flash`);
+        log(`[media-default] set default video model to jarvis-gateway/standard`);
       }
       if (changed) {
         this._prefs.savePreferences(nextPrefs);
+      }
+    }, log);
+
+    // 设置大工具模型和小工具模型为办公友好，辅助视觉模型开关打开并选择角色友好
+    runBestEffortStartupMigrationStep("gateway-default-tool-and-vision-models", () => {
+      const nextPrefs = this._prefs._mutableCopy();
+      let changed = false;
+
+      const curUtil = nextPrefs.utility_model;
+      if (!curUtil || (typeof curUtil === "object" && (curUtil.provider === "jarvis" || curUtil.provider === "jarvis-gateway"))) {
+        if (!curUtil || curUtil.provider !== "jarvis-gateway" || curUtil.id !== "office") {
+          nextPrefs.utility_model = { provider: "jarvis-gateway", id: "office" };
+          changed = true;
+        }
+      }
+      const curLarge = nextPrefs.utility_large_model;
+      if (!curLarge || (typeof curLarge === "object" && (curLarge.provider === "jarvis" || curLarge.provider === "jarvis-gateway"))) {
+        if (!curLarge || curLarge.provider !== "jarvis-gateway" || curLarge.id !== "office") {
+          nextPrefs.utility_large_model = { provider: "jarvis-gateway", id: "office" };
+          changed = true;
+        }
+      }
+
+      const curVision = nextPrefs.vision_model;
+      if (!curVision || (typeof curVision === "object" && (curVision.provider === "jarvis" || curVision.provider === "jarvis-gateway"))) {
+        if (!curVision || curVision.provider !== "jarvis-gateway" || curVision.id !== "role") {
+          nextPrefs.vision_model = { provider: "jarvis-gateway", id: "role" };
+          changed = true;
+        }
+      }
+      if (nextPrefs.vision_auxiliary_enabled !== true) {
+        nextPrefs.vision_auxiliary_enabled = true;
+        changed = true;
+      }
+
+      if (changed) {
+        this._prefs.savePreferences(nextPrefs);
+        log(`[gateway-defaults] set utility/large to office, vision to role, vision_auxiliary_enabled to true`);
       }
     }, log);
 

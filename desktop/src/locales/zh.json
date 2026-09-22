@@ -1690,7 +1690,9 @@
       "addCustom": "添加自定义供应商",
       "noKey": "未配置",
       "remove": "移除",
-      "deleteConfirm": "确定删除供应商 {name}？相关模型将一并清除。"
+      "deleteConfirm": "确定删除供应商 {name}？相关模型将一并清除。",
+      "managedGatewayUrl": "Jarvis智能路由（已加密传输）",
+      "managedGatewayKey": "●●●●●●●●（系统云端自动托管）"
     },
     "usage": {
       "title": "用量统计",

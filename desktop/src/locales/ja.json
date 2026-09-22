@@ -1624,7 +1624,9 @@
       "addCustom": "カスタムプロバイダーを追加",
       "noKey": "未設定",
       "remove": "削除",
-      "deleteConfirm": "プロバイダー {name} を削除しますか？関連するモデルも削除されます。"
+      "deleteConfirm": "プロバイダー {name} を削除しますか？関連するモデルも削除されます。",
+      "managedGatewayUrl": "Jarvisインテリジェントルーティング（暗号化通信）",
+      "managedGatewayKey": "●●●●●●●●（システムクラウド自動管理）"
     },
     "usage": {
       "title": "使用量",

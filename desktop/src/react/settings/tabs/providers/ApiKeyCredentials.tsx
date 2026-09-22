@@ -99,7 +99,8 @@ export function ApiKeyCredentials({ providerId, summary, providerConfig: _provid
   presetInfo?: { label: string; value: string; url?: string; api?: string; local?: boolean };
   onRefresh: () => Promise<void>;
 }) {
-  const hideReveal = summary.hide_api_reveal === true;
+  const isManagedGateway = providerId === 'jarvis-gateway';
+  const hideReveal = summary.hide_api_reveal === true || isManagedGateway;
   const showToast = useSettingsStore(s => s.showToast);
   const [keyVal, setKeyVal] = useState('');
   const [keyEdited, setKeyEdited] = useState(false);
@@ -258,25 +259,35 @@ export function ApiKeyCredentials({ providerId, summary, providerConfig: _provid
       <div className={styles['pv-cred-row']}>
         <span className={styles['pv-cred-label']}>{t('settings.api.apiKey')}</span>
         <div className={styles['pv-cred-key-row']}>
-          <KeyInput
-            value={keyVal}
-            onChange={(v) => { setKeyVal(v); setKeyEdited(true); setConnStatus('idle'); }}
-            onBlur={() => {
-              if (!keyEdited || isPresetSetup) return;
-              void saveApiKeyConfig({ verify: false });
-            }}
-            onReveal={hideReveal ? undefined : isMaskedSecretValue(keyVal) ? revealSavedApiKey : undefined}
-            onRevealError={(err) => {
-              const msg = err instanceof Error ? err.message : String(err);
-              showToast(msg, 'error');
-            }}
-            placeholder={isPresetSetup ? t('settings.providers.setupHint') : ''}
-          />
+          {isManagedGateway ? (
+            <input
+              className={styles['settings-input']}
+              type="text"
+              value={t('settings.providers.managedGatewayKey')}
+              readOnly
+              disabled
+            />
+          ) : (
+            <KeyInput
+              value={keyVal}
+              onChange={(v) => { setKeyVal(v); setKeyEdited(true); setConnStatus('idle'); }}
+              onBlur={() => {
+                if (!keyEdited || isPresetSetup) return;
+                void saveApiKeyConfig({ verify: false });
+              }}
+              onReveal={hideReveal ? undefined : isMaskedSecretValue(keyVal) ? revealSavedApiKey : undefined}
+              onRevealError={(err) => {
+                const msg = err instanceof Error ? err.message : String(err);
+                showToast(msg, 'error');
+              }}
+              placeholder={isPresetSetup ? t('settings.providers.setupHint') : ''}
+            />
+          )}
           <button
             className={`${styles['pv-cred-conn-icon']} ${styles[connStatus] || ''}`}
             title={t('settings.providers.verifyConnection')}
             onClick={(e) => {
-              if (keyEdited) {
+              if (keyEdited && !isManagedGateway) {
                 void saveApiKeyConfig({ verify: true, button: e.currentTarget });
               } else {
                 void verifyOnly(e.currentTarget);
@@ -290,54 +301,66 @@ export function ApiKeyCredentials({ providerId, summary, providerConfig: _provid
           </button>
         </div>
       </div>
-      <div className={`${styles['pv-cred-row']} ${styles['pv-cred-row-top']}`}>
-        <span className={styles['pv-cred-label']}>Headers</span>
-        <div className={styles['pv-cred-url-row']}>
-          <ProviderHeadersField
-            value={headersText}
-            onChange={(value) => { setHeadersText(value); setHeadersEdited(true); setConnStatus('idle'); }}
-            onBlur={async () => {
-              if (!headersEdited || isPresetSetup) return;
-              const headers = parseHeaders();
-              if (!headers) return;
-              try {
-                await saveProviderConfigPatch(providerId, { headers });
-                if (!await refreshAfterSave()) return;
-                setHeadersEdited(false);
-                showToast(t('settings.saved'), 'success');
-              } catch (err: unknown) {
-                reportSaveFailure(err);
-              }
-            }}
-            readOnly={!!isPresetSetup}
-          />
+      {!isManagedGateway && (
+        <div className={`${styles['pv-cred-row']} ${styles['pv-cred-row-top']}`}>
+          <span className={styles['pv-cred-label']}>Headers</span>
+          <div className={styles['pv-cred-url-row']}>
+            <ProviderHeadersField
+              value={headersText}
+              onChange={(value) => { setHeadersText(value); setHeadersEdited(true); setConnStatus('idle'); }}
+              onBlur={async () => {
+                if (!headersEdited || isPresetSetup) return;
+                const headers = parseHeaders();
+                if (!headers) return;
+                try {
+                  await saveProviderConfigPatch(providerId, { headers });
+                  if (!await refreshAfterSave()) return;
+                  setHeadersEdited(false);
+                  showToast(t('settings.saved'), 'success');
+                } catch (err: unknown) {
+                  reportSaveFailure(err);
+                }
+              }}
+              readOnly={!!isPresetSetup}
+            />
+          </div>
         </div>
-      </div>
+      )}
       <div className={styles['pv-cred-row']}>
         <span className={styles['pv-cred-label']}>Base URL</span>
         <div className={styles['pv-cred-url-row']}>
-          <input
-            className={styles['settings-input']}
-            type="text"
-            value={urlVal}
-            onChange={(e) => { setUrlVal(e.target.value); setUrlEdited(true); }}
-            onBlur={async () => {
-              if (!urlEdited || isPresetSetup) return;
-              const trimmed = urlVal.trim();
-              if (trimmed === derivedBaseUrl) { setUrlEdited(false); return; }
-              try {
-                await saveProviderConfigPatch(providerId, { base_url: trimmed });
-                if (!await refreshAfterSave()) return;
-                setUrlEdited(false);
-                showToast(t('settings.saved'), 'success');
-              } catch (err: unknown) {
-                reportSaveFailure(err);
-              }
-            }}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            placeholder="https://api.example.com/v1"
-            readOnly={!!isPresetSetup}
-          />
+          {isManagedGateway ? (
+            <input
+              className={styles['settings-input']}
+              type="text"
+              value={`🔒 ${t('settings.providers.managedGatewayUrl')}`}
+              readOnly
+              disabled
+            />
+          ) : (
+            <input
+              className={styles['settings-input']}
+              type="text"
+              value={urlVal}
+              onChange={(e) => { setUrlVal(e.target.value); setUrlEdited(true); }}
+              onBlur={async () => {
+                if (!urlEdited || isPresetSetup) return;
+                const trimmed = urlVal.trim();
+                if (trimmed === derivedBaseUrl) { setUrlEdited(false); return; }
+                try {
+                  await saveProviderConfigPatch(providerId, { base_url: trimmed });
+                  if (!await refreshAfterSave()) return;
+                  setUrlEdited(false);
+                  showToast(t('settings.saved'), 'success');
+                } catch (err: unknown) {
+                  reportSaveFailure(err);
+                }
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              placeholder="https://api.example.com/v1"
+              readOnly={!!isPresetSetup}
+            />
+          )}
         </div>
       </div>
       <div className={styles['pv-cred-row']}>
@@ -347,8 +370,9 @@ export function ApiKeyCredentials({ providerId, summary, providerConfig: _provid
             className={styles['pv-cred-select']}
             options={API_FORMAT_OPTIONS}
             value={apiVal}
+            disabled={isManagedGateway}
             onChange={async (val) => {
-              if (val === apiVal) return;
+              if (isManagedGateway || val === apiVal) return;
               const revision = apiDraftRevision.current + 1;
               apiDraftRevision.current = revision;
               setApiVal(val);

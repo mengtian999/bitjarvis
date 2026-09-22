@@ -216,10 +216,12 @@ export const ImView = memo(function ImView() {
   // 监听主进程发来的 jarvis://im/{mxid} 深链，转发给 iframe 并切到 IM 视图。
   // 主进程通过 ipcMain 'im/open' 发送，preload 转发到 window.jarvis.onImOpen。
   useEffect(() => {
-    const unsub = window.jarvis?.onImOpen?.((data: { mxid: string }) => {
+    const unsub = (window.jarvis as any)?.onImOpen?.((data: { mxid: string }) => {
       iframeRef.current?.contentWindow?.postMessage({ type: 'im/open', mxid: data.mxid }, '*');
     });
-    return () => unsub?.();
+    return () => {
+      if (typeof unsub === 'function') (unsub as () => void)();
+    };
   }, []);
 
   const host = window.location.hostname || '127.0.0.1';

@@ -48,6 +48,30 @@ export function ensureGatewayProviderRegistered(deps: {
     defaultApi: "openai-completions",
     defaultBaseUrl: baseUrl,
     hideApiReveal: true,
+    capabilities: {
+      media: {
+        imageGeneration: {
+          defaultModelId: "standard",
+          models: [
+            {
+              id: "standard",
+              displayName: "标准生图",
+              protocolId: "gateway-images",
+            },
+          ],
+        },
+        videoGeneration: {
+          defaultModelId: "standard",
+          models: [
+            {
+              id: "standard",
+              displayName: "标准视频",
+              protocolId: "gateway-videos",
+            },
+          ],
+        },
+      },
+    },
   });
 }
 
@@ -139,6 +163,11 @@ export async function syncGatewayModels(deps: GatewaySyncDeps): Promise<GatewayS
     id: m.id,
     name: m.display_name && m.display_name.trim() ? m.display_name : m.id,
     api: "openai-completions",
+    context: 500000,
+    contextWindow: 500000,
+    maxOutput: 65500,
+    image: true,
+    reasoning: true,
     ...(m.login_required ? { loginRequired: true } : {}),
   }));
   if (models.length === 0) {

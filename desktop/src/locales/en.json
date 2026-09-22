@@ -1690,7 +1690,9 @@
       "addCustom": "Add Custom Provider",
       "noKey": "Not configured",
       "remove": "Remove",
-      "deleteConfirm": "Delete provider {name}? Associated models will be removed."
+      "deleteConfirm": "Delete provider {name}? Associated models will be removed.",
+      "managedGatewayUrl": "Jarvis Intelligent Routing (Encrypted)",
+      "managedGatewayKey": "●●●●●●●● (System Cloud Managed)"
     },
     "usage": {
       "title": "Usage",

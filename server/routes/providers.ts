@@ -153,7 +153,7 @@ export function createProvidersRoute(engine: any) {
         is_coding_plan: name.endsWith("-coding"),
         hide_api_reveal: !!entry?.hideApiReveal,
         is_configured: true,
-        can_delete: !isOAuth || Object.prototype.hasOwnProperty.call(providers, name),
+        can_delete: name !== "jarvis-gateway" && (!isOAuth || Object.prototype.hasOwnProperty.call(providers, name)),
         config_status: p.config_error ? "invalid" : (missingFields.length > 0 ? "needs_setup" : "ok"),
         config_error: p.config_error || null,
         missing_fields: missingFields,

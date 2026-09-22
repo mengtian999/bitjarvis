@@ -372,7 +372,7 @@ function retryBackoffMs(attempt) {
 
 /** 可中断的退避睡眠：期间 signal abort 会抛 AbortError。 */
 function sleepWithAbort(ms, signal) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
       reject(createUserAbortError());
       return;

@@ -62,20 +62,24 @@ async function downloadVideoUrl(url: string, dataDir: string, filenameBase: stri
 }
 
 export function createGatewayImageAdapter(options: {
-  createClient?: () => GatewayClientLike;
-  resolveIdentity?: () => GatewayIdentity | null;
+  createClient?: (opts?: any) => GatewayClientLike;
+  resolveIdentity?: (jarvisHome?: string) => GatewayIdentity | null;
 } = {}) {
-  const createClient = options.createClient || (() => new GatewayClient());
+  const createClient = options.createClient || ((opts) => new GatewayClient(opts));
   const resolveIdentity = options.resolveIdentity
-    || (() => loadGatewayIdentity(resolveJarvisHome()));
+    || ((home) => loadGatewayIdentity(home || resolveJarvisHome()));
 
-  const client = () => createClient();
+  const client = (ctx?: any) => {
+    const jarvisHome = ctx?.dataDir || resolveJarvisHome();
+    return createClient({ jarvisHome });
+  };
 
   return {
-    id: "jarvis-gateway",
+    id: "gateway-images",
     protocolId: GATEWAY_IMAGE_PROTOCOL_ID,
     name: "Jarvis Cloud Image",
     types: ["image"],
+    aliases: ["jarvis-gateway-images", "jarvis-gateway"],
     capabilities: {
       ratios: [...GATEWAY_IMAGE_RATIOS],
       resolutions: [...GATEWAY_IMAGE_RESOLUTIONS],
@@ -83,10 +87,11 @@ export function createGatewayImageAdapter(options: {
       referenceImages: { min: 0, max: 3 },
     },
 
-    async checkAuth() {
+    async checkAuth(ctx: any = {}) {
       let identity: GatewayIdentity | null = null;
       try {
-        identity = resolveIdentity();
+        const home = ctx?.dataDir || resolveJarvisHome();
+        identity = resolveIdentity(home);
       } catch {
         identity = null;
       }
@@ -98,11 +103,15 @@ export function createGatewayImageAdapter(options: {
       };
     },
 
-    async submit(params: any = {}, _ctx: any = {}) {
+    async submit(params: any = {}, ctx: any = {}) {
       const prompt = typeof params?.prompt === "string" ? params.prompt.trim() : "";
       if (!prompt) throw new Error("prompt is required");
       // modelId 即品牌档位名（媒体模型 id 由网关 /v1/models image 组下发）
-      const tier = String(params?.modelId || params?.model || "standard").trim() || "standard";
+      let rawTier = String(params?.modelId || params?.model || "standard").trim() || "standard";
+      if (rawTier.includes("/")) {
+        rawTier = rawTier.split("/").pop() || "standard";
+      }
+      const tier = rawTier || "standard";
       const body: {
         kind?: string;
         tier: string;
@@ -118,14 +127,14 @@ export function createGatewayImageAdapter(options: {
       if (/^(2k|hd)$/i.test(String(resolution || "").trim())) body.quality = "hd";
       const images = normalizeImageInput(params?.image || params?.referenceImages);
       if (images.length > 0) body.images = images;
-      const job = await client().submitMediaJob(body);
+      const job = await client(ctx).submitMediaJob(body);
       const jobId = job?.job_id;
       if (typeof jobId !== "string" || !jobId) throw new Error("网关未返回 job_id");
       return { taskId: jobId, providerTaskId: jobId };
     },
 
     async query(providerTaskId: any, ctx: any = {}) {
-      const job = await client().getMediaJob(String(providerTaskId));
+      const job = await client(ctx).getMediaJob(String(providerTaskId));
       const status = String(job?.status || "");
       if (status === "pending" || status === "running") return { status: "pending" };
       if (status !== "succeeded") {
@@ -149,20 +158,24 @@ export function createGatewayImageAdapter(options: {
 }
 
 export function createGatewayVideoAdapter(options: {
-  createClient?: () => GatewayClientLike;
-  resolveIdentity?: () => GatewayIdentity | null;
+  createClient?: (opts?: any) => GatewayClientLike;
+  resolveIdentity?: (jarvisHome?: string) => GatewayIdentity | null;
 } = {}) {
-  const createClient = options.createClient || (() => new GatewayClient());
+  const createClient = options.createClient || ((opts) => new GatewayClient(opts));
   const resolveIdentity = options.resolveIdentity
-    || (() => loadGatewayIdentity(resolveJarvisHome()));
+    || ((home) => loadGatewayIdentity(home || resolveJarvisHome()));
 
-  const client = () => createClient();
+  const client = (ctx?: any) => {
+    const jarvisHome = ctx?.dataDir || resolveJarvisHome();
+    return createClient({ jarvisHome });
+  };
 
   return {
-    id: "jarvis-gateway",
+    id: "gateway-videos",
     protocolId: GATEWAY_VIDEO_PROTOCOL_ID,
     name: "Jarvis Cloud Video",
     types: ["video"],
+    aliases: ["jarvis-gateway-videos"],
     capabilities: {
       ratios: [...GATEWAY_VIDEO_RATIOS],
       resolutions: [...GATEWAY_VIDEO_RESOLUTIONS],
@@ -170,10 +183,11 @@ export function createGatewayVideoAdapter(options: {
       referenceImages: { min: 0, max: 2 },
     },
 
-    async checkAuth() {
+    async checkAuth(ctx: any = {}) {
       let identity: GatewayIdentity | null = null;
       try {
-        identity = resolveIdentity();
+        const home = ctx?.dataDir || resolveJarvisHome();
+        identity = resolveIdentity(home);
       } catch {
         identity = null;
       }
@@ -185,10 +199,14 @@ export function createGatewayVideoAdapter(options: {
       };
     },
 
-    async submit(params: any = {}, _ctx: any = {}) {
+    async submit(params: any = {}, ctx: any = {}) {
       const prompt = typeof params?.prompt === "string" ? params.prompt.trim() : "";
       if (!prompt) throw new Error("prompt is required");
-      const tier = String(params?.modelId || params?.model || "standard").trim() || "standard";
+      let rawTier = String(params?.modelId || params?.model || "standard").trim() || "standard";
+      if (rawTier.includes("/")) {
+        rawTier = rawTier.split("/").pop() || "standard";
+      }
+      const tier = rawTier || "standard";
       const body: {
         kind: string;
         tier: string;
@@ -211,14 +229,14 @@ export function createGatewayVideoAdapter(options: {
       if (params?.lastFrame || params?.last_frame) {
         body.last_frame = String(params?.lastFrame || params?.last_frame);
       }
-      const job = await client().submitMediaJob(body);
+      const job = await client(ctx).submitMediaJob(body);
       const jobId = job?.job_id;
       if (typeof jobId !== "string" || !jobId) throw new Error("网关未返回 job_id");
       return { taskId: jobId, providerTaskId: jobId };
     },
 
     async query(providerTaskId: any, ctx: any = {}) {
-      const job = await client().getMediaJob(String(providerTaskId));
+      const job = await client(ctx).getMediaJob(String(providerTaskId));
       const status = String(job?.status || "");
       if (status === "pending" || status === "running") return { status: "pending" };
       if (status !== "succeeded") {
