@@ -15,7 +15,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/mengtian999/Bitjarvis/releases)
 
-> **本仓库为桌面端代码。** 移动端在独立仓库托管，本仓库不包含移动端。
+> **本仓库为桌面端代码。** 移动端在独立仓库托管（<https://github.com/mengtian999/jarvis>），本仓库不包含移动端。
 
 <p align="center">
   <img src="https://www.bitjarvis.chat/jgt.png" alt="Bit Jarvis" width="800">

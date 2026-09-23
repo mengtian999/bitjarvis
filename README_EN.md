@@ -15,7 +15,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/mengtian999/Bitjarvis/releases)
 
-> **This repository contains the desktop code.** The mobile client and the IM client live in separate repositories and are not part of this repo.
+> **This repository contains the desktop code.** The mobile client lives at <https://github.com/mengtian999/jarvis>; the mobile IM client is in its own repository and is planned to merge into this app.
 
 <p align="center">
   <img src="https://www.bitjarvis.chat/jgt.png" alt="Bit Jarvis" width="800">
