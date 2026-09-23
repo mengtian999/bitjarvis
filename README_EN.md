@@ -17,6 +17,10 @@
 
 > **This repository contains the desktop code.** The mobile client and the IM client live in separate repositories and are not part of this repo.
 
+<p align="center">
+  <img src="https://www.bitjarvis.chat/jgt.png" alt="Bit Jarvis" width="800">
+</p>
+
 ---
 
 ## What is Bit Jarvis
