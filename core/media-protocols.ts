@@ -25,6 +25,19 @@ export function capabilityKey(capability) {
 }
 
 /**
+ * Jarvis Cloud 网关的媒体档位 id（与 /v1/models 的 image / video 组同名）。
+ *
+ * 档位名即客户端媒体模型的 modelId：provider 声明（gateway-sync）、启动默认值
+ * （media-default-model-seed）与 adapter 兜底都读这里，避免各处各写一份字面量。
+ * 旧版网关下载的 standard 档已下线，存量引用见 RETIRED_GATEWAY_MEDIA_TIER_ID。
+ */
+export const GATEWAY_IMAGE_TIER_ID = "image";
+export const GATEWAY_VIDEO_TIER_ID = "video";
+
+/** 已下线的网关旧档位 id：存量偏好里的 jarvis-gateway/standard 需要迁移到新档位。 */
+export const RETIRED_GATEWAY_MEDIA_TIER_ID = "standard";
+
+/**
  * 自定义 provider 中视为"OpenAI 兼容网关"的 api 协议。
  * 这类网关约定俗成在同一 base_url 下提供 OpenAI Images API（/images/generations）。
  */
@@ -51,7 +64,7 @@ export function inferMediaProtocolId(providerId, capability, modelId, provider: 
   if (key === "imageGeneration") {
     // 内置 provider 的显式规则
     if (providerId === "openai-codex-oauth") return "openai-codex-responses-image";
-    // Jarvis Cloud 网关：图片档位（standard/…）经 /v1/media/jobs 执行（§5.4）
+    // Jarvis Cloud 网关：图片档位（image/…）经 /v1/media/jobs 执行（§5.4）
     if (providerId === "jarvis-gateway") return "gateway-images";
     if (providerId === "openai" && (id.startsWith("gpt-image") || id.startsWith("dall-e"))) return "openai-images";
     if (providerId === "volcengine" && id.includes("seedream")) return "volcengine-images";
@@ -67,7 +80,7 @@ export function inferMediaProtocolId(providerId, capability, modelId, provider: 
   }
 
   if (key === "videoGeneration") {
-    // Jarvis Cloud 网关：视频档位（standard/…）经 /v1/media/jobs 执行（§5.4）
+    // Jarvis Cloud 网关：视频档位（video/…）经 /v1/media/jobs 执行（§5.4）
     if (providerId === "jarvis-gateway") return "gateway-videos";
     if (providerId === "agnes") return "agnes-videos";
     return "";

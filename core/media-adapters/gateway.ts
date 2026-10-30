@@ -1,7 +1,7 @@
 // core/media-adapters/gateway.ts
 // Jarvis Cloud（网关）图片适配器：品牌档位 → POST /v1/media/jobs → 轮询 /v1/media/jobs/{id}。
 //
-// 媒体运行时候选模型即网关品牌档位名（standard/…，来自 /v1/models 的 image 组）；
+// 媒体运行时候选模型即网关品牌档位名（image / video，来自 /v1/models 的 image / video 组）；
 // 真实上游模型只存在于服务端配置，不下发（§2.1）。
 // submit 只返回 taskId（job_id），poller 调 query() 轮询；succeeded 时把
 // result_urls 下载到 generated/ 并返回文件名（上游 URL 多为临时签名链接，
@@ -11,6 +11,7 @@ import path from "node:path";
 import { downloadImageUrls, normalizeImageInput } from "./common.ts";
 import { GatewayClient } from "../gateway/gateway-client.ts";
 import { loadGatewayIdentity, type GatewayIdentity } from "../gateway/gateway-store.ts";
+import { GATEWAY_IMAGE_TIER_ID, GATEWAY_VIDEO_TIER_ID } from "../media-protocols.ts";
 import { resolveJarvisHome } from "../../shared/jarvis-runtime-paths.ts";
 
 export const GATEWAY_IMAGE_PROTOCOL_ID = "gateway-images";
@@ -33,6 +34,17 @@ type GatewayClientLike = {
   submitMediaJob: (params: any) => Promise<any>;
   getMediaJob: (jobId: string) => Promise<any>;
 };
+
+/**
+ * 从 modelId 解析网关档位名：容忍 "jarvis-gateway/image" 这类带 provider 前缀的引用，
+ * 未指定（或解析为空）时落到该 kind 的当前档位（image / video）。
+ */
+function mediaTierFromModelId(value: unknown, fallbackTier: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return fallbackTier;
+  const tier = raw.includes("/") ? String(raw.split("/").pop() || "").trim() : raw;
+  return tier || fallbackTier;
+}
 
 function safeFilenameBase(value: unknown, fallback: string): string {
   const text = String(value || fallback || "gateway-video").trim();
@@ -107,11 +119,7 @@ export function createGatewayImageAdapter(options: {
       const prompt = typeof params?.prompt === "string" ? params.prompt.trim() : "";
       if (!prompt) throw new Error("prompt is required");
       // modelId 即品牌档位名（媒体模型 id 由网关 /v1/models image 组下发）
-      let rawTier = String(params?.modelId || params?.model || "standard").trim() || "standard";
-      if (rawTier.includes("/")) {
-        rawTier = rawTier.split("/").pop() || "standard";
-      }
-      const tier = rawTier || "standard";
+      const tier = mediaTierFromModelId(params?.modelId || params?.model, GATEWAY_IMAGE_TIER_ID);
       const body: {
         kind?: string;
         tier: string;
@@ -202,11 +210,8 @@ export function createGatewayVideoAdapter(options: {
     async submit(params: any = {}, ctx: any = {}) {
       const prompt = typeof params?.prompt === "string" ? params.prompt.trim() : "";
       if (!prompt) throw new Error("prompt is required");
-      let rawTier = String(params?.modelId || params?.model || "standard").trim() || "standard";
-      if (rawTier.includes("/")) {
-        rawTier = rawTier.split("/").pop() || "standard";
-      }
-      const tier = rawTier || "standard";
+      // modelId 即品牌档位名（媒体模型 id 由网关 /v1/models video 组下发）
+      const tier = mediaTierFromModelId(params?.modelId || params?.model, GATEWAY_VIDEO_TIER_ID);
       const body: {
         kind: string;
         tier: string;

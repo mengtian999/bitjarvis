@@ -40,6 +40,8 @@ If you have used CLI or GUI agents like Claude Code, Codex, or Manus, you will f
 
 **Tools** — Read/write files, run one-shot commands or persistent terminal sessions, browse the web, search the internet through browser-backed or API-backed providers, take screenshots and segmented long screenshots, preview media, inspect pages... covering the vast majority of daily office scenarios. A server-first CLI can also attach to the same Jarvis Server to show status, list sessions, and continue chats from a terminal.
 
+**Browser Backends** — By default the agent works inside Jarvis's embedded, isolated browser. Switch to the system backend and it drives your real, logged-in Chrome / Edge through that browser's own remote debugging endpoint instead. Under the system backend Jarvis only touches tabs it opened itself: it never closes your tabs, and it never clears your real browser's cookies or site data. The full boundary list is in [Browser Backends](BROWSER_EN.md).
+
 **Skills** — Built-in compatibility with the large community Skills ecosystem. Agents can install community skills from GitHub on the fly, or write and master new skills themselves. A strict skills review is enabled by default — you can turn it off if something refuses to install.
 
 **Character Cards & Skill Bundles** — Agents can be imported / exported as local-first character-card zip packages that carry allowlisted identity, avatar, optional memory, and Skills. Skill Bundles are a standalone skill-pack infrastructure: group skills, drag them between bundles, toggle whole bundles, and export a bundle as a zip for migration and sharing.
@@ -148,7 +150,7 @@ npm run dist:linux     # Package Linux (AppImage / deb)
 
 - Official site: <https://bitjarvis.chat>
 - Mobile: <https://github.com/mengtian999/jarvis> (separate repository, not included here)
-- [Report an Issue](https://github.com/mengtian999/Bitjarvis/issues) · [Security Policy](SECURITY.md) · [Plugin Development](PLUGINS.md) · [Contributing](CONTRIBUTING.md)
+- [Report an Issue](https://github.com/mengtian999/Bitjarvis/issues) · [Security Policy](SECURITY.md) · [Plugin Development](PLUGINS.md) · [Browser Backends](BROWSER_EN.md) · [Contributing](CONTRIBUTING.md)
 
 ## Acknowledgments
 

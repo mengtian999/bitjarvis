@@ -15,6 +15,7 @@
  * GET  /api/preferences/browser  — 读取内置浏览器偏好
  * PUT  /api/preferences/browser  — 更新内置浏览器偏好
  * POST /api/preferences/browser/clear-cookies — 清除内置浏览器 Cookies
+ * POST /api/preferences/browser/external/probe — 探测系统浏览器（Chrome/Edge）的远程调试端点
  * POST /api/preferences/setup-complete — 提交首次配置完成意图
  * POST /api/preferences/legacy-gpu-safe-mode/hardware-acceleration — 消费旧版 GPU 自动安全模式偏好
  * GET  /api/preferences/computer-use  — 读取 Computer Use provider/approval 状态
@@ -405,6 +406,16 @@ export function createPreferencesRoute(engine: any, options: Record<string, any>
         || (() => browserManagerFromOptions(options).clearBrowserCookiesAndSiteData());
       await clearBrowserCookiesAndSiteData();
       return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: err.message }, 500);
+    }
+  });
+
+  // 探测用户真实 Chrome/Edge 的远程调试端点是否可用（UI "检查连接" 用）
+  route.post("/preferences/browser/external/probe", async (c) => {
+    try {
+      const channels = BrowserManager.instance()._getExternalBackend().probeChannels();
+      return c.json({ channels });
     } catch (err) {
       return c.json({ error: err.message }, 500);
     }

@@ -6,11 +6,27 @@ import { logLlmUsage, normalizeLlmUsage } from '../lib/llm/usage-observer.ts';
 import { appendProviderApiPath, withDefaultProviderHeaders } from '../lib/llm/provider-client.ts';
 import { mergeProviderHeaders } from '../shared/provider-auth.ts';
 import {
+  modelSupportsAudioInput,
+  modelSupportsImageInput,
+  modelSupportsVideoInput,
+} from '../shared/model-capabilities.ts';
+import {
   serializeOpenAICompatibleContentBlock,
   serializeResponsesContentBlock,
 } from './provider-media-serializer.ts';
 
 const EMPTY_AFTER_THINKING_MESSAGE = "模型未回复正文，请检查思考内容或稍后重试。";
+
+/**
+ * callText 默认超时。
+ *
+ * 历史值 60s 对思考型模型（reasoning / thinking）不够用：上游首 token 之前要先跑完
+ * 思考链，长上下文下常见 1-3 分钟，60s 硬切会把本来能成功的轮次判成 LLM_TIMEOUT，
+ * 于是重试 → 再超时 → 用户看到连续失败。放宽到 300s 作为安全网，真正需要快速失败
+ * 的短任务（标题 / 摘要 / 校验）由调用方显式传更小的 timeoutMs。
+ */
+export const DEFAULT_CALL_TEXT_TIMEOUT_MS = 300_000;
+
 const DEFAULT_CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 const CODEX_ACCOUNT_CLAIM_PATH = "https://api.openai.com/auth";
 const DEFAULT_CODEX_UTILITY_INSTRUCTIONS = [
@@ -393,6 +409,62 @@ function sleepWithAbort(ms, signal) {
   });
 }
 
+/**
+ * 媒体 block 的协议形态 → 所需模型能力。audio/video 只在 Jarvis 扩展字段
+ * （compat.jarvisAudioInput / jarvisVideoInput）里声明，故用带 compat 语义的 helper 判定。
+ */
+const MEDIA_PART_RULES = [
+  {
+    types: ["image_url", "imageUrl", "image", "input_image"],
+    label: "图片",
+    supports: (model) => modelSupportsImageInput(model),
+  },
+  {
+    types: ["video_url", "input_video"],
+    label: "视频",
+    supports: (model) => modelSupportsVideoInput(model),
+  },
+  {
+    types: ["input_audio", "audio_url"],
+    label: "音频",
+    supports: (model) => modelSupportsAudioInput(model),
+  },
+];
+
+/**
+ * Multimodal pre-flight：目标模型显式声明只吃文本时，把媒体 block 换成文本占位。
+ *
+ * text-only 模型收到 `image_url` / `input_audio` 这类 block，上游多半直接 400
+ * （例如 `messages[N]: unknown variant image_url, expected text`），而且这条链路
+ * 本来也无法从这张图里得到信息；提前降级成「媒体已省略」比把 400 抛给用户好。
+ *
+ * 只在模型对象声明了 `input` 数组时生效：input 缺失代表能力未知，此时保持原样，
+ * 避免误伤未声明 input 的自定义视觉模型。
+ */
+export function stripUnsupportedMediaParts(content, model) {
+  if (!Array.isArray(content)) return { content, stripped: [] };
+  if (!model || typeof model !== "object" || !Array.isArray(model.input)) {
+    return { content, stripped: [] };
+  }
+
+  const stripped = [];
+  const kept = [];
+  for (const part of content) {
+    const type = part && typeof part === "object" && typeof part.type === "string" ? part.type : "";
+    const rule = MEDIA_PART_RULES.find((candidate) => candidate.types.includes(type));
+    if (!rule || rule.supports(model)) {
+      kept.push(part);
+      continue;
+    }
+    if (!stripped.includes(rule.label)) stripped.push(rule.label);
+  }
+  if (stripped.length === 0) return { content, stripped };
+  for (const label of stripped) {
+    kept.push({ type: "text", text: `[${label}已省略：当前模型不支持该输入模态]` });
+  }
+  return { content: kept, stripped };
+}
+
 function convertContentForApi(content, api) {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return typeof content === "undefined" ? "" : JSON.stringify(content);
@@ -441,7 +513,7 @@ function convertContentForApi(content, api) {
  * @param {number} [opts.maxTokens]    最大输出 token。未传时不写 output cap，让具体任务决定预算
  * @param {"user"|"system"|"sdk-default"} [opts.outputBudgetSource] 输出上限来源。仅在 maxTokens 显式传入时生效
  * @param {string} [opts.callPurpose]   调用意图标签，只表达请求目的，不承载模型事实
- * @param {number} [opts.timeoutMs]    超时毫秒 (default 60000)
+ * @param {number} [opts.timeoutMs]    超时毫秒 (default DEFAULT_CALL_TEXT_TIMEOUT_MS = 300000)
  * @param {AbortSignal} [opts.signal]  外部取消信号
  * @param {boolean} [opts.returnUsage] 返回 { text, usage }，默认保持旧接口返回纯文本
  * @param {object} [opts.usageContext] 用量归属和诊断来源
@@ -462,7 +534,7 @@ export async function callText({
   outputBudgetSource = "system",
   outputPolicy,
   callPurpose,
-  timeoutMs = 60_000,
+  timeoutMs = DEFAULT_CALL_TEXT_TIMEOUT_MS,
   signal,
   returnUsage = false,
   usageContext,
@@ -494,9 +566,18 @@ export async function callText({
       const text = normalizeTextFromContent(m.content);
       if (text) mergedSystem += (mergedSystem ? "\n" : "") + text;
     } else {
+      // Multimodal pre-flight：模型只声明文本输入时先把媒体块降级成占位，
+      // 避免上游以 400 拒绝整条请求（详见 stripUnsupportedMediaParts）。
+      const sanitized = stripUnsupportedMediaParts(convertContentForApi(m.content, api), modelObj);
+      if (sanitized.stripped.length > 0) {
+        errorBus.addBreadcrumb({
+          type: "llm",
+          message: `callText omitted unsupported media for model ${modelId}: ${sanitized.stripped.join("/")}`,
+        });
+      }
       normalizedMessages.push({
         role: m.role,
-        content: convertContentForApi(m.content, api),
+        content: sanitized.content,
       });
     }
   }

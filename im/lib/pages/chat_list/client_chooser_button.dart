@@ -10,7 +10,6 @@ import 'package:bitjarvis/widgets/matrix.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:matrix/matrix.dart' hide Result;
-import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../utils/fluffy_share.dart';
 import 'chat_list.dart';
@@ -78,16 +77,6 @@ class ClientChooserButton extends StatelessWidget {
             const Icon(Icons.settings_outlined),
             const SizedBox(width: 18),
             Text(L10n.of(context).settings),
-          ],
-        ),
-      ),
-      PopupMenuItem(
-        value: SettingsAction.support,
-        child: Row(
-          children: [
-            Icon(Icons.favorite, color: Colors.red),
-            const SizedBox(width: 18),
-            Text(L10n.of(context).supportFluffyChat),
           ],
         ),
       ),
@@ -211,11 +200,6 @@ class ClientChooserButton extends StatelessWidget {
         case SettingsAction.invite:
           FluffyShare.shareInviteLink(context);
           break;
-        case SettingsAction.support:
-          launchUrlString(
-            'https://bitjarvis.chat/faq/#how_can_i_support_bitjarvis',
-          );
-          break;
         case SettingsAction.settings:
           context.go('/rooms/settings');
           break;
@@ -235,7 +219,6 @@ enum SettingsAction {
   newGroup,
   setStatus,
   invite,
-  support,
   settings,
   archive,
 }

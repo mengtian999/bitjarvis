@@ -12,6 +12,8 @@
  */
 
 import { createRequire } from "module";
+import fs from "node:fs";
+import path from "node:path";
 import { resolveCliJarvisHome } from "./local-server.ts";
 import { ansi } from "./terminal-theme.ts";
 import { SERVER_PROTOCOL_VERSION } from "../shared/contract-versions.cjs";
@@ -24,6 +26,7 @@ const otaCore = require("../shared/artifact-core/ota-core.cjs");
 const pointerStore = require("../shared/artifact-core/pointer-store.cjs");
 const { rendererPointerChannel } = require("../shared/artifact-core/pointer-channels.cjs");
 const { loadPinnedKeyset } = require("../shared/artifact-core/keyset.cjs");
+const updateSource = require("../desktop/src/shared/update-source.cjs");
 
 type PullProgressEvent = {
   phase: "downloading" | "verifying" | "activating";
@@ -41,6 +44,7 @@ type DownloadRendererArtifact = (opts: {
   keyset: Array<{ keyId: string; publicKey: string }>;
   channel: string;
   serverProtocolVersion: number;
+  preferredSource?: "github" | "gitee";
   onProgress: (event: PullProgressEvent) => void;
   log: (msg: string) => void;
 }) => Promise<PullResult>;
@@ -88,11 +92,21 @@ export async function runBundlePull({
   download?: DownloadRendererArtifact;
 } = {}): Promise<number> {
   const progress = createProgressRenderer();
+  // 跟桌面壳/列车更新同一套源治理：读 preferences.json 的 update_source 字段，
+  // 结合时区检测决定拉哪个镜像（self-hosted 运维者同样按地区走更快的源）。
+  let preferredSource;
+  try {
+    const prefsPath = path.join(jarvisHome, "user", "preferences.json");
+    let prefs = null;
+    try { prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8")); } catch {}
+    preferredSource = updateSource.resolveUpdateSource(prefs);
+  } catch {}
   const result = await download({
     homeDir: jarvisHome,
     keyset: loadPinnedKeyset(),
     channel,
     serverProtocolVersion: SERVER_PROTOCOL_VERSION,
+    preferredSource,
     onProgress: progress.render,
     // Pipeline diagnostics (mirror failover, gate logs) go to stderr so
     // they never corrupt the stdout progress line.

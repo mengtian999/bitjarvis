@@ -411,6 +411,7 @@ export const PERSISTENT_STORES: readonly StoreDescriptor[] = Object.freeze([
       fields: [
         "auto_check_updates",
         "hardware_acceleration",
+        "update_source",
         "keep_awake",
         "locale",
         "network_proxy",

@@ -1123,7 +1123,17 @@
       "agentOpenBehavior": "打開網頁時",
       "agentOpenBehaviorHint": "控制 Agent 使用瀏覽器時預設沿用目前標籤頁，還是每次新開標籤頁。",
       "agentOpenBehaviorCurrentTab": "在目前標籤頁操作",
-      "agentOpenBehaviorNewTab": "新開標籤頁"
+      "agentOpenBehaviorNewTab": "新開標籤頁",
+      "backendTitle": "Target Browser",
+      "backendLabel": "Which browser the agent drives",
+      "backendHint": "Embedded runs in an isolated profile inside Jarvis. System drives your real Chrome or Edge with its existing logins.",
+      "backendEmbedded": "Embedded (isolated)",
+      "backendSystem": "My Chrome / Edge (logged-in)",
+      "backendSystemHint": "Enable remote debugging in your browser: open chrome://inspect/#remote-debugging (or edge://inspect) and toggle it on. The first connection will show a permission prompt — click Allow.",
+      "externalProbe": "Check connection",
+      "externalProbeChecking": "Checking…",
+      "externalProbeFound": "Connected — {channel} debugging endpoint found",
+      "externalProbeMissing": "No debugging endpoint found. Make sure your browser is running with remote debugging enabled."
     },
     "general": {
       "title": "通用",
@@ -1432,6 +1442,11 @@
       "keepAwake": "鎖定時保持執行",
       "betaUpdates": "接收測試版更新",
       "autoCheckUpdates": "自動檢查更新",
+      "updateSource": "更新來源",
+      "updateSourceHint": "自動模式依系統時區判斷（大陸時區走 Gitee，下載更快）。也可手動指定。",
+      "updateSourceAuto": "自動（依時區）",
+      "updateSourceGithub": "GitHub（國際）",
+      "updateSourceGitee": "Gitee（中國大陸）",
       "inviteSectionTitle": "測試通道",
       "inviteCodeLabel": "邀請碼",
       "inviteCodeHint": "邀請碼只用來開啟測試通道，不是使用本應用的門檻。",
@@ -1624,7 +1639,9 @@
       "addCustom": "新增自訂供應商",
       "noKey": "未設定",
       "remove": "移除",
-      "deleteConfirm": "確定刪除供應商 {name}？相關模型將一併清除。"
+      "deleteConfirm": "確定刪除供應商 {name}？相關模型將一併清除。",
+      "managedGatewayUrl": "Jarvis智慧路由（已加密傳輸）",
+      "managedGatewayKey": "●●●●●●●●（系統雲端自動託管）"
     },
     "usage": {
       "title": "用量統計",
@@ -3716,5 +3733,12 @@
     "sendFailed": "傳送失敗：{error}",
     "rejectFailed": "忽略失敗：{error}",
     "messageField": "訊息內容"
+  },
+  "im": {
+    "title": "消息",
+    "notBound": "尚未绑定 IM 账号，请在消息页登录",
+    "binding": "正在绑定设备...",
+    "bound": "已绑定 {userId}",
+    "bindFailed": "绑定失败，请重试"
   }
 }

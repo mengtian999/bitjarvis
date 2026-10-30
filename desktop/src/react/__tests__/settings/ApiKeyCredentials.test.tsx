@@ -518,4 +518,39 @@ describe('ApiKeyCredentials', () => {
     ));
     expect(screen.getByRole('button', { name: 'Anthropic Messages' })).toBeInTheDocument();
   });
+
+  it('masks the Base URL and API key for the built-in jarvis-gateway provider', async () => {
+    const onRefresh = vi.fn(async () => {});
+    const { container } = render(
+      <ApiKeyCredentials
+        providerId="jarvis-gateway"
+        summary={providerSummary({
+          display_name: '贾维斯(通用)',
+          base_url: 'https://gateway.bitjarvis.chat/v1',
+          api_key: '********',
+          has_credentials: true,
+          hide_api_reveal: true,
+        })}
+        onRefresh={onRefresh}
+      />,
+    );
+
+    const inputs = Array.from(container.querySelectorAll('input')) as HTMLInputElement[];
+
+    // Base URL 显示托管标签（helpers mock 的 t 返回 key 本身），且输入框只读禁用
+    const urlInput = inputs.find((el) => el.value.includes('settings.providers.managedGatewayUrl'));
+    expect(urlInput).toBeDefined();
+    expect(urlInput).toBeDisabled();
+    expect(urlInput).toHaveProperty('readOnly', true);
+
+    // API Key 显示托管占位，不渲染可编辑的 password 输入框
+    expect(container.querySelector('input[type="password"]')).toBeNull();
+    expect(inputs.some((el) => el.value.includes('settings.providers.managedGatewayKey'))).toBe(true);
+
+    // 任何输入框都不暴露真实网关地址
+    expect(inputs.some((el) => el.value.includes('gateway.bitjarvis.chat'))).toBe(false);
+
+    // 托管网关不提供 Headers 覆盖编辑
+    expect(screen.queryByText('Headers')).toBeNull();
+  });
 });

@@ -18,6 +18,20 @@ interface ReportExtra {
   route?: ErrorBusRoute;
 }
 
+interface ErrorBusOptions {
+  dedupeWindowMs?: number;
+}
+
+/**
+ * 同码错误的抑制窗口（默认 60 秒）。
+ *
+ * 以前是 5 秒：一次网络抖动 / 限流 / 超时会在重试链上以 5 秒为间隔反复进入 UI，
+ * 叠加 inline 提示就变成用户感知到的「弹窗刷屏」。60 秒覆盖一整轮重试-退避周期
+ * （client 侧 utility 调用 3 次尝试、网关侧 failover 都在秒级），同一码的错误在
+ * 一轮故障里最多只暴露一次；日志侧也因此从「每条都记」变成「每轮记一次」。
+ */
+export const DEFAULT_ERROR_DEDUPE_WINDOW_MS = 60_000;
+
 export class ErrorBus {
   _listeners: ErrorBusListener[];
   _breadcrumbs: Array<Record<string, unknown>>;
@@ -25,12 +39,14 @@ export class ErrorBus {
   _recentFingerprints: Map<string, number>;
   _dedupeWindowMs: number;
 
-  constructor() {
+  constructor(options: ErrorBusOptions = {}) {
     this._listeners = [];
     this._breadcrumbs = [];
     this._maxBreadcrumbs = 50;
     this._recentFingerprints = new Map();
-    this._dedupeWindowMs = 5000;
+    this._dedupeWindowMs = Number.isFinite(options.dedupeWindowMs) && Number(options.dedupeWindowMs) > 0
+      ? Math.floor(Number(options.dedupeWindowMs))
+      : DEFAULT_ERROR_DEDUPE_WINDOW_MS;
   }
 
   addBreadcrumb(crumb: Record<string, unknown>): void {
@@ -76,6 +92,9 @@ export class ErrorBus {
   _autoRoute(err: AppError): ErrorBusRoute {
     if (err.code === 'WS_DISCONNECTED') return 'statusbar';
     if (err.severity === 'critical') return 'boundary';
+    // cosmetic 是「进展 / 噪音」级信号（例如 LLM_SLOW_RESPONSE 的慢响应上报，
+    // 长思考模型每轮都会命中）：只保留日志和 breadcrumb，不升级成全局 toast。
+    if (err.severity === 'cosmetic') return 'silent';
     return 'toast';
   }
 

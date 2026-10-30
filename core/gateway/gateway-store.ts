@@ -21,7 +21,6 @@ export type GatewayIdentity = {
   installId: string;
   deviceId: string;
   token: string;
-  region: string; // cn | intl（服务端按 IP 判定，§4.2）
   registeredAt: string;
 };
 
@@ -40,7 +39,6 @@ export function loadGatewayIdentity(jarvisHome: string): GatewayIdentity | null 
     installId: id.installId,
     deviceId: id.deviceId,
     token: id.token,
-    region: typeof id.region === "string" ? id.region : "cn",
     registeredAt: typeof id.registeredAt === "string" ? id.registeredAt : "",
   };
 }

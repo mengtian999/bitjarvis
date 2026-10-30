@@ -962,6 +962,24 @@ export class PreferencesManager {
     this.savePreferences(prefs);
   }
 
+  /**
+   * 读取更新源偏好："auto" | "github" | "gitee"。
+   * "auto" 时由 desktop/src/shared/update-source.cjs 结合系统时区检测决定最终
+   * 走 GitHub 还是 Gitee（大陆时区 → Gitee，其余 → GitHub）。缺失/非法值一律
+   * 回落 "auto"（老用户没有这个字段时保持原有时区检测行为不变）。
+   */
+  getUpdateSource() {
+    const val = this._cache.update_source;
+    return val === "github" || val === "gitee" ? val : "auto";
+  }
+
+  /** 保存更新源偏好（"auto" | "github" | "gitee"，非法值归一为 "auto"） */
+  setUpdateSource(source) {
+    const prefs = this._mutableCopy();
+    prefs.update_source = source === "github" || source === "gitee" ? source : "auto";
+    this.savePreferences(prefs);
+  }
+
   /** 读取桌面保活开关。默认关闭。 */
   getKeepAwake() {
     return this._cache.keep_awake === true;

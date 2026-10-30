@@ -30,6 +30,8 @@ import { atomicWriteSync } from "../../shared/safe-fs.ts";
 import { t } from "../i18n.ts";
 import { IpcTransport, WsTransport } from "./browser-transport.ts";
 import { createModuleLogger } from "../debug-log.ts";
+import { ExternalBrowserBackend } from "./external/external-backend.ts";
+import { isBrowserExternalError } from "./external/cdp-client.ts";
 import {
   mergeBrowserPreferences,
   normalizeBrowserPreferences,
@@ -69,6 +71,23 @@ function _errorMessage(error) {
 function _isFatalBrowserHostError(error) {
   const msg = _errorMessage(error);
   return FATAL_BROWSER_ERROR_PATTERNS.some((pattern) => pattern.test(msg));
+}
+
+/**
+ * 外部后端的"会话级致命"错误码：连接/授权类问题意味着该 session 不可能完成
+ * 后续任何动作，必须标不可用并给出可操作原因；UNSUPPORTED / COMMAND_TIMEOUT
+ * 只是单条命令失败，不该拖垮整个 session。
+ */
+const FATAL_EXTERNAL_ERROR_CODES = new Set([
+  "BROWSER_EXTERNAL_NOT_RUNNING",
+  "BROWSER_EXTERNAL_CONNECT_FAILED",
+  "BROWSER_EXTERNAL_AWAITING_AUTH",
+  "BROWSER_EXTERNAL_AUTH_TIMEOUT",
+  "BROWSER_EXTERNAL_DISCONNECTED",
+]);
+
+function _isFatalExternalError(error) {
+  return isBrowserExternalError(error) && FATAL_EXTERNAL_ERROR_CODES.has(error.code);
 }
 
 function assertBrowserImageBase64(base64, action) {
@@ -160,6 +179,7 @@ export class BrowserManager {
   declare _revokedSessions: any;
   declare _userActivityAt: any;
   declare _idleSweepTimer: any;
+  declare _externalBackend: ExternalBrowserBackend | null;
   constructor({ getSessionIdForPath = null }: any = {}) {
     this._getSessionIdForPath = typeof getSessionIdForPath === "function" ? getSessionIdForPath : null;
     this._sessions = new Map(); // session identity key → { sessionPath, running, url, headless }
@@ -170,6 +190,8 @@ export class BrowserManager {
     this._userActivityAt = new Map();  // session identity key → 用户最后一次相关交互时间戳
     this._idleSweepTimer = null;       // 双闲置回收巡检定时器（无 running 浏览器时自停）
     this._browserPreferences = normalizeBrowserPreferences({});
+    // 外部浏览器后端（system backend）懒构造：没有 CDP 端点的环境里绝不能有副作用
+    this._externalBackend = null;
 
     // 根据环境选择 transport：fork 模式用 IPC，spawn 模式用 WS
     this._transport = process.send ? new IpcTransport() : new WsTransport();
@@ -384,6 +406,46 @@ export class BrowserManager {
     delete entry.unavailableAt;
   }
 
+  // ════════════════════════════
+  //  后端分流（embedded / system）
+  // ════════════════════════════
+
+  /**
+   * 决定一个 session 的浏览器命令走哪个后端。
+   * 已 launch 的 session 固化在 entry.backend（用户中途切开关不影响在跑的会话）；
+   * 未 launch 的跟随当前偏好。
+   */
+  _backendForSession(sessionPath) {
+    const entry = sessionPath ? this._getSessionEntry(sessionPath) : null;
+    if (entry?.backend === "system" || entry?.backend === "embedded") return entry.backend;
+    return this._browserPreferences.backend === "system" ? "system" : "embedded";
+  }
+
+  /** 懒构造外部后端；fatal 回调把该后端承载的所有 session 标为不可用。 */
+  _getExternalBackend(): ExternalBrowserBackend {
+    if (!this._externalBackend) {
+      this._externalBackend = new ExternalBrowserBackend({
+        onFatal: (err) => this._handleExternalFatal(err),
+      });
+    }
+    return this._externalBackend;
+  }
+
+  /** 连接级断线：所有 system 后端的 session 一并标不可用（reason 可操作）。 */
+  _handleExternalFatal(err) {
+    for (const [key, entry] of this._sessions) {
+      if (entry?.backend === "system") {
+        this._markSessionUnavailable(entry.sessionPath || key, err);
+      }
+    }
+  }
+
+  /** launch/resume 后固化后端归属。注意必须写 Map 里的真身：_applyWorkspaceResult 返回的是拷贝。 */
+  _stampBackend(sessionPath, backend) {
+    const stored = this._getSessionEntry(sessionPath);
+    if (stored) stored.backend = backend;
+  }
+
   async _sendSessionCmd(cmd, params: any = {}, timeoutMs?): Promise<any> {
     const sessionPath = params.sessionPath || null;
     this._assertSessionUsable(sessionPath);
@@ -392,7 +454,7 @@ export class BrowserManager {
         ? await this._sendCmd(cmd, params)
         : await this._sendCmd(cmd, params, timeoutMs);
     } catch (error) {
-      if (_isFatalBrowserHostError(error)) {
+      if (_isFatalBrowserHostError(error) || _isFatalExternalError(error)) {
         this._markSessionUnavailable(sessionPath, error);
       }
       throw error;
@@ -681,6 +743,7 @@ export class BrowserManager {
           running: false,
           resumable: false,
           unavailableReason: entry.unavailableReason || null,
+          backend: entry.backend || "embedded",
         };
         continue;
       }
@@ -690,6 +753,7 @@ export class BrowserManager {
         running: this.isRunning(sessionPath),
         resumable: true,
         unavailableReason: null,
+        backend: entry.backend || "embedded",
       };
     }
 
@@ -738,6 +802,14 @@ export class BrowserManager {
   }
 
   async clearBrowserCookiesAndSiteData() {
+    // 拒绝清单第一条：system 后端下这个按钮的语义会变成"清用户真实浏览器的
+    // cookies"——绝不允许。明确报错，让用户去浏览器自己的设置里操作。
+    if (this._browserPreferences.backend === "system") {
+      throw new Error(
+        "Clearing cookies and site data is only available for the embedded browser. "
+        + "Your system browser's data is never touched by Jarvis.",
+      );
+    }
     await this._sendCmd("clearBrowserCookiesAndSiteData", {}, 30000);
     return { ok: true };
   }
@@ -747,7 +819,11 @@ export class BrowserManager {
   }
 
   resumeReadinessForSession(sessionPath) {
-    const hostConnected = this.browserHostConnected;
+    // system 后端的"宿主"是用户本机的 Chrome/Edge：同步探测 CDP 端点（纯文件读），
+    // 而不是看内嵌 transport；两个后端的可用性互不相关。
+    const hostConnected = this._backendForSession(sessionPath) === "system"
+      ? this._getExternalBackend().probe() != null
+      : this.browserHostConnected;
     if (!sessionPath) {
       return {
         canResume: false,
@@ -841,6 +917,7 @@ export class BrowserManager {
 
     const entry = this._applyWorkspaceResult(sessionPath, result, { running: true });
     entry.headless = this._headless;
+    this._stampBackend(sessionPath, this._backendForSession(sessionPath));
     this._saveColdWorkspace(sessionPath, entry);
     this._touchLru(sessionPath);
     this._touchUserActivity(sessionPath);
@@ -863,6 +940,13 @@ export class BrowserManager {
    * @returns {Promise<any>}
    */
   _sendCmd(cmd, params: any = {}, timeoutMs = 30000): Promise<any> {
+    // system 后端分流：凡是带 sessionPath 的命令都按 session 的后端归属路由；
+    // 无 sessionPath 的全局命令（browserSearch / viewerVisibility / setAcceptCookies…）
+    // 永远走内嵌 transport —— 搜索能力与外部开关无关。
+    const sessionPath = params && typeof params.sessionPath === "string" ? params.sessionPath : null;
+    if (sessionPath && this._backendForSession(sessionPath) === "system") {
+      return this._getExternalBackend().handle(cmd, params);
+    }
     if (!this._transport.connected) {
       throw new Error(t("error.browserDesktopOnly"));
     }
@@ -903,6 +987,8 @@ export class BrowserManager {
       }
     }
 
+    // launch 时固化后端归属：在跑的 session 不随偏好开关漂移
+    const backend = this._backendForSession(sessionPath);
     const result = await this._sendCmd("launch", {
       sessionPath,
       headless: this._headless,
@@ -911,6 +997,7 @@ export class BrowserManager {
 
     const entry = this._applyWorkspaceResult(sessionPath, result, { running: true });
     entry.headless = this._headless;
+    this._stampBackend(sessionPath, backend);
     this._clearSessionUnavailable(sessionPath);
     this._touchLru(sessionPath);
 
@@ -1011,6 +1098,7 @@ export class BrowserManager {
     if (result.found) {
       const entry = this._applyWorkspaceResult(sessionPath, result, { running: true });
       entry.headless = this._headless;
+      this._stampBackend(sessionPath, this._backendForSession(sessionPath));
       this._saveColdWorkspace(sessionPath, entry);
       this._touchLru(sessionPath);
       this._touchUserActivity(sessionPath);
@@ -1032,6 +1120,7 @@ export class BrowserManager {
     });
     const entry = this._applyWorkspaceResult(sessionPath, Array.isArray(launchResult?.tabs) ? launchResult : savedWorkspace, { running: true });
     entry.headless = this._headless;
+    this._stampBackend(sessionPath, this._backendForSession(sessionPath));
     this._saveColdWorkspace(sessionPath, entry);
     this._touchLru(sessionPath);
     this._touchUserActivity(sessionPath);

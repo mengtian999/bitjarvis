@@ -106,6 +106,9 @@ const {
   normalizeQuickChatPreferences,
 } = require("../shared/quick-chat-preferences.cjs");
 const {
+  isAllowedBrowserUrl,
+} = require("../shared/browser-url-policy.cjs");
+const {
   decorateScreenshotMarkdownIt,
   escapeAttr,
   renderScreenshotMarkdownArticle,
@@ -198,6 +201,21 @@ function readUpdateChannelPreference() {
   const prefsPath = path.join(jarvisHome, "user", "preferences.json");
   const prefs = safeReadJSON(prefsPath, {});
   return prefs?.update_channel === "beta" ? "beta" : "stable";
+}
+
+/**
+ * 更新源偏好（github/gitee）：读 preferences.json 的 update_source 字段，
+ * 经 update-source.cjs 决策——手动覆盖 > 时区检测（大陆时区 → gitee，其余 →
+ * github）。同一个设置项同时驱动壳自动更新（auto-updater.cjs 的 feed）与列车
+ * OTA（checkOnce/downloadAndApplyArtifacts 的 preferredSource），让用户在
+ * 设置-关于页选一次，两条更新路径就一致地走同一个源。不缓存：每次调用重新读，
+ * 用户切换后对下一次调用立刻生效（同 readUpdateChannelPreference 约定）。
+ * @returns {"github" | "gitee"}
+ */
+function readUpdateSourcePreference() {
+  const prefsPath = path.join(jarvisHome, "user", "preferences.json");
+  const prefs = safeReadJSON(prefsPath, {});
+  return updateSourceMod.resolveUpdateSource(prefs);
 }
 
 async function applyDesktopNetworkProxy(config, { reason = "runtime" } = {}) {
@@ -621,13 +639,9 @@ function attachRendererLaunchDiagnostics(win, label) {
   });
 }
 
-/** 校验浏览器 URL：仅允许 http/https */
-function isAllowedBrowserUrl(url) {
-  try {
-    const p = new URL(url);
-    return p.protocol === "http:" || p.protocol === "https:";
-  } catch { return false; }
-}
+// 浏览器 URL 白名单 isAllowedBrowserUrl 已提升到 shared/browser-url-policy.cjs，
+// 由本进程与 server 侧外部浏览器后端（lib/browser/external/**）共用同一实现，
+// 避免两条驱动路径各自演进后出现放行差异。
 
 let _browserViewerTheme = themeRegistry.DEFAULT_THEME; // 当前主题（用于 backgroundColor）
 const TITLEBAR_HEIGHT = 44;        // 浏览器窗口标题栏高度（px）
@@ -1014,6 +1028,7 @@ const { resolvePostUpdateAnnouncement, coerceDigestHistory, sliceDigestHistory, 
 // 列车更新"立即应用"（refresh-grade apply）的纯编排/守卫层：只提供步骤顺序 + fail-fast 语义，实际 IO（promote
 // / 停 server / 重新 spawn / 重载窗口）仍然全部走本文件已有的基础设施。
 const trainUpdateApply = require("./src/shared/train-update-apply.cjs");
+const updateSourceMod = require("./src/shared/update-source.cjs");
 
 /**
  * 轮询 server-info.json 等待 server 就绪
@@ -2793,6 +2808,7 @@ function startBackgroundOtaSchedulerOnce() {
       currentShellVersion: app.getVersion(),
       platformArch: `${process.platform}-${process.arch}`,
       channel: readUpdateChannelPreference(),
+      preferredSource: readUpdateSourcePreference(),
       log: (msg) => console.log(redactMainLogText(msg)),
       onAvailable: (result) => {
         broadcastToAllWindows("train-update-available", {
@@ -5083,6 +5099,7 @@ async function applyTrainUpdateNow(senderWebContents) {
     currentShellVersion: app.getVersion(),
     platformArch: `${process.platform}-${process.arch}`,
     channel,
+    preferredSource: readUpdateSourcePreference(),
     onProgress: (progress) => {
       try {
         if (senderWebContents && !senderWebContents.isDestroyed()) senderWebContents.send("train-update-progress", progress);
@@ -5171,6 +5188,7 @@ wrapIpcHandler("train-update-check", async () => {
     currentShellVersion: app.getVersion(),
     platformArch: `${process.platform}-${process.arch}`,
     channel: readUpdateChannelPreference(),
+    preferredSource: readUpdateSourcePreference(),
     log: (msg) => console.log(redactMainLogText(msg)),
   });
 });
@@ -6079,7 +6097,9 @@ app.whenReady().then(async () => {
   try {
     // 0. 注册 jarvis:// 与 im.bitjarvis:// 协议，让浏览器/其他 app 能唤起 BitJarvis 桌面端。
     //    Windows 通过 electron-builder 写注册表，macOS 自动写 Info.plist。
-    if (app.isPackaged) {
+    //    MSIX/AppX 包无法写注册表：协议改由包清单(AppxManifest)声明，系统直接接管，
+    //    这里的运行时调用会被容器拒掉，故跳过。
+    if (app.isPackaged && !process.windowsStore) {
       app.setAsDefaultProtocolClient('jarvis');
       app.setAsDefaultProtocolClient('im.bitjarvis');
     }

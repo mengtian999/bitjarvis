@@ -1123,7 +1123,17 @@
       "agentOpenBehavior": "打开网页时",
       "agentOpenBehaviorHint": "控制 Agent 使用浏览器时默认复用当前标签页，还是每次新开标签页。",
       "agentOpenBehaviorCurrentTab": "在当前标签页操作",
-      "agentOpenBehaviorNewTab": "新开标签页"
+      "agentOpenBehaviorNewTab": "新开标签页",
+      "backendTitle": "目标浏览器",
+      "backendLabel": "Agent 操作哪个浏览器",
+      "backendHint": "内嵌浏览器在 Jarvis 内用隔离 profile 运行。系统浏览器驱动你真实登录态的 Chrome 或 Edge。",
+      "backendEmbedded": "内嵌（隔离）",
+      "backendSystem": "我的 Chrome / Edge（已登录）",
+      "backendSystemHint": "在浏览器里开启远程调试：打开 chrome://inspect/#remote-debugging（或 edge://inspect）并开启开关。首次连接会弹授权提示，点「允许」。",
+      "externalProbe": "检查连接",
+      "externalProbeChecking": "检查中…",
+      "externalProbeFound": "已连接 — 找到 {channel} 调试端点",
+      "externalProbeMissing": "未找到调试端点。请确认浏览器已开启远程调试。"
     },
     "experiments": {
       "title": "实验",
@@ -1498,6 +1508,11 @@
       "keepAwake": "锁屏时保持运行",
       "betaUpdates": "接收测试版更新",
       "autoCheckUpdates": "自动检查更新",
+      "updateSource": "更新源",
+      "updateSourceHint": "自动模式按系统时区判断（大陆时区走 Gitee，下载更快）。也可手动指定。",
+      "updateSourceAuto": "自动（按时区）",
+      "updateSourceGithub": "GitHub（国际）",
+      "updateSourceGitee": "Gitee（中国大陆）",
       "inviteSectionTitle": "测试通道",
       "inviteCodeLabel": "邀请码",
       "inviteCodeHint": "邀请码只用来打开测试通道，不是使用本应用的门槛。",
@@ -1690,7 +1705,9 @@
       "addCustom": "添加自定义供应商",
       "noKey": "未配置",
       "remove": "移除",
-      "deleteConfirm": "确定删除供应商 {name}？相关模型将一并清除。"
+      "deleteConfirm": "确定删除供应商 {name}？相关模型将一并清除。",
+      "managedGatewayUrl": "Jarvis智能路由（已加密传输）",
+      "managedGatewayKey": "●●●●●●●●（系统云端自动托管）"
     },
     "usage": {
       "title": "用量统计",

@@ -68,7 +68,7 @@ enum AppSettings<T> {
   ),
   privacyPolicy<String>(
     'chat.fluffy.privacy_policy_url',
-    'https://bitjarvis.chat/privacy',
+    'https://www.bitjarvis.chat/privacy.html',
   ),
   tos<String>('chat.fluffy.tos_url', 'https://bitjarvis.chat/tos'),
   sendTimelineEventTimeout<int>('chat.fluffy.send_timeline_event_timeout', 15),

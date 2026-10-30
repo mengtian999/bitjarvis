@@ -209,15 +209,21 @@ const MAX_SIG_BYTES = 4 * 1024; // raw ed25519 sig is 64 bytes; PEM-wrapped is s
 const ORIGIN_MANIFEST_RACE_TIMEOUT_MS = MANIFEST_REQUEST_TIMEOUT_MS;
 
 // ── channel pointer URLs: clients poll ONLY these static asset
-//    URLs, never the GitHub API ───────────────────────────────────────────
+//    URLs, never the GitHub/Gitee API ───────────────────────────────────────
 const GITHUB_CHANNEL_BASE = "https://github.com/mengtian999/Bitjarvis/releases/download/channels";
+const GITEE_CHANNEL_BASE = "https://gitee.com/dreamsky111333/bitjarvis/releases/download/channels";
 
 /**
- * One-element array retained for compatibility with existing callers.
- * @returns {[string]} the GitHub channel manifest URL.
+ * Returns both origin (GitHub) and mirror (Gitee) manifest URLs.
+ * fetchChannelManifest tries the preferred source first and falls back
+ * to the other — both serve the same signed manifest.
+ * @returns {{origin: string, mirror: string}}
  */
 function channelManifestUrls(channel) {
-  return [`${GITHUB_CHANNEL_BASE}/${channel}.json`];
+  return {
+    origin: `${GITHUB_CHANNEL_BASE}/${channel}.json`,
+    mirror: `${GITEE_CHANNEL_BASE}/${channel}.json`,
+  };
 }
 
 // ── low-level https transport: manual redirect following, injectable for
@@ -457,78 +463,107 @@ function tryVerifyManifestCandidate(fetchResult, keyset, log) {
   try {
     return manifestModule.verifyManifest(fetchResult.manifestBytes, fetchResult.sigBytes, keyset);
   } catch (err) {
-    log(`[ota] GitHub channel manifest failed verification: ${err.message}`);
+    log(`[ota] channel manifest failed verification: ${err.message}`);
     return null;
   }
 }
 
 /**
- * Fetches this round's channel manifest from GitHub exactly once. A failed
- * round returns an error to the caller; retrying is a separate user action.
+ * Fetches this round's channel manifest. Tries the preferred source
+ * first, falls back to the other if it fails. Both sources serve the
+ * same signed manifest; the mirror exists so domestic users get a fast
+ * path via Gitee without depending on GitHub reachability.
+ *
+ * ETags are tracked per source key ("origin" for GitHub, "mirror" for
+ * Gitee) so conditional GETs hit the right source.
  * @param {{channel: string, keyset: Array<{keyId:string, publicKey:string}>,
- *   cachedEtags?: {origin?: string|null},
+ *   cachedEtags?: {origin?: string|null, mirror?: string|null},
+ *   preferredSource?: "github"|"gitee",
  *   log?: (msg: string) => void, fetchOnce?: Function,
  *   devBypass?: {hasDevOverride: () => boolean, resolveDevManifestOverride: () => string|null}}} opts
- *   `devBypass` defaults to "no override, ever" (see `NO_DEV_OVERRIDE`) —
- *   only the desktop shell ever passes the real dev-bypass module in.
  * @returns {Promise<
- *   {notModified: true, sourceEtagUpdate: {origin?: string|null}} |
- *   {manifest: object, sourceUrl: string, sourceKind: "origin",
+ *   {notModified: true, sourceEtagUpdate: {origin?: string|null, mirror?: string|null}} |
+ *   {manifest: object, sourceUrl: string, sourceKind: "origin"|"mirror",
  *    originUnreachable: boolean, etag: string|null, localDir: string|null,
- *    sourceEtagUpdate: {origin?: string|null}}>}
+ *    sourceEtagUpdate: {origin?: string|null, mirror?: string|null}}>}
  */
-async function fetchChannelManifest({ channel, keyset, cachedEtags = {}, log = () => {}, fetchOnce, devBypass = NO_DEV_OVERRIDE }) {
+async function fetchChannelManifest({ channel, keyset, cachedEtags = {}, preferredSource, log = () => {}, fetchOnce, devBypass = NO_DEV_OVERRIDE }) {
   if (devBypass.hasDevOverride()) {
     return fetchDevOverrideManifest(devBypass.resolveDevManifestOverride(), keyset, log);
   }
-  const [originUrl] = channelManifestUrls(channel);
-  const originResult = await fetchOneChannelSource(originUrl, {
-    cachedEtag: cachedEtags.origin,
-    fetchOnce,
-    log,
-    timeoutMs: MANIFEST_REQUEST_TIMEOUT_MS,
-  });
+  const urls = channelManifestUrls(channel);
+  // preferredSource 决定先试哪个源；默认 origin (GitHub) first。
+  const tryOrder = preferredSource === "gitee"
+    ? [{ key: "mirror", url: urls.mirror }, { key: "origin", url: urls.origin }]
+    : [{ key: "origin", url: urls.origin }, { key: "mirror", url: urls.mirror }];
 
   const sourceEtagUpdate = {};
-  if (originResult.status === "fetched") sourceEtagUpdate.origin = originResult.etag;
-  if (originResult.status === "not-modified") return { notModified: true, sourceEtagUpdate };
-  if (originResult.status === "error") {
-    throw new Error(`artifact-ota: GitHub channel manifest request failed: ${originResult.error.message}`);
+  let lastError = null;
+
+  for (const { key, url } of tryOrder) {
+    const result = await fetchOneChannelSource(url, {
+      cachedEtag: cachedEtags[key],
+      fetchOnce,
+      log,
+      timeoutMs: MANIFEST_REQUEST_TIMEOUT_MS,
+    });
+
+    if (result.status === "fetched") sourceEtagUpdate[key] = result.etag;
+    if (result.status === "not-modified") {
+      sourceEtagUpdate[key] = cachedEtags[key] ?? null;
+      return { notModified: true, sourceEtagUpdate };
+    }
+    if (result.status === "error") {
+      log(`[ota] ${key} source failed, trying fallback: ${result.error.message}`);
+      lastError = result.error;
+      continue;
+    }
+
+    const verified = tryVerifyManifestCandidate(result, keyset, log);
+    if (!verified) {
+      log(`[ota] ${key} manifest verification failed, trying fallback`);
+      lastError = new Error(`artifact-ota: ${key} channel manifest failed signature or schema verification`);
+      continue;
+    }
+
+    const originUnreachable = key === "mirror";
+    return {
+      manifest: verified,
+      sourceUrl: result.sourceUrl,
+      sourceKind: key,
+      originUnreachable,
+      etag: result.etag,
+      localDir: null,
+      sourceEtagUpdate,
+    };
   }
 
-  const verified = tryVerifyManifestCandidate(originResult, keyset, log);
-  if (!verified) throw new Error("artifact-ota: GitHub channel manifest failed signature or schema verification");
-
-  return {
-    manifest: verified,
-    sourceUrl: originResult.sourceUrl,
-    sourceKind: "origin",
-    originUnreachable: false,
-    etag: originResult.etag,
-    localDir: null,
-    sourceEtagUpdate,
-  };
+  throw new Error(`artifact-ota: all manifest sources failed: ${lastError ? lastError.message : "unknown"}`);
 }
 
 /**
- * GitHub ETag cache merge. Legacy state may still carry extra source keys;
- * reading it is safe, while every successful new write normalizes the
- * persisted shape back to the single `origin` key.
+ * ETag cache merge for dual-source manifest fetch. Tracks per-source keys
+ * ("origin" for GitHub, "mirror" for Gitee). Legacy state carrying only
+ * the `origin` key is read safely; new writes normalize to {origin, mirror}.
  */
 function mergeSourceEtags(previous, update) {
   const prev = previous && typeof previous === "object" ? previous : {};
   const upd = update && typeof update === "object" ? update : {};
   return {
     origin: Object.prototype.hasOwnProperty.call(upd, "origin") ? upd.origin : (prev.origin ?? null),
+    mirror: Object.prototype.hasOwnProperty.call(upd, "mirror") ? upd.mirror : (prev.mirror ?? null),
   };
 }
 
 function cachedGithubEtags(channelState) {
   const manifestEtags = channelState?.manifestEtags;
   if (!manifestEtags || typeof manifestEtags !== "object") return {};
-  return Object.prototype.hasOwnProperty.call(manifestEtags, "origin")
-    ? { origin: manifestEtags.origin ?? null }
-    : {};
+  const result = {};
+  if (Object.prototype.hasOwnProperty.call(manifestEtags, "origin"))
+    result.origin = manifestEtags.origin ?? null;
+  if (Object.prototype.hasOwnProperty.call(manifestEtags, "mirror"))
+    result.mirror = manifestEtags.mirror ?? null;
+  return result;
 }
 
 // ── minShell comparison (major.minor.patch only; no new semver dep) ───────
@@ -880,18 +915,20 @@ function buildAvailableDescriptor({ manifest, serverEntry, rendererEntry, versio
  *
  * @param {{homeDir: string, keyset: Array<{keyId:string, publicKey:string}>,
  *   currentShellVersion: string, platformArch: string, channel?: string,
+ *   preferredSource?: "github"|"gitee",
  *   log?: (msg: string) => void, fetchOnce?: Function,
  *   devBypass?: {hasDevOverride: () => boolean, resolveDevManifestOverride: () => string|null}}} opts
  *   `fetchOnce` is a test-only low-level transport override (see
  *   `fetchWithRedirects`); production callers never pass it. `devBypass`
  *   defaults to "no override, ever" — see `fetchChannelManifest`'s doc
- *   comment.
+ *   comment. `preferredSource` controls which manifest source is tried
+ *   first (the other is always a fallback).
  * @returns {Promise<{outcome: string, train?: number, version?: string,
  *   minShellBlocked?: boolean, error?: string}>}
  */
 async function checkOnce(opts) {
   const {
-    homeDir, keyset, currentShellVersion, platformArch, channel = SEED_CHANNEL, log = () => {}, fetchOnce,
+    homeDir, keyset, currentShellVersion, platformArch, channel = SEED_CHANNEL, preferredSource, log = () => {}, fetchOnce,
     devBypass = NO_DEV_OVERRIDE,
   } = opts || {};
   if (!homeDir) throw new Error("artifact-ota: homeDir is required");
@@ -907,7 +944,7 @@ async function checkOnce(opts) {
   const cachedEtags = cachedGithubEtags(priorChannelState);
 
   try {
-    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags, log, fetchOnce, devBypass });
+    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags, preferredSource, log, fetchOnce, devBypass });
     if (fetched.notModified) {
       // The shelf hasn't moved since the last check. That is NOT the same
       // thing as "you are up to date" — whatever the last check found
@@ -1104,6 +1141,7 @@ async function checkOnce(opts) {
  *
  * @param {{homeDir: string, keyset: Array<{keyId:string, publicKey:string}>,
  *   currentShellVersion: string, platformArch: string, channel?: string,
+ *   preferredSource?: "github"|"gitee",
  *   onProgress?: (event: {phase: "downloading"|"verifying"|"activating",
  *     kind: "server"|"renderer", receivedBytes: number, totalBytes: number,
  *     overallReceivedBytes: number, overallTotalBytes: number}) => void,
@@ -1126,6 +1164,7 @@ async function downloadAndApplyArtifacts(opts) {
     currentShellVersion,
     platformArch,
     channel = SEED_CHANNEL,
+    preferredSource,
     onProgress = () => {},
     log = () => {},
     fetchOnce,
@@ -1144,7 +1183,7 @@ async function downloadAndApplyArtifacts(opts) {
     // Bypass the ETag cache on purpose: the point of a click-triggered
     // download is to get the latest shelf state, not whatever checkOnce
     // last cached.
-    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags: {}, log, fetchOnce, devBypass });
+    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags: {}, preferredSource, log, fetchOnce, devBypass });
     if (fetched.notModified) {
       // Can't happen with no cache token sent to either source, but guard
       // explicitly rather than silently proceeding with no manifest.
@@ -1392,6 +1431,7 @@ async function downloadAndApplyArtifacts(opts) {
  *
  * @param {{homeDir: string, keyset: Array<{keyId:string, publicKey:string}>,
  *   channel?: string, serverProtocolVersion: number,
+ *   preferredSource?: "github"|"gitee",
  *   onProgress?: (event: {phase: "downloading"|"verifying"|"activating",
  *     kind: "renderer", receivedBytes: number, totalBytes: number,
  *     overallReceivedBytes: number, overallTotalBytes: number}) => void,
@@ -1414,6 +1454,7 @@ async function downloadAndApplyRendererArtifact(opts) {
     homeDir,
     keyset,
     channel = SEED_CHANNEL,
+    preferredSource,
     serverProtocolVersion,
     onProgress = () => {},
     log = () => {},
@@ -1424,13 +1465,13 @@ async function downloadAndApplyRendererArtifact(opts) {
   if (!Array.isArray(keyset) || keyset.length === 0) throw new Error("artifact-ota: keyset is required");
   if (!Number.isInteger(serverProtocolVersion)) throw new Error("artifact-ota: serverProtocolVersion is required");
 
-  // Same GitHub-only ETag bookkeeping as downloadAndApplyArtifacts.
+  // Same dual-source ETag bookkeeping as downloadAndApplyArtifacts.
   const priorCachedEtags = cachedGithubEtags((await readOtaState(homeDir))[channel] || {});
 
   try {
     // Bypass the ETag cache on purpose: an operator-triggered pull wants
     // the latest shelf state, not whatever a previous run cached.
-    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags: {}, log, fetchOnce, devBypass });
+    const fetched = await fetchChannelManifest({ channel, keyset, cachedEtags: {}, preferredSource, log, fetchOnce, devBypass });
     if (fetched.notModified) {
       // Can't happen with no cache token sent to either source, but guard
       // explicitly rather than silently proceeding with no manifest.

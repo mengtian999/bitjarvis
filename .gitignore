@@ -73,3 +73,11 @@ vendor/
 
 # Keys & certificates
 keys/
+.dev-keys/
+
+# Local editor & tool scratch
+.vscode/
+$T/
+.tt2/
+*.stdout
+*.stderr

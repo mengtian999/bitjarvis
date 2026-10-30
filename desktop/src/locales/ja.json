@@ -1123,7 +1123,17 @@
       "agentOpenBehavior": "Web ページを開く時",
       "agentOpenBehaviorHint": "Agent がブラウザを使う時に、現在のタブを使うか新しいタブを開くかを選びます。",
       "agentOpenBehaviorCurrentTab": "現在のタブで操作",
-      "agentOpenBehaviorNewTab": "新しいタブを開く"
+      "agentOpenBehaviorNewTab": "新しいタブを開く",
+      "backendTitle": "Target Browser",
+      "backendLabel": "Which browser the agent drives",
+      "backendHint": "Embedded runs in an isolated profile inside Jarvis. System drives your real Chrome or Edge with its existing logins.",
+      "backendEmbedded": "Embedded (isolated)",
+      "backendSystem": "My Chrome / Edge (logged-in)",
+      "backendSystemHint": "Enable remote debugging in your browser: open chrome://inspect/#remote-debugging (or edge://inspect) and toggle it on. The first connection will show a permission prompt — click Allow.",
+      "externalProbe": "Check connection",
+      "externalProbeChecking": "Checking…",
+      "externalProbeFound": "Connected — {channel} debugging endpoint found",
+      "externalProbeMissing": "No debugging endpoint found. Make sure your browser is running with remote debugging enabled."
     },
     "general": {
       "title": "一般",
@@ -1432,6 +1442,11 @@
       "keepAwake": "ロック中も実行を継続",
       "betaUpdates": "ベータ版アップデートを受け取る",
       "autoCheckUpdates": "アップデートを自動で確認",
+      "updateSource": "アップデート元",
+      "updateSourceHint": "自動モードはシステムのタイムゾーンで判定します（大陸は Gitee、ダウンロードが高速）。手動でも指定できます。",
+      "updateSourceAuto": "自動（タイムゾーン）",
+      "updateSourceGithub": "GitHub（海外）",
+      "updateSourceGitee": "Gitee（中国本土）",
       "inviteSectionTitle": "テストチャンネル",
       "inviteCodeLabel": "招待コード",
       "inviteCodeHint": "招待コードはテストチャンネルを開くためのものです。アプリの利用条件ではありません。",
@@ -3718,5 +3733,12 @@
     "sendFailed": "送信に失敗しました：{error}",
     "rejectFailed": "無視に失敗しました：{error}",
     "messageField": "メッセージ内容"
+  },
+  "im": {
+    "title": "Messages",
+    "notBound": "No IM account bound — log in on the Messages page",
+    "binding": "Binding device...",
+    "bound": "Bound to {userId}",
+    "bindFailed": "Binding failed, please retry"
   }
 }

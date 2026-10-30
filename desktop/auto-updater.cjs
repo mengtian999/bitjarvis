@@ -22,6 +22,8 @@ const UPDATE_CHANNEL_VERSION = 1;
 const DEFAULT_INVITE_API_URL = "";
 const DEFAULT_GITHUB_OWNER = "mengtian999";
 const DEFAULT_GITHUB_REPO = "Bitjarvis";
+const DEFAULT_GITEE_OWNER = "dreamsky111333";
+const DEFAULT_GITEE_REPO = "bitjarvis";
 
 let _mainWindow = null;
 let _setIsUpdating = null;  // 由 main.cjs 注入
@@ -54,6 +56,29 @@ function createGithubFeedConfig(digestBaseUrl = "") {
       repo: DEFAULT_GITHUB_REPO,
     },
     digestBaseUrl: digestBaseUrl || `https://github.com/${DEFAULT_GITHUB_OWNER}/${DEFAULT_GITHUB_REPO}/releases/download`,
+    channel: "default",
+    channelError: null,
+  };
+}
+
+/**
+ * Gitee shell-update feed。electron-updater 的 generic provider 需要
+ * {url}/latest.yml，所以发布时要在 gitee 建一个 tag="latest" 的 release，
+ * 把 latest.yml 当 asset 传上去。
+ */
+function createGiteeFeedConfig(digestBaseUrl = "") {
+  const giteeBase = `https://gitee.com/${DEFAULT_GITEE_OWNER}/${DEFAULT_GITEE_REPO}/releases/download`;
+  return {
+    feedURL: {
+      provider: "generic",
+      url: `${giteeBase}/latest`,
+    },
+    source: {
+      provider: "gitee",
+      owner: DEFAULT_GITEE_OWNER,
+      repo: DEFAULT_GITEE_REPO,
+    },
+    digestBaseUrl: digestBaseUrl || giteeBase,
     channel: "default",
     channelError: null,
   };
@@ -178,8 +203,29 @@ function resolveUpdateFeedConfig(env = process.env) {
     return createInviteChannelFeedConfig(record.feedUrl, digestBaseUrl);
   }
 
-  // 公开 stable/beta 固定使用 GitHub。旧环境里即使还留着其它 source 值，
-  // 也不再触发第二个公共更新源；只有上面的显式 feed URL 和邀请通道可以改源。
+  // 显式环境变量 JARVIS_UPDATE_SOURCE=github|gitee 是运维/调试的直接指令，
+  // 压过任何持久化状态与时区检测（与 explicitFeedUrl 同优先级语义）。legacy 值
+  // （gitcode/atomgit 等）不匹配，落到下面的 prefs+时区检测分支按既有行为处理。
+  if (source === "github" || source === "gitee") {
+    const forcedConfig = source === "gitee" ? createGiteeFeedConfig(digestBaseUrl) : createGithubFeedConfig(digestBaseUrl);
+    return { ...forcedConfig, channelError: channelError || null };
+  }
+
+  // 读 preferences.json 的 update_source 字段，结合时区检测决定走 GitHub 还是 Gitee。
+  let preferredSource = "github";
+  try {
+    const updateSource = require("./src/shared/update-source.cjs");
+    const prefsPath = path.join(_jarvisHome || "", "user", "preferences.json");
+    let prefs = null;
+    try { prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8")); } catch {}
+    preferredSource = updateSource.resolveUpdateSource(prefs);
+  } catch {}
+
+  if (preferredSource === "gitee") {
+    const giteeConfig = createGiteeFeedConfig(digestBaseUrl);
+    return { ...giteeConfig, channelError: channelError || null };
+  }
+
   const defaultConfig = createGithubFeedConfig(digestBaseUrl);
   return { ...defaultConfig, channelError: channelError || null };
 }
@@ -245,6 +291,8 @@ function createIdleState() {
     updateSource: _updateFeedConfig.source,
     updateChannel: _updateFeedConfig.channel || "default",
     updateChannelError: _updateFeedConfig.channelError || null,
+    // 商店托管包（MSIX/AppX）的更新由 Microsoft Store 分发，壳不参与。
+    storeManaged: false,
   };
 }
 
@@ -835,6 +883,16 @@ function startPolling() {
 
 // ── 公共 API ──
 
+/**
+ * 是否运行在商店/打包容器里（MSIX 或 AppX）。Electron 在 AppX 容器内会把
+ * process.windowsStore 置为 true；非 Windows 平台恒为 undefined。
+ * 这种包几乎没有可写注册表和自由的文件系统布局，electron-updater 的
+ * quitAndInstall 也无从落地，更新必须交给商店。
+ */
+function isWindowsStoreBuild() {
+  return process.windowsStore === true;
+}
+
 function initAutoUpdater(mainWindow, {
   setIsUpdating, jarvisHome,
 } = {}) {
@@ -846,6 +904,15 @@ function initAutoUpdater(mainWindow, {
 
   // 开发环境不初始化 auto-updater
   if (!app.isPackaged) return;
+
+  // 商店托管包：更新由 Microsoft Store 推送，壳侧彻底退出自动更新。
+  // IPC handlers 仍然注册（渲染端照常调用 auto-update-state 拿到 storeManaged），
+  // 只是不再配置 feed、不再轮询、不再下载。
+  if (isWindowsStoreBuild()) {
+    setState({ status: "idle", storeManaged: true });
+    logUpdate("windows store package detected; auto-update delegated to Microsoft Store");
+    return;
+  }
 
   // macOS：从 DMG 直接运行时禁用
   if (isRunningFromDmg()) {
@@ -865,7 +932,7 @@ function initAutoUpdater(mainWindow, {
 }
 
 async function checkForUpdatesAuto() {
-  if (!app.isPackaged || isRunningFromDmg()) return;
+  if (!app.isPackaged || isRunningFromDmg() || isWindowsStoreBuild()) return;
   // 用户关了自动检查开关：启动时也不自动 check
   if (!isAutoCheckEnabled()) return;
   try {

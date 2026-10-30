@@ -1123,7 +1123,17 @@
       "agentOpenBehavior": "웹페이지를 열 때",
       "agentOpenBehaviorHint": "Agent가 브라우저를 사용할 때 현재 탭을 쓸지 새 탭을 열지 선택합니다.",
       "agentOpenBehaviorCurrentTab": "현재 탭에서 작업",
-      "agentOpenBehaviorNewTab": "새 탭 열기"
+      "agentOpenBehaviorNewTab": "새 탭 열기",
+      "backendTitle": "Target Browser",
+      "backendLabel": "Which browser the agent drives",
+      "backendHint": "Embedded runs in an isolated profile inside Jarvis. System drives your real Chrome or Edge with its existing logins.",
+      "backendEmbedded": "Embedded (isolated)",
+      "backendSystem": "My Chrome / Edge (logged-in)",
+      "backendSystemHint": "Enable remote debugging in your browser: open chrome://inspect/#remote-debugging (or edge://inspect) and toggle it on. The first connection will show a permission prompt — click Allow.",
+      "externalProbe": "Check connection",
+      "externalProbeChecking": "Checking…",
+      "externalProbeFound": "Connected — {channel} debugging endpoint found",
+      "externalProbeMissing": "No debugging endpoint found. Make sure your browser is running with remote debugging enabled."
     },
     "general": {
       "title": "일반",
@@ -1432,6 +1442,11 @@
       "keepAwake": "잠금 중에도 계속 실행",
       "betaUpdates": "베타 업데이트 수신",
       "autoCheckUpdates": "업데이트 자동 확인",
+      "updateSource": "업데이트 소스",
+      "updateSourceHint": "자동 모드는 시스템 시간대로 판단합니다(중국 본토는 Gitee, 다운로드가 빠름). 수동으로 지정할 수도 있습니다.",
+      "updateSourceAuto": "자동(시간대 기준)",
+      "updateSourceGithub": "GitHub(해외)",
+      "updateSourceGitee": "Gitee(중국 본토)",
       "inviteSectionTitle": "테스트 채널",
       "inviteCodeLabel": "초대 코드",
       "inviteCodeHint": "초대 코드는 테스트 채널을 여는 용도입니다. 앱 사용 조건이 아닙니다.",
@@ -3718,5 +3733,12 @@
     "sendFailed": "전송 실패: {error}",
     "rejectFailed": "무시 실패: {error}",
     "messageField": "메시지 내용"
+  },
+  "im": {
+    "title": "Messages",
+    "notBound": "No IM account bound — log in on the Messages page",
+    "binding": "Binding device...",
+    "bound": "Bound to {userId}",
+    "bindFailed": "Binding failed, please retry"
   }
 }

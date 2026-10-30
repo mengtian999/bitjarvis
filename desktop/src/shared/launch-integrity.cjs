@@ -159,7 +159,15 @@ function findSeedManifestSignature(seedDir) {
   return findSeedFile(seedDir, "seed-train-", ".json.sig");
 }
 
-function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath } = {}) {
+/**
+ * 是否运行在商店/打包容器里（MSIX 或 AppX）。Electron 在 AppX 容器内会把
+ * process.windowsStore 置为 true。
+ */
+function isStoreManagedBuild() {
+  return process.windowsStore === true;
+}
+
+function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath, storeManaged = isStoreManagedBuild() } = {}) {
   const executablePath = execPath || "";
   const appRoot = executablePath ? path.dirname(executablePath) : "";
   const resourcesRoot = resourcesPath || (appRoot ? path.join(appRoot, "resources") : "");
@@ -193,12 +201,15 @@ function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath } = {}) {
       relativePath: "resources/app.asar",
       paths: [path.join(resourcesRoot, "app.asar")],
     },
-    {
+    // MSIX/AppX 包由 Microsoft Store 负责更新，安装面里根本没有 app-update.yml
+    // （electron-updater 也不随包分发）。此时仍强制要求它存在，会把一次正常的
+    // 商店包启动判成"安装不完整"。检测到商店托管时整项跳过。
+    ...(storeManaged ? [] : [{
       id: "app-update-yml",
       label: "resources/app-update.yml",
       relativePath: "resources/app-update.yml",
       paths: [path.join(resourcesRoot, "app-update.yml")],
-    },
+    }]),
     {
       id: "seed-manifest",
       label: "resources/seed/seed-train-*.json",

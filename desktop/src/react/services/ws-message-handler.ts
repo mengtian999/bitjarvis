@@ -10,6 +10,7 @@ import { streamBufferManager } from '../hooks/use-stream-buffer';
 import { dispatchStreamKey } from './stream-key-dispatcher';
 import { useStore } from '../stores';
 import { updateKeyed } from '../stores/create-keyed-slice';
+import { DEFAULT_ERROR_DEDUPE_WINDOW_MS } from '../../../../shared/error-bus.ts';
 import { sessionScopedKey, sessionScopedListIncludes, sessionScopedValue } from '../stores/session-slice';
 import { browserStateForPath, setBrowserStateForPath } from '../stores/browser-slice';
 import { scheduleSessionsRefresh } from './session-refresh-scheduler';
@@ -89,6 +90,21 @@ function syncSessionPermissionMode(mode: unknown) {
 
 function nonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/**
+ * 无 sessionPath 的错误只能用全局 toast 呈现（例如会话身份解析失败）。重连 / 重试
+ * 会让同一条错误在几秒内重复到达，这里按 code 做与 ErrorBus 同宽的抑制窗口，
+ * 一轮故障里最多提醒一次。
+ */
+const _sessionlessErrorToastAt = new Map<string, number>();
+
+function shouldToastSessionlessError(code: string): boolean {
+  const now = Date.now();
+  const lastSeen = _sessionlessErrorToastAt.get(code);
+  if (lastSeen && now - lastSeen < DEFAULT_ERROR_DEDUPE_WINDOW_MS) return false;
+  _sessionlessErrorToastAt.set(code, now);
+  return true;
 }
 
 function sessionIdentityFromMessage(msg: any): { sessionId: string | null; sessionPath: string | null } {
@@ -1047,7 +1063,9 @@ export function handleServerMessage(msg: any): void {
           typeof msg.code === 'string' ? msg.code : null,
         ));
         if (msg.code === 'session_identity_unresolved' || msg.code === 'session_identity_mismatch') {
-          useStore.getState().addToast(presented.text, 'error', 6000, { errorCode: msg.code });
+          if (shouldToastSessionlessError(String(msg.code))) {
+            useStore.getState().addToast(presented.text, 'error', 6000, { errorCode: msg.code });
+          }
         } else {
           console.warn('[ws] event missing sessionPath:', msg.type);
         }

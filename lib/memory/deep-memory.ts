@@ -8,7 +8,7 @@
  * 这条链路替代 v1 的 extractMemoryEvents → findNewEvents → 三区间 → score/decay。
  */
 
-import { callText } from "../../core/llm-client.ts";
+import { callText, DEFAULT_CALL_TEXT_TIMEOUT_MS } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getLocale } from "../i18n.ts";
 import { attachPromptLayoutMetadata, buildUtilityPromptLayout } from "../llm/prompt-layout.ts";
@@ -296,7 +296,7 @@ async function extractFactsFromDiff(currentSummary, previousSnapshot, resolvedMo
     messages: layout.messages,
     temperature: 0.3,
     maxTokens: 4096,
-    timeoutMs: 60_000,
+    timeoutMs: DEFAULT_CALL_TEXT_TIMEOUT_MS,
     usageLedger: resolvedModel.usageLedger,
     usageContext,
   }) as string;

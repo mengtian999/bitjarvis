@@ -40,6 +40,8 @@ Bit Jarvis 是一个个人 AI 助理（桌面 Agent）：有记忆，有性格�
 
 **工具** — 读写文件、执行一次性命令或持续终端会话、浏览网页、通过浏览器后端或 API 搜索互联网、截图、分段长截图、媒体预览、检查网页……覆盖日常办公的绝大多数场景。也可以通过 server-first CLI 连接同一个 Jarvis Server，在终端里查看状态、列会话、继续对话。
 
+**系统浏览器** — Agent 默认在 Jarvis 内嵌的隔离浏览器里工作；也可以在设置里切到「系统浏览器」后端，直接驱动你本机真实登录态的 Chrome / Edge（走浏览器自带的远程调试端点）。系统浏览器下 Jarvis 只操作自己开的标签页，绝不关闭你自己的标签页，也绝不清除你真实浏览器的 Cookie 与站点数据——完整边界见 [浏览器后端](BROWSER.md)。
+
 **SKILLS 支持** — 内置兼容庞大的社区 SKILLS 生态。干活之前，Agent 有时会从 GitHub 安装社区技能，也可以自己编写并学会新技能。默认启用严格的 SKILLS 审核，如果发现装不上可以自行关闭。
 
 **角色卡与技能包** — Agent 可以导入 / 导出为本地优先的角色卡 zip，按白名单携带人格、头像、可选记忆和 Skills。Skill Bundle 是独立的技能包基础设施，可以分组、拖拽、成组启用，并单独导出为 zip 方便迁移和分享。
@@ -148,7 +150,7 @@ npm run dist:linux     # 打包 Linux（AppImage / deb）
 
 - 官网：<https://bitjarvis.chat>
 - 移动端：<https://github.com/mengtian999/jarvis>（独立仓库，本仓库不包含）
-- [提交 Issue](https://github.com/mengtian999/Bitjarvis/issues) · [安全政策](SECURITY.md) · [插件开发指南](PLUGINS.md) · [贡献指南](CONTRIBUTING.md)
+- [提交 Issue](https://github.com/mengtian999/Bitjarvis/issues) · [安全政策](SECURITY.md) · [插件开发指南](PLUGINS.md) · [浏览器后端](BROWSER.md) · [贡献指南](CONTRIBUTING.md)
 
 ## 致谢
 

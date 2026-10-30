@@ -16,7 +16,7 @@ import fs from "fs";
 import path from "path";
 import { atomicWriteSync } from "../../shared/safe-fs.ts";
 import { scrubPII } from "../pii-guard.ts";
-import { callText } from "../../core/llm-client.ts";
+import { callText, DEFAULT_CALL_TEXT_TIMEOUT_MS } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getToolArgs, isToolCallBlock } from "../../core/llm-utils.ts";
 import { getLocale } from "../i18n.ts";
@@ -752,7 +752,7 @@ export class SessionSummaryManager {
       messages: layout.messages,
       temperature: 0.3,
       maxTokens: withMemoryReasoningBuffer(visibleMaxTokens, resolvedModel),
-      timeoutMs: 60_000,
+      timeoutMs: DEFAULT_CALL_TEXT_TIMEOUT_MS,
       signal: undefined,
       returnUsage: opts.returnUsage === true,
       usageLedger: resolvedModel.usageLedger,
@@ -957,7 +957,7 @@ Word limit: follow the per-run summary budget. If three sentences suffice, don't
       messages: layout.messages,
       temperature: 0.3,
       maxTokens: maxTokens,
-      timeoutMs: 60_000,
+      timeoutMs: DEFAULT_CALL_TEXT_TIMEOUT_MS,
       signal: undefined,
       returnUsage: opts.returnUsage === true,
       usageLedger: resolvedModel.usageLedger,

@@ -18,7 +18,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { DAY_BOUNDARY_HOUR, getLogicalDay, getLogicalDayForDate, shiftLogicalDate } from "../time-utils.ts";
-import { callText } from "../../core/llm-client.ts";
+import { callText, DEFAULT_CALL_TEXT_TIMEOUT_MS } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getLocale } from "../i18n.ts";
 import { atomicWriteSync, safeReadFile } from "../../shared/safe-fs.ts";
@@ -1084,7 +1084,7 @@ async function _compactLLM(input, systemPrompt, resolvedModel, maxTokens, operat
     systemPrompt: layout.systemPrompt,
     temperature: 0.3,
     maxTokens: withMemoryReasoningBuffer(maxTokens, resolvedModel),
-    timeoutMs: 60_000,
+    timeoutMs: DEFAULT_CALL_TEXT_TIMEOUT_MS,
     signal: undefined,
     usageLedger: resolvedModel.usageLedger,
     usageContext,

@@ -206,6 +206,7 @@ import { NotificationService } from "../lib/notifications/notification-service.t
 import { SpeechRecognitionService } from "./speech-recognition-service.ts";
 import { TtsService } from "./tts-service.ts";
 import { UniversalMediaManager } from "./media/universal-media-manager.ts";
+import { seedGatewayMediaDefaultModels } from "./media/media-default-model-seed.ts";
 import { McpManager } from "./mcp/manager.ts";
 import { createCurrentTurnNativeMediaStore } from "./current-turn-native-media.ts";
 import {
@@ -2484,31 +2485,10 @@ export class JarvisEngine {
       this._models.providerRegistry.seedDefaultApiKeys(log);
     }, log);
 
-    // 设置默认的媒体生成模型为 Jarvis Cloud 网关模型，并清理旧版 jarvis 供应商残留
+    // 设置默认的媒体生成模型为 Jarvis Cloud 网关的当前档位（image / video），
+    // 并把旧版 jarvis 供应商、已下线的 standard 档位残留一并迁移过去
     runBestEffortStartupMigrationStep("media-default-model-seed", () => {
-      const imageConfig = this._prefs.getImageGenerationConfig();
-      const videoConfig = this._prefs.getVideoGenerationConfig();
-      let changed = false;
-      const nextPrefs = this._prefs._mutableCopy();
-      if (!imageConfig.defaultImageModel || imageConfig.defaultImageModel.provider === "jarvis") {
-        nextPrefs.imageGeneration = {
-          ...imageConfig,
-          defaultImageModel: { provider: "jarvis-gateway", id: "standard" },
-        };
-        changed = true;
-        log(`[media-default] set default image model to jarvis-gateway/standard`);
-      }
-      if (!videoConfig.defaultVideoModel || videoConfig.defaultVideoModel.provider === "jarvis") {
-        nextPrefs.videoGeneration = {
-          ...videoConfig,
-          defaultVideoModel: { provider: "jarvis-gateway", id: "standard" },
-        };
-        changed = true;
-        log(`[media-default] set default video model to jarvis-gateway/standard`);
-      }
-      if (changed) {
-        this._prefs.savePreferences(nextPrefs);
-      }
+      seedGatewayMediaDefaultModels({ prefs: this._prefs, log });
     }, log);
 
     // 设置大工具模型和小工具模型为办公友好，辅助视觉模型开关打开并选择角色友好

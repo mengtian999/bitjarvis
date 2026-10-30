@@ -30,6 +30,63 @@ import {
 const DEFAULT_BASE_URL = "https://gateway.bitjarvis.chat"; // 正式域名，部署后可用 JARVIS_GATEWAY_URL 覆盖
 const RETRYABLE_AUTH_CODES = new Set(["token_invalid", "token_missing"]);
 
+/**
+ * 网关重试预算。
+ *
+ * 用户侧最常见的失败形态是「上游 503 / 连接被重置（status 0）」——都是瞬时故障，
+ * 直接抛给用户就是一次失败轮次 + 一条错误提示。这里做幂等重试：
+ *   - 网络层异常（fetch 抛出 / DNS / TLS / socket reset）；
+ *   - 5xx（网关自身或上游过载）；
+ *   - 429 且不是额度用尽（额度用尽是终态，重试只会拿到同一个拒绝）。
+ * 4xx 业务错误（鉴权、参数、额度）不重试，避免放大风控。
+ */
+const DEFAULT_RETRY_DELAYS_MS = [500, 1_500];
+/** 流式响应中途断流时，只在「还没吐出任何增量」的情况下重连一次。 */
+const STREAM_RESET_RETRY_DELAY_MS = 800;
+
+function isRetryableStatus(status: number): boolean {
+  if (status === 429) return true;
+  return status >= 500 && status <= 599;
+}
+
+/** 429 要区分「限流」（可重试）与「额度用尽」（终态，重试只会拿到同一个拒绝）。 */
+async function shouldRetryResponse(res: Response): Promise<boolean> {
+  if (!isRetryableStatus(res.status)) return false;
+  if (res.status !== 429) return true;
+  const data: any = await res.clone().json().catch(() => null);
+  return data?.error?.code !== "quota_exceeded";
+}
+
+function sleepWithSignal(ms: number, signal?: AbortSignal | null): Promise<void> {
+  if (!(ms > 0)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortLikeError());
+      return;
+    }
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(abortLikeError());
+    };
+    function cleanup() {
+      signal?.removeEventListener?.("abort", onAbort);
+    }
+    signal?.addEventListener?.("abort", onAbort, { once: true });
+  });
+}
+
+function abortLikeError(): Error {
+  const err: Error & { type?: string } = new Error("This operation was aborted");
+  err.name = "AbortError";
+  err.type = "aborted";
+  return err;
+}
+
 export type GatewayClientOptions = {
   baseUrl?: string;
   appSecret?: string;
@@ -38,6 +95,8 @@ export type GatewayClientOptions = {
   appVersion?: string;
   line?: "cn" | "intl" | null; // 用户手动线路（§4.2 设置里的「线路选择」）
   fetchImpl?: typeof fetch;    // 测试注入
+  retryDelaysMs?: number[];    // 幂等重试退避（测试传 [] 关闭重试）
+  sleepImpl?: (ms: number, signal?: AbortSignal | null) => Promise<void>;
 };
 
 export type GatewayChatMessage = { role: string; content: unknown };
@@ -52,6 +111,8 @@ export class GatewayClient {
   private appVersion: string;
   private line: "cn" | "intl" | null;
   private fetchImpl: typeof fetch;
+  private retryDelaysMs: number[];
+  private sleep: (ms: number, signal?: AbortSignal | null) => Promise<void>;
 
   constructor(opts: GatewayClientOptions = {}) {
     this.baseUrl = (
@@ -63,6 +124,10 @@ export class GatewayClient {
     this.appVersion = opts.appVersion || "0.0.1";
     this.line = opts.line ?? null;
     this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.retryDelaysMs = Array.isArray(opts.retryDelaysMs)
+      ? opts.retryDelaysMs.filter((ms) => Number.isFinite(ms) && ms >= 0).map(Math.floor)
+      : [...DEFAULT_RETRY_DELAYS_MS];
+    this.sleep = opts.sleepImpl ?? sleepWithSignal;
   }
 
   /** OpenAI 兼容端点（provider 配置的 base_url 用它）。 */
@@ -97,7 +162,6 @@ export class GatewayClient {
       installId,
       deviceId: String(data.device_id || ""),
       token: String(data.token || ""),
-      region: typeof data.region === "string" ? data.region : "cn",
       registeredAt: new Date().toISOString(),
     };
     if (!identity.deviceId || !identity.token) {
@@ -170,6 +234,9 @@ export class GatewayClient {
   /**
    * 流式聊天：解析 SSE，逐段 yield 增量文本（choices[0].delta.content）。
    * 网关已在源头改写真实模型名，此处无需再处理。
+   *
+   * 断流重连规则：只在「还没吐出任何增量」时重连一次。已经产出过文本再重连会
+   * 把同一段回复拼接两遍；宁可直接失败，由会话层的中断条让用户决定是否重试。
    */
   async *chatStream(opts: {
     model: string;
@@ -178,43 +245,60 @@ export class GatewayClient {
     temperature?: number;
     signal?: AbortSignal;
   }): AsyncGenerator<string, void, unknown> {
-    const res = await this.authedFetch("POST", "/v1/chat/completions", {
-      model: opts.model,
-      messages: opts.messages,
-      stream: true,
-      max_tokens: opts.maxTokens,
-      temperature: opts.temperature,
-    }, opts.signal);
-    if (!res.ok || !res.body) {
-      throw toGatewayError(await res.json().catch(() => null), res.status);
-    }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buffer.indexOf("\n")) >= 0) {
-          const line = buffer.slice(0, idx).replace(/\r$/, "");
-          buffer = buffer.slice(idx + 1);
-          if (!line.startsWith("data: ")) continue;
-          const payload = line.slice(6).trim();
-          if (payload === "[DONE]") return;
-          let chunk: any;
-          try {
-            chunk = JSON.parse(payload);
-          } catch {
-            continue; // 心跳/注释行
-          }
-          const delta = chunk?.choices?.[0]?.delta?.content;
-          if (typeof delta === "string" && delta) yield delta;
-        }
+    const attempts = 2;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const res = await this.authedFetch("POST", "/v1/chat/completions", {
+        model: opts.model,
+        messages: opts.messages,
+        stream: true,
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+      }, opts.signal);
+      if (!res.ok || !res.body) {
+        throw toGatewayError(await res.json().catch(() => null), res.status);
       }
-    } finally {
-      reader.cancel().catch(() => {});
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let yieldedAny = false;
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx: number;
+          while ((idx = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, idx).replace(/\r$/, "");
+            buffer = buffer.slice(idx + 1);
+            if (!line.startsWith("data: ")) continue;
+            const payload = line.slice(6).trim();
+            if (payload === "[DONE]") return;
+            let chunk: any;
+            try {
+              chunk = JSON.parse(payload);
+            } catch {
+              continue; // 心跳/注释行
+            }
+            const delta = chunk?.choices?.[0]?.delta?.content;
+            if (typeof delta === "string" && delta) {
+              yieldedAny = true;
+              yield delta;
+            }
+          }
+        }
+        return;
+      } catch (err) {
+        if (yieldedAny || attempt >= attempts || opts.signal?.aborted) {
+          if (err instanceof AppError) throw err;
+          throw new AppError("GATEWAY_UNAVAILABLE", {
+            message: "网关流式响应中断",
+            context: { model: opts.model, cause: (err as any)?.message || String(err) },
+          });
+        }
+        await this.sleep(STREAM_RESET_RETRY_DELAY_MS, opts.signal);
+      } finally {
+        reader.cancel().catch(() => {});
+      }
     }
   }
 
@@ -246,20 +330,33 @@ export class GatewayClient {
       ...extraHeaders,
     };
     if (this.line) headers["X-Line"] = this.line;
-    const init: FetchInit = { method, headers };
-    if (method !== "GET" && method !== "HEAD") init.body = bodyString;
-    if (signal) init.signal = signal;
-    let res: Response;
-    try {
-      res = await this.fetchImpl(this.baseUrl + path, init);
-    } catch (err) {
-      throw new AppError("GATEWAY_UNAVAILABLE", {
-        message: "无法连接网关服务",
-        context: { baseUrl: this.baseUrl, path },
-        cause: err,
-      });
+
+    const attempts = this.retryDelaysMs.length + 1;
+    let lastError: unknown = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const init: FetchInit = { method, headers };
+      if (method !== "GET" && method !== "HEAD") init.body = bodyString;
+      if (signal) init.signal = signal;
+      try {
+        const res = await this.fetchImpl(this.baseUrl + path, init);
+        if (attempt < attempts && await shouldRetryResponse(res)) {
+          await this.sleep(this.retryDelaysMs[attempt - 1], signal);
+          continue;
+        }
+        return res;
+      } catch (err) {
+        // 调用方主动取消：不重试，原样抛出（上层按 abort 处理）。
+        if (signal?.aborted) throw err;
+        lastError = err;
+        if (attempt >= attempts) break;
+        await this.sleep(this.retryDelaysMs[attempt - 1], signal);
+      }
     }
-    return res;
+    throw new AppError("GATEWAY_UNAVAILABLE", {
+      message: "无法连接网关服务",
+      context: { baseUrl: this.baseUrl, path, attempts },
+      cause: lastError,
+    });
   }
 
   /** 带设备 token 的请求；token 失效时清本地身份并重注册重试一次（服务端幂等）。 */

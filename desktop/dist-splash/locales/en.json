@@ -1123,7 +1123,17 @@
       "agentOpenBehavior": "When opening webpages",
       "agentOpenBehaviorHint": "Choose whether the agent reuses the current tab or opens a new tab by default.",
       "agentOpenBehaviorCurrentTab": "Use current tab",
-      "agentOpenBehaviorNewTab": "Open new tab"
+      "agentOpenBehaviorNewTab": "Open new tab",
+      "backendTitle": "Target Browser",
+      "backendLabel": "Which browser the agent drives",
+      "backendHint": "Embedded runs in an isolated profile inside Jarvis. System drives your real Chrome or Edge with its existing logins.",
+      "backendEmbedded": "Embedded (isolated)",
+      "backendSystem": "My Chrome / Edge (logged-in)",
+      "backendSystemHint": "Enable remote debugging in your browser: open chrome://inspect/#remote-debugging (or edge://inspect) and toggle it on. The first connection will show a permission prompt — click Allow.",
+      "externalProbe": "Check connection",
+      "externalProbeChecking": "Checking…",
+      "externalProbeFound": "Connected — {channel} debugging endpoint found",
+      "externalProbeMissing": "No debugging endpoint found. Make sure your browser is running with remote debugging enabled."
     },
     "experiments": {
       "title": "Experiments",
@@ -1498,6 +1508,11 @@
       "keepAwake": "Keep running while locked",
       "betaUpdates": "Receive beta updates",
       "autoCheckUpdates": "Check for updates automatically",
+      "updateSource": "Update source",
+      "updateSourceHint": "Auto picks GitHub or Gitee by your system timezone (mainland China → Gitee). Choose manually to override.",
+      "updateSourceAuto": "Auto (by timezone)",
+      "updateSourceGithub": "GitHub (international)",
+      "updateSourceGitee": "Gitee (China mainland)",
       "inviteSectionTitle": "Test channel",
       "inviteCodeLabel": "Invite code",
       "inviteCodeHint": "An invite code unlocks the test channel. It does not unlock the app itself.",
@@ -1690,7 +1705,9 @@
       "addCustom": "Add Custom Provider",
       "noKey": "Not configured",
       "remove": "Remove",
-      "deleteConfirm": "Delete provider {name}? Associated models will be removed."
+      "deleteConfirm": "Delete provider {name}? Associated models will be removed.",
+      "managedGatewayUrl": "Jarvis Intelligent Routing (Encrypted)",
+      "managedGatewayKey": "●●●●●●●● (System Cloud Managed)"
     },
     "usage": {
       "title": "Usage",

@@ -261,7 +261,7 @@ The host validates `network.fetch` capability declaration, `network.allowedHosts
 
 Do not put API keys, bearer tokens, or cookies in `assets/` or browser JavaScript. Define configuration schema fields and read them from `ctx.config` inside the route or lifecycle code.
 
-Browser automation, login-backed websites, and turning a full external web app into a persistent plugin should use a separate future web-session capability rather than inventing ad hoc browser-control routes. Until that API exists, document the gap and keep ordinary data APIs on `ctx.network.fetch()`.
+Jarvis already ships browser automation as a first-class agent capability: the built-in `browser` tool drives either the isolated embedded browser or the user's real Chrome/Edge through that browser's own DevTools endpoint (see [`BROWSER.md`](BROWSER.md)). Plugins do not get a browser-control surface of their own. Keep ordinary data APIs on `ctx.network.fetch()`, and do not invent ad hoc browser-control routes, read the user's live browser profile (`Cookies`, `Login Data`) from a plugin route, or carry site cookies through plugin config. When a plugin genuinely needs a logged-in external site driven, delegate that work to an agent session that calls the `browser` tool and render the result in the plugin UI. There is still no plugin-facing web-session API that owns persistent cookies or user-mediated navigation, so do not pretend one exists.
 
 ### Runtime Session and Agent API
 

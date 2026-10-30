@@ -95,10 +95,75 @@ export function BrowserTab() {
     }
   }, [showToast]);
 
+  // 外部浏览器连接探测：同步只读 DevToolsActivePort，不建立 WS
+  const [probe, setProbe] = useState<{ status: 'idle' | 'checking' | 'found' | 'missing'; channel?: string } | null>(null);
+  const probeConnection = useCallback(async () => {
+    setProbe({ status: 'checking' });
+    try {
+      const res = await jarvisFetch('/api/preferences/browser/external/probe', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.error) throw new Error(data?.error || res.statusText || 'Failed');
+      const found = (data.channels || []).filter((ch: any) => ch.found);
+      if (found.length > 0) {
+        setProbe({ status: 'found', channel: found[0].channel });
+      } else {
+        setProbe({ status: 'missing' });
+      }
+    } catch (err: any) {
+      setProbe({ status: 'missing' });
+      showToast(t('settings.saveFailed') + ': ' + (err?.message || String(err)), 'error');
+    }
+  }, [showToast]);
+
+  const backendOptions = useMemo(() => ([
+    { value: 'embedded', label: t('settings.browser.backendEmbedded') },
+    { value: 'system', label: t('settings.browser.backendSystem') },
+  ]), []);
+
   const agentOpenBehavior = browserBehaviorForControl(prefs?.agentOpenBehavior || 'current_tab');
 
   return (
     <div className={`${styles['settings-tab-content']} ${styles['active']}`} data-tab="browser">
+      <SettingsSection title={t('settings.browser.backendTitle')}>
+        <SettingsRow
+          label={t('settings.browser.backendLabel')}
+          hint={t('settings.browser.backendHint')}
+          control={
+            <SelectWidget
+              options={backendOptions}
+              value={prefs?.backend || 'embedded'}
+              onChange={(value) => void saveBrowserPreferences({
+                backend: value === 'system' ? 'system' : 'embedded',
+              })}
+              placeholder={t('common.loading')}
+              disabled={saving || !prefs}
+            />
+          }
+        />
+        {prefs?.backend === 'system' && (
+          <SettingsRow
+            label={t('settings.browser.externalProbe')}
+            hint={
+              probe?.status === 'found'
+                ? t('settings.browser.externalProbeFound', { channel: probe.channel })
+                : probe?.status === 'missing'
+                  ? t('settings.browser.externalProbeMissing')
+                  : t('settings.browser.backendSystemHint')
+            }
+            control={
+              <button
+                type="button"
+                className={styles['quick-chat-reset-button']}
+                onClick={() => void probeConnection()}
+                disabled={probe?.status === 'checking'}
+              >
+                {probe?.status === 'checking' ? t('settings.browser.externalProbeChecking') : t('settings.browser.externalProbe')}
+              </button>
+            }
+          />
+        )}
+      </SettingsSection>
+
       <SettingsSection title={t('settings.browser.cookiesTitle')}>
         <SettingsRow
           label={t('settings.browser.acceptCookies')}

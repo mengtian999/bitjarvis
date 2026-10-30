@@ -48,10 +48,15 @@
     "build:shell": "npm run stage:sherpa:optional && node scripts/build-shell.mjs",
     "build:packages": "npm run build --workspaces --if-present",
     "generate:windows-icon": "node scripts/generate-windows-icon.cjs",
+    "generate:appx-assets": "node scripts/generate-appx-assets.cjs",
+    "generate:appx-store-manifest": "node scripts/appx-store-manifest.cjs",
+    "generate:appx-store-cert": "powershell -ExecutionPolicy Bypass -File scripts/dev-msix-cert.ps1 -Subject \"CN=6FD0A3E7-BDD7-4BCC-8E30-A22E78694675\" -Name bitjarvis-store -FriendlyName \"Bit Jarvis Store Submission\"",
     "pack": "npm run stage:sherpa:optional && npm run build:computer-use-helper && npm run build:client && npm run build:server && npm run verify:seed-kit && electron-builder --dir",
     "install:local": "npm run pack && rm -rf /Applications/Jarvis.app && cp -R dist/mac-arm64/Jarvis.app /Applications/ && printf 'provider: github\\nowner: mengtian999\\nrepo: Bitjarvis\\n' > /Applications/Jarvis.app/Contents/Resources/app-update.yml && node scripts/sign-local.cjs",
     "dist": "npm run stage:sherpa && npm run build:computer-use-helper && npm run build:client && npm run build:server && npm run verify:seed-kit && electron-builder --mac dmg",
     "dist:win": "npm run stage:sherpa && npm run build:computer-use-helper && npm run build:windows-sandbox-helper && npm run generate:windows-icon && npm run build:client && npm run build:server && npm run verify:seed-kit && npm run pack:server:standalone && npm run verify:standalone:server && electron-builder --win nsis",
+    "dist:win:appx": "npm run stage:sherpa && npm run build:computer-use-helper && npm run build:windows-sandbox-helper && npm run generate:windows-icon && npm run generate:appx-assets && npm run build:client && npm run build:server && npm run verify:seed-kit && npm run pack:server:standalone && npm run verify:standalone:server && electron-builder --win appx --publish never",
+    "dist:win:appx:store": "npm run stage:sherpa && npm run build:computer-use-helper && npm run build:windows-sandbox-helper && npm run generate:windows-icon && npm run generate:appx-assets && npm run generate:appx-store-manifest && npm run build:client && npm run build:server && npm run verify:seed-kit && npm run pack:server:standalone && npm run verify:standalone:server && electron-builder --win appx --publish never --config.appx.identityName=mengtian.BitJarvis --config.appx.publisher=CN=6FD0A3E7-BDD7-4BCC-8E30-A22E78694675 --config.appx.publisherDisplayName=mengtian --config.appx.customManifestPath=appx/AppxManifest.store.xml --config.win.signtoolOptions.certificateFile=build/bitjarvis-store.pfx --config.win.signtoolOptions.certificatePassword=bitjarvis",
     "dist:linux": "npm run stage:sherpa && npm run build:client && npm run build:server && npm run verify:seed-kit && electron-builder --linux AppImage deb",
     "verify:seed-kit": "node scripts/verify-seed-kit.mjs",
     "pack:server:standalone": "node scripts/build-standalone-server-artifact.mjs x64",
@@ -223,6 +228,9 @@
       }
     ],
     "afterSign": "./scripts/notarize.cjs",
+    "toolsets": {
+      "winCodeSign": "1.1.0"
+    },
     "mac": {
       "target": [
         "dmg",
@@ -297,6 +305,24 @@
       "include": "build/installer.nsh",
       "installerIcon": "desktop/src/icon.ico",
       "uninstallerIcon": "desktop/src/icon.ico"
+    },
+    "appx": {
+      "applicationId": "BitJarvis",
+      "identityName": "BitJarvis.Desktop",
+      "publisherDisplayName": "Bit Jarvis",
+      "publisher": "CN=Bit Jarvis Dev",
+      "displayName": "Bit Jarvis",
+      "minVersion": "10.0.17763.0",
+      "maxVersionTested": "10.0.22621.0",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ],
+      "capabilities": [
+        "runFullTrust",
+        "internetClient",
+        "privateNetworkClientServer"
+      ]
     },
     "linux": {
       "target": [
