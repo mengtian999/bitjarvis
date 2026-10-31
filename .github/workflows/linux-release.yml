@@ -29,17 +29,46 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Build desktop renderer (vite)
+        run: |
+          npm run build:main
+          npm run build:preload
+          npm run build:renderer
+          npm run build:splash
+          npm run build:theme
+
+      - name: Build IM web (flutter)
+        run: |
+          cd im
+          flutter pub get
+          flutter build web --release --base-href "/im/" --no-wasm-dry-run
+
+      - name: Stage sherpa models
+        run: npm run stage:sherpa
+
+      - name: Build server (linux)
+        env:
+          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
+        run: npm run build:server
+
+      - name: Verify seed kit
+        env:
+          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
+        run: node scripts/verify-seed-kit.mjs
 
       - name: Build Linux packages (AppImage + deb)
         env:
           JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run dist:linux
-
-      - name: Verify seed kit
-        run: node scripts/verify-seed-kit.mjs
+        run: npx electron-builder --linux AppImage deb --publish never
 
       - name: Determine tag
         id: tag
