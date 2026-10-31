@@ -212,19 +212,6 @@ class ChatController extends State<ChatPageWithRoom>
     });
 
     try {
-      await translationService.initFromSettings(AppSettings.store);
-
-      if (!translationService.isConfigured) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.of(context).translationNotConfigured),
-          ),
-        );
-        setState(() => translatingEvents.remove(eventId));
-        return;
-      }
-
       final result = await translationService.translate(
         eventId,
         text,
@@ -254,9 +241,9 @@ class ChatController extends State<ChatPageWithRoom>
 
   Future<void> _initTranslationService() async {
     try {
-      await translationService.initFromSettings(AppSettings.store);
+      await translationService.preloadCache(AppSettings.store);
     } catch (e) {
-      debugPrint('Failed to initialize translation service: $e');
+      debugPrint('Failed to preload translation cache: $e');
       return;
     }
     if (!mounted) return;

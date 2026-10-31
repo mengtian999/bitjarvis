@@ -96,4 +96,27 @@ class AgentBridge {
       debugPrint('[AgentBridge] exitToAgent failed: ${e.code} ${e.message}');
     }
   }
+
+  /// 请求原生宿主经由 Jarvis 网关翻译 [text] 到 [targetLanguage]（BCP-47 代码）。
+  ///
+  /// 宿主持有网关设备身份，调用 `POST /v1/chat/completions`（model=`im_translate`，
+  /// 网关隐藏档位）。返回 `{translatedText, detectedSourceLanguage?, targetLanguage?}`；
+  /// 独立运行模式（无宿主监听该通道）返回 null，由调用方降级提示。
+  static Future<Map<String, dynamic>?> translate(
+    String text,
+    String targetLanguage,
+  ) async {
+    try {
+      final res = await channel.invokeMethod<Map>('translate', {
+        'text': text,
+        'target': targetLanguage,
+      });
+      return res?.cast<String, dynamic>();
+    } on MissingPluginException {
+      return null;
+    } on PlatformException catch (e) {
+      debugPrint('[AgentBridge] translate failed: ${e.code} ${e.message}');
+      return null;
+    }
+  }
 }

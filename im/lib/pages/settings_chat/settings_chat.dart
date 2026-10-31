@@ -17,62 +17,36 @@ class SettingsChat extends StatefulWidget {
 }
 
 class SettingsChatController extends State<SettingsChat> {
-  final TranslationService _translationService = TranslationService();
-
-  String? translationProviderType;
-  bool hasTranslationApiKey = false;
+  /// Cached copy of the stored target language (empty = follow system).
+  String _storedTargetLanguage = '';
+  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadTranslationSettings();
+    _refreshTargetLanguage();
   }
 
   void updateState() => setState(() {});
 
-  Future<void> _loadTranslationSettings() async {
+  /// The explicitly configured target language, empty when following system.
+  String get storedTargetLanguage => _storedTargetLanguage;
+
+  bool get loaded => _loaded;
+
+  Future<void> _refreshTargetLanguage() async {
     final prefs = AppSettings.store;
-    final apiKey = await _translationService.loadApiKey(prefs: prefs);
+    final stored = TranslationService.getStoredTargetLanguage(prefs) ?? '';
     if (!mounted) return;
     setState(() {
-      translationProviderType = TranslationService.getProviderType(prefs);
-      hasTranslationApiKey = apiKey != null && apiKey.isNotEmpty;
+      _storedTargetLanguage = stored;
+      _loaded = true;
     });
-  }
-
-  /// The explicitly configured target language, empty when following system.
-  String get storedTargetLanguage =>
-      TranslationService.getStoredTargetLanguage(AppSettings.store) ?? '';
-
-  Future<void> setTranslationProvider(String? type) async {
-    final prefs = AppSettings.store;
-    if (type == null) {
-      await _translationService.clearProviderConfig(prefs);
-    } else {
-      final apiKey = await _translationService.loadApiKey(prefs: prefs) ?? '';
-      await _translationService.saveProviderConfig(
-        prefs,
-        type: type,
-        apiKey: apiKey,
-      );
-    }
-    await _loadTranslationSettings();
-  }
-
-  Future<void> setTranslationApiKey(String apiKey) async {
-    final type = translationProviderType;
-    if (type == null) return;
-    await _translationService.saveProviderConfig(
-      AppSettings.store,
-      type: type,
-      apiKey: apiKey.trim(),
-    );
-    await _loadTranslationSettings();
   }
 
   Future<void> setTranslationTargetLanguage(String language) async {
     await TranslationService.setTargetLanguage(AppSettings.store, language);
-    await _loadTranslationSettings();
+    await _refreshTargetLanguage();
   }
 
   @override

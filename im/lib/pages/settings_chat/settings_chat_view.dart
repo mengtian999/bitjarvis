@@ -10,7 +10,6 @@ import 'package:bitjarvis/l10n/l10n.dart';
 import 'package:bitjarvis/services/translation_service.dart';
 import 'package:bitjarvis/utils/adaptive_bottom_sheet.dart';
 import 'package:bitjarvis/utils/platform_infos.dart';
-import 'package:bitjarvis/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:bitjarvis/widgets/layouts/max_width_body.dart';
 import 'package:bitjarvis/widgets/matrix.dart';
 import 'package:bitjarvis/widgets/settings_switch_list_tile.dart';
@@ -151,25 +150,6 @@ class SettingsChatView extends StatelessWidget {
                 ),
               ),
               ListTile(
-                title: Text(L10n.of(context).translationProvider),
-                subtitle: Text(
-                  _providerLabel(context, controller.translationProviderType),
-                ),
-                trailing: const Icon(Icons.chevron_right_outlined),
-                onTap: () => _selectProvider(context),
-              ),
-              if (controller.translationProviderType != null)
-                ListTile(
-                  title: Text(L10n.of(context).translationApiKey),
-                  subtitle: Text(
-                    controller.hasTranslationApiKey
-                        ? '••••••••'
-                        : L10n.of(context).translationNotConfiguredShort,
-                  ),
-                  trailing: const Icon(Icons.chevron_right_outlined),
-                  onTap: () => _editApiKey(context),
-                ),
-              ListTile(
                 title: Text(L10n.of(context).translationTargetLanguage),
                 subtitle: Text(_targetLanguageLabel(context)),
                 trailing: const Icon(Icons.chevron_right_outlined),
@@ -219,19 +199,6 @@ class SettingsChatView extends StatelessWidget {
     );
   }
 
-  String _providerLabel(BuildContext context, String? type) {
-    switch (type) {
-      case TranslationService.providerGoogle:
-        return 'Google Cloud Translation';
-      case TranslationService.providerDeepl:
-        return 'DeepL (Free)';
-      case TranslationService.providerDeeplPro:
-        return 'DeepL (Pro)';
-      default:
-        return L10n.of(context).translationProviderOff;
-    }
-  }
-
   String _systemLanguageCode(BuildContext context) =>
       Localizations.localeOf(context).languageCode;
 
@@ -243,58 +210,6 @@ class SettingsChatView extends StatelessWidget {
       );
     }
     return TranslationService.languageName(stored);
-  }
-
-  Future<void> _selectProvider(BuildContext context) async {
-    const offValue = '_off_';
-    final entries = <String, String>{
-      offValue: L10n.of(context).translationProviderOff,
-      TranslationService.providerGoogle: 'Google Cloud Translation',
-      TranslationService.providerDeepl: 'DeepL (Free)',
-      TranslationService.providerDeeplPro: 'DeepL (Pro)',
-    };
-    final current = controller.translationProviderType ?? offValue;
-    final selected = await showAdaptiveBottomSheet<String>(
-      context: context,
-      builder: (context) => Scaffold(
-        appBar: AppBar(
-          title: Text(L10n.of(context).translationProvider),
-          leading: CloseButton(onPressed: () => Navigator.of(context).pop()),
-        ),
-        body: ListView(
-          children: [
-            for (final entry in entries.entries)
-              ListTile(
-                leading: Icon(
-                  entry.key == current
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                ),
-                title: Text(entry.value),
-                onTap: () => Navigator.of(context).pop(entry.key),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (selected == null) return;
-    await controller.setTranslationProvider(
-      selected == offValue ? null : selected,
-    );
-  }
-
-  Future<void> _editApiKey(BuildContext context) async {
-    final apiKey = await showTextInputDialog(
-      context: context,
-      title: L10n.of(context).translationApiKey,
-      hintText: L10n.of(context).translationApiKeyHint,
-      obscureText: true,
-      autocorrect: false,
-      validator: (input) =>
-          input.trim().isEmpty ? L10n.of(context).translationApiKeyHint : null,
-    );
-    if (apiKey == null) return;
-    await controller.setTranslationApiKey(apiKey);
   }
 
   Future<void> _selectTargetLanguage(BuildContext context) async {
