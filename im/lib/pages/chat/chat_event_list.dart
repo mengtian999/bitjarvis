@@ -237,6 +237,11 @@ class ChatEventList extends StatelessWidget {
                               ),
                             )
                           : null,
+                      translationResult:
+                          controller.getTranslation(event.eventId),
+                      isTranslating:
+                          controller.isTranslating(event.eventId),
+                      onHideTranslation: controller.hideTranslation,
                     ),
                   ],
                 ),

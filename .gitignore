@@ -81,3 +81,12 @@ $T/
 .tt2/
 *.stdout
 *.stderr
+
+# Root build/scratch residue
+main.bundle.cjs
+jgt.png
+mini.c
+cl.exe.bak-*
+.t.c
+.t.cpp
+.gpp.out

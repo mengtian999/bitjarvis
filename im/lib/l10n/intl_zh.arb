@@ -2717,5 +2717,88 @@
     "changeAccountProvider": "更改账户提供方",
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
+    },
+    "translateMessage": "翻译",
+    "@translateMessage": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translating": "翻译中...",
+    "@translating": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationError": "翻译失败",
+    "@translationError": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationNotConfigured": "翻译功能未配置。请前往 设置 > 聊天 设置翻译服务。",
+    "@translationNotConfigured": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationSettings": "翻译",
+    "@translationSettings": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationProvider": "翻译服务商",
+    "@translationProvider": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationApiKey": "API 密钥",
+    "@translationApiKey": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationTargetLanguage": "翻译为",
+    "@translationTargetLanguage": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translatedFrom": "已从 {language} 翻译",
+    "@translatedFrom": {
+        "type": "String",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
+    },
+    "hideTranslation": "隐藏翻译",
+    "@hideTranslation": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationProviderOff": "关闭",
+    "@translationProviderOff": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationNotConfiguredShort": "未配置",
+    "@translationNotConfiguredShort": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationApiKeyHint": "输入 API 密钥",
+    "@translationApiKeyHint": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationSettingsDescription": "按需将单条消息翻译为你偏好的语言。",
+    "@translationSettingsDescription": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationLanguageAuto": "跟随系统语言（{language}）",
+    "@translationLanguageAuto": {
+        "type": "String",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
     }
 }

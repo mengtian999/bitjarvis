@@ -2773,5 +2773,88 @@
     "changeAccountProvider": "Change account provider",
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
+    },
+    "translateMessage": "Translate",
+    "@translateMessage": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translating": "Translating...",
+    "@translating": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationError": "Translation failed",
+    "@translationError": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationNotConfigured": "Translation is not configured. Go to Settings > Chat to set up a translation provider.",
+    "@translationNotConfigured": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationSettings": "Translation",
+    "@translationSettings": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationProvider": "Translation provider",
+    "@translationProvider": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationApiKey": "API Key",
+    "@translationApiKey": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationTargetLanguage": "Translate to",
+    "@translationTargetLanguage": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translatedFrom": "Translated from {language}",
+    "@translatedFrom": {
+        "type": "String",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
+    },
+    "hideTranslation": "Hide translation",
+    "@hideTranslation": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationProviderOff": "Disabled",
+    "@translationProviderOff": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationNotConfiguredShort": "Not configured",
+    "@translationNotConfiguredShort": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationApiKeyHint": "Enter your API key",
+    "@translationApiKeyHint": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationSettingsDescription": "Translate single messages on demand into your preferred language.",
+    "@translationSettingsDescription": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "translationLanguageAuto": "Follow system language ({language})",
+    "@translationLanguageAuto": {
+        "type": "String",
+        "placeholders": {
+            "language": {
+                "type": "String"
+            }
+        }
     }
 }

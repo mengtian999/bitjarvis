@@ -102,17 +102,64 @@ function resolveEdgeVoice(input) {
   return input.model?.voice || input.provider?.defaultVoice || DEFAULT_VOICE;
 }
 // ── Microsoft Edge TTS ──
+// Edge TTS Sec-MS-GEC v2: Microsoft 于 2026-10-13 弃用 v1 token，改用 v2 握手。
+// v2 = "<CS64 checksum>-<SHA-256>"，输入为 Edge 版权声明行 + v1 原始串。
+// 参考: https://github.com/rany2/edge-tts/pull/492
+const EDGE_COPYRIGHT = "Copyright (C) Microsoft Corporation. All rights reserved.";
+const CS64_SWAP_FIRST = { swappedWord: 0xEF0569FB, swappedSum: 0x76F50F34, swappedProduct: 0xC3EFEA97 };
+const CS64_SWAP_SECOND = { swappedWord: 0xC31713DB, swappedSum: 0x1881CE3C, swappedProduct: 0x35BD1EC9 };
+const CS64_MIX_FIRST = [0xCF98B111, 0x87085B9F, 0x12CEB96D, 0x257E1D83];
+const CS64_MIX_SECOND = [0xA27416F5, 0xD38396FF, 0x7C932B89, 0xBFA49F69];
+
+function swapHalves32(value: number): number {
+  return ((value << 16) | (value >>> 16)) >>> 0;
+}
+function cs64SwapTerm(word: number, key: number, m: typeof CS64_SWAP_FIRST): number {
+  const sum = Math.imul(word, key) + Math.imul(swapHalves32(word), m.swappedWord);
+  const product = Math.imul(swapHalves32(sum), m.swappedSum) >>> 0;
+  return (Math.imul(swapHalves32(product), m.swappedProduct) + product) >>> 0;
+}
+function cs64SwapAndMultiply(value: number, multipliers: number[]): number {
+  for (const mult of multipliers) value = Math.imul(swapHalves32(value), mult) >>> 0;
+  return value;
+}
+/** v2 校验和:对版权声明 + ticks+token 做 SHA-256 后，用摘要派生两个 key 逐 8 字节折叠消息。 */
+function cs64Checksum(message: Buffer, digest: Buffer): Buffer {
+  const firstKey = (digest.readUInt32LE(0) | 1) >>> 0;
+  const secondKey = (digest.readUInt32LE(4) | 1) >>> 0;
+  const padded = Buffer.alloc(Math.ceil(message.length / 8) * 8);
+  message.copy(padded);
+  let swapSum = 0, lastSwap = 0, mix = 0, mixSum = 0;
+  for (let offset = 0; offset < padded.length; offset += 8) {
+    const firstWord = padded.readUInt32LE(offset);
+    const secondWord = padded.readUInt32LE(offset + 4);
+    const firstSwap = cs64SwapTerm(firstWord, firstKey, CS64_SWAP_FIRST);
+    lastSwap = cs64SwapTerm(secondWord, secondKey, CS64_SWAP_SECOND);
+    swapSum = (swapSum + firstSwap + lastSwap) >>> 0;
+    mix = cs64SwapAndMultiply(Math.imul(mix + firstWord, firstKey), CS64_MIX_FIRST);
+    mixSum = (mixSum + mix) >>> 0;
+    mix = cs64SwapAndMultiply(Math.imul(mix + secondWord, secondKey), CS64_MIX_SECOND);
+    mixSum = (mixSum + mix) >>> 0;
+  }
+  const checksum = Buffer.alloc(8);
+  checksum.writeUInt32LE((lastSwap ^ mix) >>> 0, 0);
+  checksum.writeUInt32LE((swapSum ^ mixSum) >>> 0, 4);
+  return checksum;
+}
+function toUpperHex(buf: Buffer): string {
+  return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
 export function generateSecMsGec() {
-  // Windows file time (1601-01-01 epoch) + 100-nanosecond intervals, rounded down to 5 minutes
-  // Use BigInt to avoid precision loss above Number.MAX_SAFE_INTEGER
-  const unixSec = BigInt(Math.floor(Date.now() / 1000));
-  const winEpoch = BigInt(WIN_EPOCH);
-  const fiveMin = BigInt(300);
-  const hundredNs = BigInt(10000000);
-  // ticks = unixSec + winEpoch, rounded down to 5 min, * 10,000,000
-  const ticks = ((unixSec + winEpoch) / fiveMin) * fiveMin * hundredNs;
-  const strToHash = ticks.toString() + EDGE_TRUSTED_CLIENT_TOKEN;
-  return createHash("sha256").update(strToHash).digest("hex").toUpperCase();
+  // Windows file time: (unix秒 + epoch偏移) 向下取整到 5 分钟,再 × 10,000,000 (100ns 单位)
+  const unixSec = Math.floor(Date.now() / 1000);
+  const ticksSec = unixSec + WIN_EPOCH;
+  const roundedSec = ticksSec - (ticksSec % 300);
+  const windowsTicks = roundedSec * 10000000;
+  const strToHash = `${windowsTicks}${EDGE_TRUSTED_CLIENT_TOKEN}`;
+  const message = Buffer.from(EDGE_COPYRIGHT + strToHash, "utf8");
+  const digest = createHash("sha256").update(message).digest();
+  const checksum = cs64Checksum(message, digest);
+  return `${toUpperHex(checksum)}-${toUpperHex(digest)}`;
 }
 
 function edgeDateStr() {
@@ -178,10 +225,11 @@ function edgeTtsSynthesize(text, voiceName, rate) {
 /**
  * Stream Edge TTS: calls onChunk(buffer) for each audio chunk, onDone() when finished.
  */
-function edgeTtsStreamSynthesize(text, voiceName, rate, onChunk, onDone, onError) {
+function edgeTtsStreamSynthesize(text, voiceName, rate, onChunk, onDone, onError, attempt = 1) {
+  const MAX_RETRIES = 3;
   const connectionId = randomUUID();
   const gec = generateSecMsGec();
-  const gecVersion = "1-143.0.3650.75";
+  const gecVersion = "2-143.0.3650.96";
   const url = EDGE_WS_BASE
     + "?TrustedClientToken=" + EDGE_TRUSTED_CLIENT_TOKEN
     + "&ConnectionId=" + connectionId
@@ -189,6 +237,7 @@ function edgeTtsStreamSynthesize(text, voiceName, rate, onChunk, onDone, onError
     + "&Sec-MS-GEC-Version=" + gecVersion;
 
   let settled = false;
+  let retrying = false;
   const muid = randomUUID().replace(/-/g, "").toUpperCase();
   const ws = new WebSocket(url, {
     headers: {
@@ -241,9 +290,25 @@ function edgeTtsStreamSynthesize(text, voiceName, rate, onChunk, onDone, onError
     } catch (err) { fail(err); }
   });
 
+  ws.on("unexpected-response", (req, res) => {
+    const code = res.statusCode;
+    res.resume();
+    // 429/503:读 Retry-After 等待后重连,最多 MAX_RETRIES 次
+    if ((code === 429 || code === 503) && attempt < MAX_RETRIES) {
+      retrying = true;
+      const retryAfter = Math.min(parseInt(res.headers["retry-after"] || "1", 10) || 1, 10);
+      try { ws.close(); } catch { /* ignore */ }
+      setTimeout(
+        () => edgeTtsStreamSynthesize(text, voiceName, rate, onChunk, onDone, onError, attempt + 1),
+        retryAfter * 1000,
+      );
+      return;
+    }
+    fail(new Error("edge-tts: upstream " + code));
+  });
   ws.on("error", (err) => fail(err));
   ws.on("close", () => {
-    if (!settled) fail(new Error("edge-tts: connection closed before synthesis finished"));
+    if (!settled && !retrying) fail(new Error("edge-tts: connection closed before synthesis finished"));
   });
 }
 

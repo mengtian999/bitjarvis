@@ -146,6 +146,12 @@ class ChatView extends StatelessWidget {
                       tooltip: L10n.of(context).copyToClipboard,
                       onPressed: controller.copyEventsAction,
                     ),
+                    if (controller.canTranslateSelectedEvent)
+                      IconButton(
+                        icon: const Icon(Icons.translate),
+                        tooltip: L10n.of(context).translateMessage,
+                        onPressed: controller.translateSelectedEvent,
+                      ),
                     if (controller.canRedactSelectedEvents)
                       IconButton(
                         icon: const Icon(Icons.delete_outlined),

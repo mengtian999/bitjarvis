@@ -10,6 +10,7 @@ import 'package:bitjarvis/l10n/l10n.dart';
 import 'package:bitjarvis/pages/chat/events/poll.dart';
 import 'package:bitjarvis/pages/chat/events/video_player.dart';
 import 'package:bitjarvis/pages/image_viewer/image_viewer.dart';
+import 'package:bitjarvis/services/translation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:matrix/matrix.dart';
 
@@ -33,6 +34,9 @@ class MessageContent extends StatelessWidget {
   final Timeline timeline;
   final bool selected;
   final Set<String> bigEmojis;
+  final TranslationResult? translationResult;
+  final bool isTranslating;
+  final void Function(String eventId)? onHideTranslation;
 
   const MessageContent(
     this.event, {
@@ -44,6 +48,9 @@ class MessageContent extends StatelessWidget {
     required this.borderRadius,
     required this.selected,
     required this.bigEmojis,
+    this.translationResult,
+    this.isTranslating = false,
+    this.onHideTranslation,
   });
 
   @override
@@ -183,23 +190,106 @@ class MessageContent extends StatelessWidget {
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: HtmlMessage(
-                html: html,
-                textColor: textColor,
-                room: event.room,
-                fontSize: AppConfig.messageFontSize * (bigEmotes ? 5 : 1),
-                linkStyle: TextStyle(
-                  color: linkColor,
-                  fontSize: AppConfig.messageFontSize,
-                  decoration: TextDecoration.underline,
-                  decorationColor: linkColor,
-                ),
-                onOpen: (url) => UrlLauncher(context, url.url).launchUrl(),
-                eventId: event.eventId,
-                checkboxCheckedEvents: event.aggregatedEvents(
-                  timeline,
-                  EventCheckboxRoomExtension.relationshipType,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  HtmlMessage(
+                    html: html,
+                    textColor: textColor,
+                    room: event.room,
+                    fontSize: AppConfig.messageFontSize * (bigEmotes ? 5 : 1),
+                    linkStyle: TextStyle(
+                      color: linkColor,
+                      fontSize: AppConfig.messageFontSize,
+                      decoration: TextDecoration.underline,
+                      decorationColor: linkColor,
+                    ),
+                    onOpen: (url) => UrlLauncher(context, url.url).launchUrl(),
+                    eventId: event.eventId,
+                    checkboxCheckedEvents: event.aggregatedEvents(
+                      timeline,
+                      EventCheckboxRoomExtension.relationshipType,
+                    ),
+                  ),
+                  if (isTranslating)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: textColor.withAlpha(150),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            L10n.of(context).translating,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: textColor.withAlpha(150),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (translationResult != null) ...[
+                    Divider(
+                      height: 12,
+                      thickness: 0.5,
+                      color: textColor.withAlpha(40),
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.translate,
+                          size: 11,
+                          color: textColor.withAlpha(150),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            translationResult!.detectedSourceLanguage.isNotEmpty
+                                ? L10n.of(context).translatedFrom(
+                                    TranslationService.languageName(
+                                      translationResult!.detectedSourceLanguage
+                                          .toLowerCase(),
+                                    ),
+                                  )
+                                : L10n.of(context).translateMessage,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: textColor.withAlpha(150),
+                            ),
+                          ),
+                        ),
+                        if (onHideTranslation != null)
+                          GestureDetector(
+                            onTap: () =>
+                                onHideTranslation!(event.eventId),
+                            child: Icon(
+                              Icons.close,
+                              size: 12,
+                              color: textColor.withAlpha(150),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      translationResult!.translatedText,
+                      style: TextStyle(
+                        fontSize: AppConfig.messageFontSize,
+                        color: textColor.withAlpha(220),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             );
         }

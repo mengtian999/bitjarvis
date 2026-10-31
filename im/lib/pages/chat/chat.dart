@@ -30,6 +30,7 @@ import 'package:bitjarvis/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:bitjarvis/utils/other_party_can_receive.dart';
 import 'package:bitjarvis/utils/platform_infos.dart';
 import 'package:bitjarvis/utils/show_scaffold_dialog.dart';
+import 'package:bitjarvis/services/translation_service.dart';
 import 'package:bitjarvis/widgets/adaptive_dialogs/show_modal_action_popup.dart';
 import 'package:bitjarvis/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:bitjarvis/widgets/adaptive_dialogs/show_text_input_dialog.dart';
@@ -174,6 +175,93 @@ class ChatController extends State<ChatPageWithRoom>
   List<Event> selectedEvents = [];
 
   final Set<String> unfolded = {};
+
+  // Translation state
+  final TranslationService translationService = TranslationService();
+  final Map<String, TranslationResult> translatedEvents = {};
+  final Set<String> translatingEvents = {};
+
+  bool get canTranslateSelectedEvent =>
+      selectedEvents.length == 1 &&
+      {
+        MessageTypes.Text,
+        MessageTypes.Notice,
+        MessageTypes.Emote,
+      }.contains(selectedEvents.single.messageType);
+
+  bool isTranslating(String eventId) => translatingEvents.contains(eventId);
+
+  TranslationResult? getTranslation(String eventId) =>
+      translatedEvents[eventId] ?? translationService.getAnyCached(eventId);
+
+  Future<void> translateSelectedEvent() async {
+    final event = selectedEvents.single;
+    final eventId = event.eventId;
+    final timeline = this.timeline;
+    if (timeline == null) return;
+    final text = event.getDisplayEvent(timeline).body;
+    final targetLang = TranslationService.getTargetLanguage(
+      AppSettings.store,
+      Localizations.localeOf(context).languageCode,
+    );
+
+    setState(() {
+      translatingEvents.add(eventId);
+      showEmojiPicker = false;
+      selectedEvents.clear();
+    });
+
+    try {
+      await translationService.initFromSettings(AppSettings.store);
+
+      if (!translationService.isConfigured) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).translationNotConfigured),
+          ),
+        );
+        setState(() => translatingEvents.remove(eventId));
+        return;
+      }
+
+      final result = await translationService.translate(
+        eventId,
+        text,
+        targetLang,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        translatedEvents[eventId] = result;
+        translatingEvents.remove(eventId);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => translatingEvents.remove(eventId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${L10n.of(context).translationError}: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> hideTranslation(String eventId) async {
+    setState(() => translatedEvents.remove(eventId));
+    await translationService.removeTranslation(eventId);
+  }
+
+  Future<void> _initTranslationService() async {
+    try {
+      await translationService.initFromSettings(AppSettings.store);
+    } catch (e) {
+      debugPrint('Failed to initialize translation service: $e');
+      return;
+    }
+    if (!mounted) return;
+    setState(() {});
+  }
 
   Event? replyEvent;
 
@@ -420,6 +508,7 @@ class ChatController extends State<ChatPageWithRoom>
         : '';
     WidgetsBinding.instance.addObserver(this);
     _tryLoadTimeline();
+    _initTranslationService();
   }
 
   final Set<String> expandedEventIds = {};
