@@ -51,22 +51,33 @@ jobs:
           flutter pub get
           flutter build web --release --base-href "/im/" --no-wasm-dry-run
 
+      - name: Install Linux packaging deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y file desktop-file-utils || true
+          sudo apt-get install -y libfuse2 libfuse2t64 || true
+          sudo apt-get install -y libarchive-tools || true
+
+      - name: Write signing key
+        env:
+          JARVIS_SIGN_KEY_CONTENT: ${{ secrets.JARVIS_SIGN_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/jarvis-ci"
+          printf '%s' "$JARVIS_SIGN_KEY_CONTENT" > "$RUNNER_TEMP/jarvis-ci/sign-key.pem"
+          chmod 600 "$RUNNER_TEMP/jarvis-ci/sign-key.pem"
+          echo "JARVIS_SIGN_KEY=$RUNNER_TEMP/jarvis-ci/sign-key.pem" >> "$GITHUB_ENV"
+
       - name: Stage sherpa models
         run: npm run stage:sherpa
 
       - name: Build server (linux)
-        env:
-          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
         run: npm run build:server
 
       - name: Verify seed kit
-        env:
-          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
         run: node scripts/verify-seed-kit.mjs
 
       - name: Build Linux packages (AppImage + deb)
         env:
-          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --linux AppImage deb --publish never
 
