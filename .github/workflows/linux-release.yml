@@ -1,0 +1,70 @@
+name: Linux Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload to (e.g. v0.0.1)"
+        required: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  linux-build:
+    name: Build Linux packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux packages (AppImage + deb)
+        env:
+          JARVIS_SIGN_KEY: ${{ secrets.JARVIS_SIGN_KEY }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run dist:linux
+
+      - name: Verify seed kit
+        run: node scripts/verify-seed-kit.mjs
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux.yml
+          body: |
+            ## Bit Jarvis
+
+            Linux 桌面版（AppImage + deb）。
+
+            ### What's new
+            - Added AI chat translation via the Jarvis gateway
+            - Added TTS adapter support for voice output
+            - Improved browser backend using an external CDP connection
+          fail_on_unmatched_files: false
