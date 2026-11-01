@@ -120,12 +120,12 @@ The engine layer coordinates multiple managers (Agent, Session, Model, Preferenc
 | Platform | Status |
 |----------|--------|
 | macOS (Apple Silicon / Intel) | ✅ Supported (signed & notarized) |
-| Windows | 🚧 Beta (installer not code-signed yet; SmartScreen prompts are expected) |
+| Windows | ✅ Supported ([Microsoft Store](https://apps.microsoft.com/detail/9ndth1xfp2jm) signed · installer in Releases) |
 | Linux | ✅ Supported (AppImage / deb) |
 
 ## Quick Start
 
-Download the installer for your platform from [GitHub Releases](https://github.com/mengtian999/Bitjarvis/releases): macOS `.dmg`, Windows `.exe`, Linux `.AppImage` / `.deb`.
+**Windows** users can install from the [Microsoft Store](https://apps.microsoft.com/detail/9ndth1xfp2jm) (signed, auto-updated). macOS `.dmg`, Windows `.exe`, and Linux `.AppImage` / `.deb` are also available on [GitHub Releases](https://github.com/mengtian999/Bitjarvis/releases).
 
 On first launch, a setup wizard walks you through configuration: pick a language, enter your name, connect a model provider (API key + base URL), and choose three models — **chat model** (main conversation), **small tool model** (lightweight tasks), and **large tool model** (memory compilation & deep analysis). A **vision model** can be set separately in settings. OpenAI-compatible, Anthropic-style, OAuth providers, and local Ollama models are all supported.
 

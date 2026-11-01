@@ -120,12 +120,12 @@ cli/ scripts/ tools/ tests/   命令行入口 / 构建打包签名工具 / Vites
 | 平台 | 状态 |
 |------|------|
 | macOS（Apple Silicon / Intel） | ✅ 已支持（已签名公证） |
-| Windows | 🚧 Beta（安装包暂未代码签名，SmartScreen 提示属正常现象） |
+| Windows | ✅ 已支持（[微软商店](https://apps.microsoft.com/detail/9ndth1xfp2jm)已签名 · 安装包见 Releases） |
 | Linux | ✅ 已支持（AppImage / deb） |
 
 ## 快速开始
 
-从 [GitHub Releases](https://github.com/mengtian999/Bitjarvis/releases) 下载对应平台安装包：macOS `.dmg`、Windows `.exe`、Linux `.AppImage` / `.deb`。
+**Windows** 用户推荐从 [微软商店](https://apps.microsoft.com/detail/9ndth1xfp2jm) 安装（已签名，自动更新）；也可从 [GitHub Releases](https://github.com/mengtian999/Bitjarvis/releases) 下载 `.exe` 安装包。macOS `.dmg`、Linux `.AppImage` / `.deb` 同样在 Releases。
 
 首次启动的引导向导会带你完成配置：选择语言、输入你的名字、连接模型提供商（API key + base URL），并选择三个模型——**对话模型**（主对话）、**小工具模型**（轻量任务）、**大工具模型**（记忆编译和深度分析）；设置页还可单独选择**视觉模型**。支持 OpenAI 兼容、Anthropic 风格、OAuth Provider 和 Ollama 本地模型等多类接入。
 
