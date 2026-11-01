@@ -120,7 +120,10 @@ const CHANNELS_RELEASE_NOTES =
 // preload API, a new server-launch protocol, etc.) — raising it means every
 // shell older than this version stops receiving hot updates and has to
 // update the app itself first, so don't raise it casually.
-export const SHELL_COMPAT_FLOOR = "0.386.5";
+// 本仓库的 shell（安装包本体）版本从 0.0.1 起，所以地板也钉在 0.0.1：
+// 首个发布版 0.0.1 必须能收到 0.0.2 的列车。抬这个数就要先确认
+// 现存用户的壳版本都在它之上。
+export const SHELL_COMPAT_FLOOR = "0.0.1";
 
 // ── argument parsing ────────────────────────────────────────────────────
 

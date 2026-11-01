@@ -210,20 +210,16 @@ const ORIGIN_MANIFEST_RACE_TIMEOUT_MS = MANIFEST_REQUEST_TIMEOUT_MS;
 
 // ── channel pointer URLs: clients poll ONLY these static asset
 //    URLs, never the GitHub/Gitee API ───────────────────────────────────────
+// 桌面端只发 GitHub（Windows 商店版由 Store 更新，其余走 Releases）。
+// Gitee 镜像已废弃：那边没有 channels release，留着只会多一次注定失败的请求。
 const GITHUB_CHANNEL_BASE = "https://github.com/mengtian999/Bitjarvis/releases/download/channels";
-const GITEE_CHANNEL_BASE = "https://gitee.com/dreamsky111333/bitjarvis/releases/download/channels";
 
 /**
- * Returns both origin (GitHub) and mirror (Gitee) manifest URLs.
- * fetchChannelManifest tries the preferred source first and falls back
- * to the other — both serve the same signed manifest.
- * @returns {{origin: string, mirror: string}}
+ * Returns the signed channel manifest URL(s). One source: GitHub.
+ * @returns {string[]}
  */
 function channelManifestUrls(channel) {
-  return {
-    origin: `${GITHUB_CHANNEL_BASE}/${channel}.json`,
-    mirror: `${GITEE_CHANNEL_BASE}/${channel}.json`,
-  };
+  return [`${GITHUB_CHANNEL_BASE}/${channel}.json`];
 }
 
 // ── low-level https transport: manual redirect following, injectable for
@@ -487,71 +483,51 @@ function tryVerifyManifestCandidate(fetchResult, keyset, log) {
  *    originUnreachable: boolean, etag: string|null, localDir: string|null,
  *    sourceEtagUpdate: {origin?: string|null, mirror?: string|null}}>}
  */
-async function fetchChannelManifest({ channel, keyset, cachedEtags = {}, preferredSource, log = () => {}, fetchOnce, devBypass = NO_DEV_OVERRIDE }) {
+async function fetchChannelManifest({ channel, keyset, cachedEtags = {}, log = () => {}, fetchOnce, devBypass = NO_DEV_OVERRIDE }) {
   if (devBypass.hasDevOverride()) {
     return fetchDevOverrideManifest(devBypass.resolveDevManifestOverride(), keyset, log);
   }
-  const urls = channelManifestUrls(channel);
-  // preferredSource 决定先试哪个源；默认 origin (GitHub) first。
-  const tryOrder = preferredSource === "gitee"
-    ? [{ key: "mirror", url: urls.mirror }, { key: "origin", url: urls.origin }]
-    : [{ key: "origin", url: urls.origin }, { key: "mirror", url: urls.mirror }];
+  const [originUrl] = channelManifestUrls(channel);
+  const result = await fetchOneChannelSource(originUrl, {
+    cachedEtag: cachedEtags.origin,
+    fetchOnce,
+    log,
+    timeoutMs: MANIFEST_REQUEST_TIMEOUT_MS,
+  });
 
-  const sourceEtagUpdate = {};
-  let lastError = null;
-
-  for (const { key, url } of tryOrder) {
-    const result = await fetchOneChannelSource(url, {
-      cachedEtag: cachedEtags[key],
-      fetchOnce,
-      log,
-      timeoutMs: MANIFEST_REQUEST_TIMEOUT_MS,
-    });
-
-    if (result.status === "fetched") sourceEtagUpdate[key] = result.etag;
-    if (result.status === "not-modified") {
-      sourceEtagUpdate[key] = cachedEtags[key] ?? null;
-      return { notModified: true, sourceEtagUpdate };
-    }
-    if (result.status === "error") {
-      log(`[ota] ${key} source failed, trying fallback: ${result.error.message}`);
-      lastError = result.error;
-      continue;
-    }
-
-    const verified = tryVerifyManifestCandidate(result, keyset, log);
-    if (!verified) {
-      log(`[ota] ${key} manifest verification failed, trying fallback`);
-      lastError = new Error(`artifact-ota: ${key} channel manifest failed signature or schema verification`);
-      continue;
-    }
-
-    const originUnreachable = key === "mirror";
-    return {
-      manifest: verified,
-      sourceUrl: result.sourceUrl,
-      sourceKind: key,
-      originUnreachable,
-      etag: result.etag,
-      localDir: null,
-      sourceEtagUpdate,
-    };
+  if (result.status === "not-modified") {
+    return { notModified: true, sourceEtagUpdate: { origin: cachedEtags.origin ?? null } };
+  }
+  if (result.status === "error") {
+    // 只有一个源，失败就是失败：不再吞进 "all sources failed"、不再重试。
+    throw new Error(`artifact-ota: GitHub channel manifest fetch failed: ${result.error.message}`);
   }
 
-  throw new Error(`artifact-ota: all manifest sources failed: ${lastError ? lastError.message : "unknown"}`);
+  const verified = tryVerifyManifestCandidate(result, keyset, log);
+  if (!verified) {
+    throw new Error("artifact-ota: GitHub channel manifest failed signature or schema verification");
+  }
+
+  return {
+    manifest: verified,
+    sourceUrl: result.sourceUrl,
+    sourceKind: "origin",
+    originUnreachable: false,
+    etag: result.etag,
+    localDir: null,
+    sourceEtagUpdate: { origin: result.etag },
+  };
 }
 
 /**
- * ETag cache merge for dual-source manifest fetch. Tracks per-source keys
- * ("origin" for GitHub, "mirror" for Gitee). Legacy state carrying only
- * the `origin` key is read safely; new writes normalize to {origin, mirror}.
+ * ETag cache merge. 只剩 GitHub 一个源，所以只有 origin 一个键；历史
+ * 状态里残留的 mirror 值直接丢弃。
  */
 function mergeSourceEtags(previous, update) {
   const prev = previous && typeof previous === "object" ? previous : {};
   const upd = update && typeof update === "object" ? update : {};
   return {
     origin: Object.prototype.hasOwnProperty.call(upd, "origin") ? upd.origin : (prev.origin ?? null),
-    mirror: Object.prototype.hasOwnProperty.call(upd, "mirror") ? upd.mirror : (prev.mirror ?? null),
   };
 }
 

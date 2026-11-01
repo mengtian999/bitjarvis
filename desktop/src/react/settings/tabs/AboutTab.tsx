@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '../store';
 import { autoSaveConfig, t } from '../helpers';
-import { Toggle, SelectWidget } from '@/ui';
+import { Toggle } from '@/ui';
 import { loadSettingsConfig } from '../actions';
 import { loadUpdateDigestHistory } from '../update-history-actions';
 import { readConfigBoolean } from '../resource-state';
@@ -131,48 +131,6 @@ function formatManifestDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   return date.toLocaleDateString();
-}
-
-const UPDATE_SOURCES = ['auto', 'github', 'gitee'] as const;
-type UpdateSource = (typeof UPDATE_SOURCES)[number];
-
-function updateSourceLabelKey(src: UpdateSource) {
-  if (src === 'github') return 'settings.about.updateSourceGithub';
-  if (src === 'gitee') return 'settings.about.updateSourceGitee';
-  return 'settings.about.updateSourceAuto';
-}
-
-/**
- * 更新源选择器：自动（按时区检测，大陆 → Gitee，其余 → GitHub）/ GitHub / Gitee
- * 三选一。壳自动更新（auto-updater）与列车 OTA（checkOnce/download）都读
- * 同一个 preferences.update_source 字段，所以这里选一次两条路径就一致了。
- * value=undefined 表示配置尚未加载，SelectWidget 回落 "auto" 并禁用交互。
- */
-function UpdateSourceSelect({
-  value,
-  onChange,
-}: {
-  value: UpdateSource | undefined;
-  onChange: (src: UpdateSource) => void;
-}) {
-  const loading = value === undefined;
-  // 不用 Array.includes(value)：value 可能是 undefined，strictNullChecks 下
-  // includes 的参数类型不接受 undefined。显式字面量比较既类型安全又能 narrow
-  // 出 UpdateSource。
-  const current: UpdateSource =
-    value === 'auto' || value === 'github' || value === 'gitee' ? value : 'auto';
-  return (
-    <SelectWidget
-      value={current}
-      disabled={loading}
-      onChange={(next) => {
-        if (next === 'auto' || next === 'github' || next === 'gitee') {
-          onChange(next);
-        }
-      }}
-      options={UPDATE_SOURCES.map((src) => ({ value: src, label: t(updateSourceLabelKey(src)) }))}
-    />
-  );
 }
 
 /**
@@ -491,9 +449,6 @@ export function AboutTab() {
   const isBeta = readConfigBoolean(settingsConfig, cfg => cfg.update_channel === 'beta', false);
   // 默认 true：老用户（preferences 里没写这个字段）保持原有"自动检查"行为
   const autoCheck = readConfigBoolean(settingsConfig, cfg => cfg.auto_check_updates, true);
-  // 更新源偏好：auto（按时区检测）/ github / gitee。undefined 表示配置尚未加载，
-  // UpdateSourceSelect 内部回落 "auto" 并禁用交互，避免空值闪烁。
-  const updateSourcePref = settingsConfig?.update_source as UpdateSource | undefined;
 
   const handleCheck = useCallback(() => {
     void jarvis?.autoUpdateCheck?.();
@@ -534,15 +489,7 @@ export function AboutTab() {
     await loadSettingsConfig();
   }, []);
 
-  // 切换更新源后立刻触发一次重新检查，让新源（GitHub/Gitee）即时生效——
-  // 两条更新路径（壳自动更新 + 列车 OTA）下一次调用都会读新的
-  // preferences.update_source，无需重启。
-  const handleUpdateSourceChange = useCallback(async (src: UpdateSource) => {
-    await autoSaveConfig({ update_source: src }, { silent: true });
-    await loadSettingsConfig();
-    jarvis?.autoUpdateCheck?.();
-    void checkTrainNow();
-  }, [checkTrainNow, jarvis]);
+  // 切换更新源不再需要：桌面端只走 GitHub（见 update-source.cjs）。
 
   // 平台更新条件行：仅当壳更新待命时出现，平时不渲染——一个
   // 一年两次的事件不该常年占一行。两层文案：minShell 真的挡住
@@ -627,13 +574,6 @@ export function AboutTab() {
         <SettingsRow
           label={t('settings.about.autoCheckUpdates')}
           control={<Toggle on={autoCheck} onChange={handleAutoCheckToggle} />}
-        />
-        <SettingsRow
-          label={t('settings.about.updateSource')}
-          hint={t('settings.about.updateSourceHint')}
-          control={
-            <UpdateSourceSelect value={updateSourcePref} onChange={handleUpdateSourceChange} />
-          }
         />
         <SettingsRow
           label={t('settings.about.betaUpdates')}

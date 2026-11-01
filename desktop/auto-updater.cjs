@@ -22,8 +22,6 @@ const UPDATE_CHANNEL_VERSION = 1;
 const DEFAULT_INVITE_API_URL = "";
 const DEFAULT_GITHUB_OWNER = "mengtian999";
 const DEFAULT_GITHUB_REPO = "Bitjarvis";
-const DEFAULT_GITEE_OWNER = "dreamsky111333";
-const DEFAULT_GITEE_REPO = "bitjarvis";
 
 let _mainWindow = null;
 let _setIsUpdating = null;  // 由 main.cjs 注入
@@ -56,29 +54,6 @@ function createGithubFeedConfig(digestBaseUrl = "") {
       repo: DEFAULT_GITHUB_REPO,
     },
     digestBaseUrl: digestBaseUrl || `https://github.com/${DEFAULT_GITHUB_OWNER}/${DEFAULT_GITHUB_REPO}/releases/download`,
-    channel: "default",
-    channelError: null,
-  };
-}
-
-/**
- * Gitee shell-update feed。electron-updater 的 generic provider 需要
- * {url}/latest.yml，所以发布时要在 gitee 建一个 tag="latest" 的 release，
- * 把 latest.yml 当 asset 传上去。
- */
-function createGiteeFeedConfig(digestBaseUrl = "") {
-  const giteeBase = `https://gitee.com/${DEFAULT_GITEE_OWNER}/${DEFAULT_GITEE_REPO}/releases/download`;
-  return {
-    feedURL: {
-      provider: "generic",
-      url: `${giteeBase}/latest`,
-    },
-    source: {
-      provider: "gitee",
-      owner: DEFAULT_GITEE_OWNER,
-      repo: DEFAULT_GITEE_REPO,
-    },
-    digestBaseUrl: digestBaseUrl || giteeBase,
     channel: "default",
     channelError: null,
   };
@@ -203,31 +178,9 @@ function resolveUpdateFeedConfig(env = process.env) {
     return createInviteChannelFeedConfig(record.feedUrl, digestBaseUrl);
   }
 
-  // 显式环境变量 JARVIS_UPDATE_SOURCE=github|gitee 是运维/调试的直接指令，
-  // 压过任何持久化状态与时区检测（与 explicitFeedUrl 同优先级语义）。legacy 值
-  // （gitcode/atomgit 等）不匹配，落到下面的 prefs+时区检测分支按既有行为处理。
-  if (source === "github" || source === "gitee") {
-    const forcedConfig = source === "gitee" ? createGiteeFeedConfig(digestBaseUrl) : createGithubFeedConfig(digestBaseUrl);
-    return { ...forcedConfig, channelError: channelError || null };
-  }
-
-  // 读 preferences.json 的 update_source 字段，结合时区检测决定走 GitHub 还是 Gitee。
-  let preferredSource = "github";
-  try {
-    const updateSource = require("./src/shared/update-source.cjs");
-    const prefsPath = path.join(_jarvisHome || "", "user", "preferences.json");
-    let prefs = null;
-    try { prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8")); } catch {}
-    preferredSource = updateSource.resolveUpdateSource(prefs);
-  } catch {}
-
-  if (preferredSource === "gitee") {
-    const giteeConfig = createGiteeFeedConfig(digestBaseUrl);
-    return { ...giteeConfig, channelError: channelError || null };
-  }
-
-  const defaultConfig = createGithubFeedConfig(digestBaseUrl);
-  return { ...defaultConfig, channelError: channelError || null };
+  // 桌面端更新源固定 GitHub（见 update-source.cjs）。Gitee 镜像已废弃：
+  // 那边没有 channels release，多一次注定失败的请求只会拖慢更新检查。
+  return { ...createGithubFeedConfig(digestBaseUrl), channelError: channelError || null };
 }
 
 function feedSourceLabel(config) {

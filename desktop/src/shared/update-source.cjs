@@ -1,73 +1,29 @@
 "use strict";
 
 /**
- * update-source.cjs — 更新源地区检测与手动覆盖
+ * update-source.cjs — 桌面端更新源
  *
- * 三层决策：
- *   1. preferences.json 里 update_source 显式写了 "github" / "gitee" → 直接用
- *   2. 系统时区落在大陆时区 → gitee
- *   3. 其余 → github
+ * 事实上的发布渠道决定更新源，不需要客户端去猜：
+ *   - Windows 商店版：Microsoft Store 负责更新，不读这里的 feed
+ *   - Windows 安装包版 / Linux：只走 GitHub Releases
  *
- * 只负责"选哪个源"，不负责怎么拉。auto-updater.cjs 和 ota-core.cjs 各自
- * 拿到结果后走自己的下载逻辑。
+ * 所以 Gitee 镜像已经废弃，地区检测与手动覆盖一并移除：一个永远只有
+ * 一个取值的"选择器"不算选择器，留着只会让更新链路多一次注定失败的
+ * 请求（Gitee 上没有 channels release）。
  */
 
 const GITHUB_OWNER = "mengtian999";
 const GITHUB_REPO = "Bitjarvis";
-const GITEE_OWNER = "dreamsky111333";
-const GITEE_REPO = "bitjarvis";
-
-// 大陆时区——香港/台北不在此列，它们走 github
-const CN_TIMEZONES = new Set([
-  "Asia/Shanghai",
-  "Asia/Urumqi",
-  "Asia/Chongqing",
-  "Asia/Harbin",
-  "Asia/Chungking",
-  "PRC",
-]);
 
 /**
- * 检测地区。只看时区，不看 IP——客户端离线也能判断，不引入网络延迟。
- * @returns {"cn" | "global"}
+ * @returns {"github"}
  */
-function detectRegion() {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz && CN_TIMEZONES.has(tz)) return "cn";
-  } catch {}
-  return "global";
-}
-
-/**
- * 读 preferences.json 的 update_source 字段。
- * @param {object|null|undefined} prefs — 已解析的 preferences.json
- * @returns {"github" | "gitee" | "auto"}
- */
-function readUpdateSourcePreference(prefs) {
-  const val = prefs && prefs.update_source;
-  if (val === "github" || val === "gitee") return val;
-  return "auto";
-}
-
-/**
- * 最终决策：手动覆盖 > 时区检测 > 默认 github。
- * @param {object|null|undefined} prefs
- * @returns {"github" | "gitee"}
- */
-function resolveUpdateSource(prefs) {
-  const pref = readUpdateSourcePreference(prefs);
-  if (pref !== "auto") return pref;
-  return detectRegion() === "cn" ? "gitee" : "github";
+function resolveUpdateSource() {
+  return "github";
 }
 
 module.exports = {
   GITHUB_OWNER,
   GITHUB_REPO,
-  GITEE_OWNER,
-  GITEE_REPO,
-  CN_TIMEZONES,
-  detectRegion,
-  readUpdateSourcePreference,
   resolveUpdateSource,
 };
