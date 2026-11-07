@@ -46,7 +46,7 @@ If you have used CLI or GUI agents like Claude Code, Codex, or Manus, you will f
 
 **Character Cards & Skill Bundles** — Agents can be imported / exported as local-first character-card zip packages that carry allowlisted identity, avatar, optional memory, and Skills. Skill Bundles are a standalone skill-pack infrastructure: group skills, drag them between bundles, toggle whole bundles, and export a bundle as a zip for migration and sharing.
 
-**Multi-Agent** — Create multiple agents, each with independent memory, personality, and scheduled tasks. Agents can collaborate in channel group chats, hold multi-agent group conversations in the same session, or delegate tasks to each other.
+**Multi-Agent** — Create multiple agents, each with independent memory, personality, and scheduled tasks. Agents can collaborate in channel group chats or delegate tasks to each other.
 
 **Desk** — Every agent has its own desk for files and notes (like sticky notes that agents proactively read and act on). Drag-and-drop, file preview, and workspace file-tree change watching turn the desk into an async collaboration space between you and your agent.
 
