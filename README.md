@@ -46,7 +46,7 @@ Bit Jarvis 是一个个人 AI 助理（桌面 Agent）：有记忆，有性格�
 
 **角色卡与技能包** — Agent 可以导入 / 导出为本地优先的角色卡 zip，按白名单携带人格、头像、可选记忆和 Skills。Skill Bundle 是独立的技能包基础设施，可以分组、拖拽、成组启用，并单独导出为 zip 方便迁移和分享。
 
-**多 Agent** — 创建多个 Agent，各自有独立记忆、人格和定时任务。Agent 之间可以频道群聊协作，也可以互相委派任务。
+ **多 Agent** — 创建多个 Agent，各自有独立记忆、人格和定时任务。Agent 之间可以频道群聊协作、同一会话内多 Agent 群聊对话，也可以互相委派任务。
 
 **书桌** — 每个 Agent 都有自己的书桌，可以放文件、写笺（类似便签，Agent 会主动读取并执行）。支持拖拽、文件预览和工作区文件树变更监听，是你和 Agent 之间的异步协作空间。
 
@@ -64,6 +64,7 @@ Bit Jarvis 是一个个人 AI 助理（桌面 Agent）：有记忆，有性格�
 - 由 server 的 `/im/` 静态路由托管（`im/build/web`，Flutter Web 产物）
 - 打包时经 `extraResources` 随应用分发到 `im-web/`
 - iframe 与桌面端主题实时同步（亮 / 暗色跟随）
+- IM 聊天翻译通过 Jarvis 网关的 `im_translate` 档位完成，支持多语言互译
 
 **互通架构** — 用户只需 **1 个 Jarvis IM 账号**，每台设备上的每个 Agent 都是一个 **AppService 虚拟用户**（如 `@jarvis_home3f2a`）：
 
@@ -113,7 +114,8 @@ cli/ scripts/ tools/ tests/   命令行入口 / 构建打包签名工具 / Vites
 | Agent 运行时 | Pi SDK（@earendil-works/pi-coding-agent） |
 | 数据库 | better-sqlite3（WAL 模式） |
 | 测试 | Vitest |
-| 国际化 | 5 语言（zh / en / ja / ko / zh-TW） |
+| 国际化 | 7 语言（zh / en / ja / ko / zh-TW / de / fr） |
+| 语音 | Sherpa-ONNX TTS + 多语言语音识别 |
 
 ## 平台支持
 
