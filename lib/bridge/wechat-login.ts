@@ -5,7 +5,11 @@
  * 参考 @tencent-weixin/openclaw-weixin v1.0.2 的 src/auth/login-qr.ts（MIT 协议）。
  */
 
-import QRCode from "qrcode";
+// A2（docs/SIZE_AND_STARTUP_OPT.md）：qrcode 只在扫码登录时使用，改走按需
+// 动态加载，从 server 冷启动模块图摘除（~35 文件）。
+async function loadQRCode() {
+  return (await import("qrcode")).default;
+}
 
 const BASE_URL = "https://ilinkai.weixin.qq.com";
 const BOT_TYPE = "3";
@@ -38,6 +42,7 @@ export async function getWechatQrcode() {
     // qrcode_img_content 是要被编码成二维码的 URL 文本，不是图片
     // 用 qrcode 库转成 data URL（base64 PNG），前端直接 <img src> 显示
     const qrText = data.qrcode_img_content || data.qrcode;
+    const QRCode = await loadQRCode();
     const qrcodeDataUrl = await QRCode.toDataURL(qrText, { width: 280, margin: 2 });
     return {
       ok: true,

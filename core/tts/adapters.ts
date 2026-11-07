@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import WebSocket from "ws";
-import { resolveSherpaBin, resolveSherpaDir } from "../realtime-voice/sherpa-paths.ts";
+import { resolveSherpaBin, resolveSherpaDir, resolveSherpaModelDirMultiRoot } from "../realtime-voice/sherpa-paths.ts";
 import { defaultEdgeVoiceForLanguage, getSpeechLanguage, voiceToSsmlLang } from "../speech/speech-languages.ts";
 
 const EDGE_TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
@@ -345,8 +345,8 @@ function resolveLanguageModelDir(baseDir, language, kind) {
   const entry = getSpeechLanguage(language);
   const preferred = kind === "tts" ? entry?.sherpaTtsModelDir : entry?.sherpaAsrModelDir;
   if (!preferred) return null;
-  const candidate = path.join(baseDir, "models", kind, preferred);
-  return fileExists(candidate) ? candidate : null;
+  // B1：多根解析——引擎目录优先，用户级按需下载目录（JARVIS_HOME/speech-models）兜底
+  return resolveSherpaModelDirMultiRoot(baseDir, kind, preferred);
 }
 
 function runSherpaOfflineTts(text, model, conf, language) {

@@ -10,15 +10,21 @@
  * 全部消费这一份实现，禁止各自复制回落顺序，否则多份拷贝会在未来某次模板
  * 改名/加语言时悄悄漂移。
  *
- * 回落顺序（与改动前 core/agent.ts personality getter 逐字节等价）：
+ * 回落顺序（由 shared/prompt-locale.ts 的 resolveTemplatePath 统一实现）：
  *   1. agentDir 下的落盘文件（用户定制内容）
- *   2. 该 yuan 的语言专属模板（identity-templates/en/xxx.md 等）
- *   3. 该 yuan 的通用模板（不分语言）
- *   4. 通用 example 兜底（identity.example.md / ishiki.example.md）
+ *   2. 该语言专属模板：identity-templates/{lang}/xxx.md
+ *   3. 英文模板：identity-templates/en/xxx.md
+ *   4. 该 yuan 的通用模板（根目录 = 默认中文）
+ *   5. 通用 example 兜底（identity.example.md / ishiki.example.md）
+ *
+ * 第 3 步不可省略：缺语言模板时若直接落到根目录，fr/de 用户会拿到中文人格
+ * （见 docs/AGENT_I18N.md §2.2 H1）。
  */
 
+import fs from "fs";
 import path from "path";
 import { safeReadFile } from "../shared/safe-fs.ts";
+import { normalizePromptLang, resolveTemplatePath } from "../shared/prompt-locale.ts";
 
 export type PersonaKind = "identity" | "ishiki";
 
@@ -57,18 +63,21 @@ export function resolvePersonaSource({
   kind,
 }: ResolvePersonaSourceArgs): PersonaSourceResult {
   const { fileName, templateDir, exampleFile } = KIND_CONFIG[kind];
-  const isZh = String(locale).startsWith("zh");
-  const langDir = isZh ? "" : "en/";
+  const lang = normalizePromptLang(locale);
   const readFile = (p: string) => safeReadFile(p, "");
 
   const own = readFile(path.join(agentDir, fileName));
   if (own) return { content: own, fromTemplate: false };
 
-  const langTemplate = readFile(path.join(productDir, templateDir, `${langDir}${yuanType}.md`));
-  if (langTemplate) return { content: langTemplate, fromTemplate: true };
-
-  const genericTemplate = readFile(path.join(productDir, templateDir, `${yuanType}.md`));
-  if (genericTemplate) return { content: genericTemplate, fromTemplate: true };
+  // 顺序：{lang}/ → en/ → 根目录(默认中文)。以文件存在性判断而非内容非空，
+  // 否则 lib/yuan/kong.md 这类近乎空的模板会被误判为缺失。
+  const templatePath = resolveTemplatePath(
+    path.join(productDir, templateDir),
+    `${yuanType}.md`,
+    lang,
+    (candidate) => fs.existsSync(candidate),
+  );
+  if (templatePath) return { content: readFile(templatePath), fromTemplate: true };
 
   const example = readFile(path.join(productDir, exampleFile));
   return { content: example, fromTemplate: true };

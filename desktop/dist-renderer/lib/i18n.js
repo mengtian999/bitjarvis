@@ -103,6 +103,8 @@ const i18n = {
     if (locale.startsWith("zh")) return "zh";
     if (locale.startsWith("ja")) return "ja";
     if (locale.startsWith("ko")) return "ko";
+    if (locale.startsWith("fr")) return "fr";
+    if (locale.startsWith("de")) return "de";
     return "en";
   },
 

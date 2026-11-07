@@ -18,6 +18,7 @@ const { pathToFileURL } = require("url");
 const { PNG } = require("pngjs");
 const { initAutoUpdater, checkForUpdatesAuto, setMainWindow: setUpdaterMainWindow, setUpdateChannel, installDownloadedUpdate, normalizeReleaseDigest } = require("./auto-updater.cjs");
 const { createUpdateDigestHistoryLoader } = require("./src/shared/update-digest-history.cjs");
+const { loadElectronNetFetch } = require("./src/shared/electron-net-fetch-once.cjs");
 const {
   getAutoLaunchStatus,
   setAutoLaunchEnabled,
@@ -507,6 +508,60 @@ const _distSplash = path.join(__dirname, "dist-splash");
 let _rendererBootChannel = null; // artifactBoot.rendererPointerChannel(_artifactBootChannel)，如 "stable.renderer"
 let _rendererBootTrain = null;
 
+// A4（docs/SIZE_AND_STARTUP_OPT.md §5）：最近一次（或进行中的）artifact boot
+// 的 renderer 半场句柄，由 `resolvePackagedArtifactBoot` 赋值。whenReady 的
+// "主窗口先行"路径用它等 renderer artifact 就绪（解压完成 + 模块级赋值），
+// 而不必等 server 整体就绪——renderer 的加载/解析与 server 冷 import/init
+// 并行。dev 模式（无 seed）赋 `{ rendererReady: null }`，等待方立即放行、
+// 窗口照常加载 asar/dev renderer。
+let _rendererBootHandle = null;
+
+// A5.2（docs/SIZE_AND_STARTUP_OPT.md §5）：本次 boot 是否动过 seed（激活/
+// 崩溃回退）。由 resolvePackagedArtifactBoot 在 renderer 半场收尾时赋值；
+// 只有稳定 boot（false）才允许 scheduleSeedArchiveCleanup 清理随包归档。
+let _bootUsedSeedActivation = true;
+
+/**
+ * A4：等待 `resolvePackagedArtifactBoot` 产出 renderer 半场句柄（它在
+ * startServer 内部较早阶段赋值）。dev 模式句柄立即出现（rendererReady 为
+ * null）。超时兜底返回 null（调用方退回串行路径）。
+ */
+async function waitForRendererBootHandle(timeoutMs = 90_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!_rendererBootHandle && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return _rendererBootHandle;
+}
+
+// A5.2：稳定启动后清理随包 seed 归档（resources/seed/*.tar.gz，~232MB），
+// 双份占盘改为单份（JARVIS_HOME 的已解压 artifact）。只在满足以下全部条件
+// 时执行：packaged 模式；本次 boot 未激活 seed 且无崩溃回退；seed 目录可写
+// （机器级安装 $INSTDIR 不可写 → 静默跳过）。manifest + .sig 永不删除
+// （版本判定与 repair 守卫依赖）。归档清理后的恢复链：demote→previous
+// （GC 保留 current+previous）→ OTA；"artifacts 被清空"场景由 repair 守卫
+// 与激活分支的明确报错兜底（重装/OTA）。
+const SEED_ARCHIVE_CLEANUP_DELAY_MS = 90_000;
+function scheduleSeedArchiveCleanup() {
+  if (!app.isPackaged || !process.resourcesPath) return;
+  const timer = setTimeout(() => {
+    try {
+      if (_bootUsedSeedActivation) return;
+      const seedDir = path.join(process.resourcesPath, "seed");
+      fs.accessSync(seedDir, fs.constants.W_OK);
+      const archives = fs.readdirSync(seedDir)
+        .filter((name) => /^server-.*\.tar\.gz$/.test(name) || /^renderer-.*\.tar\.gz$/.test(name));
+      if (archives.length === 0) return;
+      for (const name of archives) {
+        try { fs.rmSync(path.join(seedDir, name), { force: true }); } catch { /* best-effort */ }
+      }
+      console.log(`[desktop] seed archive cleanup: removed ${archives.length} archive(s) (${archives.join(", ")})`);
+    } catch { // 不可写/读不到：静默跳过（机器级安装的正常情况）
+    }
+  }, SEED_ARCHIVE_CLEANUP_DELAY_MS);
+  if (typeof timer.unref === "function") timer.unref();
+}
+
 // 本次启动实际生效的通道（"stable"/"beta"，未加
 // ".renderer" 限定），由 `resolvePackagedArtifactBoot` 读一次
 // `readUpdateChannelPreference()` 后赋值一次，此后 server 崩溃哨兵
@@ -572,6 +627,15 @@ function loadPageFromDir(win, distDir, pageName, opts) {
   } else {
     const built = path.join(distDir, `${pageName}.html`);
     if (fs.existsSync(built)) {
+      win.loadFile(built, opts);
+    } else if (app.isPackaged) {
+      // 白屏修复（2026-11-06）：打包布局下 asar 不含可运行的 desktop/src 页面
+      // （src/index.html 是开发源码壳，引用 dev-only 资源，加载必然白屏且
+      // app-ready 永不触发）。绝不再静默回退到它——直接加载目标路径，让
+      // did-fail-load 走 renderer 崩溃回退闭环（重解析/重试）而不是装作加载
+      // 成功；同时 loudly 写诊断。
+      console.error(`[desktop] packaged renderer page missing: ${built} (distDir=${distDir}); NOT falling back to dev src page`);
+      writeDesktopLaunchDiagnostic("renderer-page-missing", { built, distDir, pageName });
       win.loadFile(built, opts);
     } else {
       win.loadFile(path.join(__dirname, "src", `${pageName}.html`), opts);
@@ -1253,16 +1317,31 @@ async function startServer() {
       try { process.kill(existingInfo.pid, 0); return true; } catch { return false; }
     })();
 
-    if (pidAlive) {
-      const verification = await verifyReusableServerInfo(existingInfo);
-      if (verification.reusable) {
-        console.log(`[desktop] 复用已运行的 server，端口: ${existingInfo.port}, 版本: ${existingInfo.version || "unknown"}, studio: ${verification.identity.studioId}`);
-        serverPort = existingInfo.port;
-        serverToken = existingInfo.token;
-        reusedServerPid = existingInfo.pid;
-        reusedServerOwned = isDesktopOwnedServerInfo(existingInfo);
-        return; // 跳过启动
-      }
+      if (pidAlive) {
+        const verification = await verifyReusableServerInfo(existingInfo);
+        if (verification.reusable) {
+          console.log(`[desktop] 复用已运行的 server，端口: ${existingInfo.port}, 版本: ${existingInfo.version || "unknown"}, studio: ${verification.identity.studioId}`);
+          serverPort = existingInfo.port;
+          serverToken = existingInfo.token;
+          reusedServerPid = existingInfo.pid;
+          reusedServerOwned = isDesktopOwnedServerInfo(existingInfo);
+          // 白屏修复（2026-11-06）：复用路径此前完全跳过 artifact 决议，
+          // `_distRenderer` 停留在 asar 默认值——打包布局下 asar 不含
+          // dist-renderer（renderer 只随 seed 走），loadPageFromDir 会静默
+          // 回退到开发源码页 desktop/src/index.html → 白屏 + app-ready 永不
+          // 触发。这里把 renderer 半场决议补跑完：`_distRenderer`/
+          // `_rendererBootTrain`/`_currentContentVersion`/崩溃回退闭环状态
+          // 全部就位。server 半场无需等待（运行中的 server 就是本次会话的
+          // server）；其指针 promote/可能的 seed 激活只影响下一次真实 boot，
+          // 语义正确。决议失败（seed 损坏等）不阻断复用——warn 后按原状继续。
+          try {
+            const reuseBoot = await resolvePackagedArtifactBoot();
+            if (reuseBoot?.rendererReady) await reuseBoot.rendererReady;
+          } catch (err) {
+            console.warn(`[desktop] reuse-path renderer resolution failed: ${redactMainLogText(err?.message || err)}`);
+          }
+          return; // 跳过启动
+        }
 
       let knownDead = false;
       if (verification.terminate) {
@@ -1361,10 +1440,22 @@ async function startServer() {
   // 重试条件：stderr 含 ERR_MODULE_NOT_FOUND 或 "Cannot find package/module"。
   // 文件已通过完整性检查仍报模块缺失，说明 transitive 依赖在更新落地中尚未完成；
   // 再退避一次，给 NSIS/AV 更多收尾时间。
+  const startServerT0 = Date.now();
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       await _spawnServerOnce(serverInfoPath, artifactBootContext);
+      if (artifactBootContext?.rendererReady) {
+        // A5.1（renderer 解压后台化）：renderer 半场（解压/`_distRenderer` 等
+        // 模块级赋值/隔离与崩溃回退提示/拆箱 GC）已与 server 冷 import 并行
+        // 跑完，这里只是兑现——通常立即返回。必须在返回前完成：下游
+        // （whenReady 建主窗口/onboarding 窗、apply-now 的窗口重载）读
+        // `_distRenderer`。renderer 半场失败 = 启动失败（fail loud，与旧版
+        // prepareArtifactBoot 在 spawn 前整体抛错语义一致，只是失败点后移到
+        // server 就绪之后）。
+        await artifactBootContext.rendererReady;
+      }
+      console.log(`[desktop] boot-summary: startServerTotalMs=${Date.now() - startServerT0}`);
       return;
     } catch (err) {
       lastErr = err;
@@ -1402,16 +1493,24 @@ async function startServer() {
 /**
  * 打包模式启动解析：签名 seed 同时覆盖 server 与 renderer。
  * - Resources/seed/ 在场 → 走 artifact-boot 的双 kind 组合入口
- *   `prepareArtifactBoot`（两个 kind 都必须在场，缺一硬报错 → server 走
- *   promote → 三连败降级 → 验签 → resolveBoot → 必要时首启解压 seed；
- *   renderer 走同一条链但没有三连败降级）。副作用：把 `_distRenderer`
- *   重指向 renderer 的激活目录——packaged 模式下所有非 splash 窗口
- *  （index/settings/quick-chat/onboarding/browser-viewer/viewer-window）
- *   从这里往后加载的都是 artifact 目录，不是随 asar 走的旧路径。同时把
- *   `_rendererBootChannel`/`_rendererBootTrain` 赋值——下游
+ *   `prepareArtifactBootDeferred`（两个 kind 都必须在场，缺一硬报错）。A5.1
+ *   （docs/SIZE_AND_STARTUP_OPT.md）renderer 解压后台化：本函数只 await
+ *   server 半场（promote → 三连败降级 → 验签 → resolveBoot → 必要时首启解压
+ *   seed），renderer 半场的 promise 原样返回（`rendererReady`）——server 立即
+ *   spawn，renderer 的解压与 server 冷 import 重叠。两个半场内部共享同一把
+ *   指针 mutex（server 先持锁），决策语义与旧的先 server 后 renderer 串行版
+ *   本逐字节一致。
+ *   renderer 半场收尾（`rendererReady` 兑现时）完成：`_distRenderer` 重指向
+ *   renderer 的激活目录——packaged 模式下所有非 splash 窗口（index/settings/
+ *   quick-chat/onboarding/browser-viewer/viewer-window）从这里往后加载的都是
+ *   artifact 目录，不是随 asar 走的旧路径；`_rendererBootTrain` 赋值——下游
  *   renderer 崩溃回退闭环靠这两个模块级变量非 null 判断"当前是否处于
- *   artifact 模式"。返回 {serverRoot, train}（server 半——renderer 半的
- *   下游消费者读上面那两个模块级变量，不需要走返回值）。
+ *   artifact 模式"；`_currentContentVersion` 赋值；隔离/崩溃回退提示；两只
+ *   箱子的版本目录 GC。spawn 端（_spawnServerOnce）读 `JARVIS_RENDERER_DIST`
+ *   用 `rendererDecisionPromise`（毫秒级决策快照，不含解压），不等解压。
+ *   返回 {serverRoot, train, channel, rendererDecisionPromise, rendererReady}
+ *   （server 半——renderer 半的下游消费者读上面那两个模块级变量，不需要走
+ *   返回值）。
  * - seed 不在场且未打包 → dev 模式，返回 null（原有 source server 路径，
  *   `_distRenderer` 维持默认值，逐字节不变，`_rendererBootChannel` 维持
  *   null）。
@@ -1429,13 +1528,17 @@ async function resolvePackagedArtifactBoot() {
     }
     return null;
   }
+  // A4：dev 模式（无 seed）立即放行窗口先行等待方——rendererReady 为 null
+  // 表示"没有 renderer artifact 可等"，窗口照常加载 asar/dev renderer。
+  _rendererBootHandle = { rendererReady: null, rendererDecisionPromise: null };
   // 通道只读一次，本次启动全程复用。若各调用点硬编码
   // `artifactBoot.SEED_CHANNEL`，beta 偏好机器的
   // prepareArtifactBoot 用 beta 拆箱激活，GC 却拿 stable 账本清点，把刚
   // 激活的 beta 目录当"不在保留集"删掉）。
   const bootChannel = readUpdateChannelPreference();
   _artifactBootChannel = bootChannel;
-  const boot = await artifactBoot.prepareArtifactBoot({
+  const bootT0 = Date.now();
+  const { serverPromise, rendererDecisionPromise, rendererPromise } = artifactBoot.prepareArtifactBootDeferred({
     homeDir: jarvisHome,
     resourcesPath,
     platformArch,
@@ -1457,54 +1560,80 @@ async function resolvePackagedArtifactBoot() {
     },
     log: (msg) => console.log(redactMainLogText(msg)),
   });
-  console.log(`[desktop] server artifact resolved: train ${boot.server.train} (${boot.server.version}) slot=${boot.server.slot}${boot.server.activatedSeed ? " [seed activated]" : ""}${boot.server.crashFallback ? " [crash fallback]" : ""}`);
-  console.log(`[desktop] renderer artifact resolved: train ${boot.renderer.train} (${boot.renderer.version}) slot=${boot.renderer.slot}${boot.renderer.activatedSeed ? " [seed activated]" : ""}${boot.renderer.crashFallback ? " [crash fallback]" : ""}`);
-  _distRenderer = boot.renderer.versionDir;
+  const server = await serverPromise;
+  console.log(`[desktop] server artifact resolved: train ${server.train} (${server.version}) slot=${server.slot}${server.activatedSeed ? " [seed activated]" : ""}${server.crashFallback ? " [crash fallback]" : ""}`);
   _rendererBootChannel = artifactBoot.rendererPointerChannel(bootChannel);
-  _rendererBootTrain = boot.renderer.train;
-  // 内容版本单一源的赋值点之一：这是每次启动（含 apply-now 触发的 server
-  // 重启，见 applyTrainUpdateNow 里对 startServer 的重新调用）都会走到的
-  // 决议路径，renderer 与 server 归档按发布约定共享同一个产品版本号，
-  // renderer 优先只是两者不巧不一致时的兜底顺序，不代表 renderer 更权威。
-  _currentContentVersion = boot.renderer.version || boot.server.version || _currentContentVersion;
+  // server 半场就绪即返回——renderer 半场的收尾全部挂在这里的 continuation：
+  const rendererReady = rendererPromise.then((renderer) => {
+    console.log(`[desktop] renderer artifact resolved: train ${renderer.train} (${renderer.version}) slot=${renderer.slot}${renderer.activatedSeed ? " [seed activated]" : ""}${renderer.crashFallback ? " [crash fallback]" : ""} (rendererBootMs=${Date.now() - bootT0})`);
+    _distRenderer = renderer.versionDir;
+    _rendererBootTrain = renderer.train;
+    // A5.2：本次 boot 是否动过 seed（激活/降级）——稳定 boot 才允许清理归档
+    _bootUsedSeedActivation = !!(renderer.activatedSeed || server.activatedSeed
+      || renderer.crashFallback || server.crashFallback);
+    // 内容版本单一源的赋值点之一：这是每次启动（含 apply-now 触发的 server
+    // 重启，见 applyTrainUpdateNow 里对 startServer 的重新调用）都会走到的
+    // 决议路径，renderer 与 server 归档按发布约定共享同一个产品版本号，
+    // renderer 优先只是两者不巧不一致时的兜底顺序，不代表 renderer 更权威。
+    _currentContentVersion = renderer.version || server.version || _currentContentVersion;
 
-  // 隔离事件的不阻塞提示：只在真的写入了 quarantine.json
-  // 条目时提示（train 0 的"降级但不隔离"分支不算），server/renderer 任一
-  // 侧触发都算——两者用同一条通用文案，用户不需要关心是哪个 kind。
-  if (boot.server.quarantinedTrain != null || boot.renderer.quarantinedTrain != null) {
-    notifyComponentQuarantined();
-  }
+    // 隔离事件的不阻塞提示：只在真的写入了 quarantine.json
+    // 条目时提示（train 0 的"降级但不隔离"分支不算），server/renderer 任一
+    // 侧触发都算——两者用同一条通用文案，用户不需要关心是哪个 kind。
+    if (server.quarantinedTrain != null || renderer.quarantinedTrain != null) {
+      notifyComponentQuarantined();
+    }
 
-  // 崩溃回退的明确提示（系统通知之外，侧栏卡片承载"哪个版本坏了、退到了
-  // 哪个版本"的完整信息）：server/renderer 理论上可能在同一次启动里各自
-  // 独立触发一次 demote，两者互不相干（各自的三连败计数、各自的指针命名
-  // 空间），但侧栏只有一张卡的展示位——server 侧优先，理由是 server 崩溃
-  // 对功能的影响面通常大于单纯的界面加载失败；renderer 侧不会被丢弃，只是
-  // 这次没轮到它展示，下次它自己触发时会用自己的 fromVersion/toVersion 重新
-  // announce 一次。
-  const crashFallbackNotice =
-    buildCrashFallbackNotice("server", boot.server) || buildCrashFallbackNotice("renderer", boot.renderer);
-  if (crashFallbackNotice) {
-    announceCrashFallbackNotice(crashFallbackNotice);
-  }
+    // 崩溃回退的明确提示（系统通知之外，侧栏卡片承载"哪个版本坏了、退到了
+    // 哪个版本"的完整信息）：server/renderer 理论上可能在同一次启动里各自
+    // 独立触发一次 demote，两者互不相干（各自的三连败计数、各自的指针命名
+    // 空间），但侧栏只有一张卡的展示位——server 侧优先，理由是 server 崩溃
+    // 对功能的影响面通常大于单纯的界面加载失败；renderer 侧不会被丢弃，只是
+    // 这次没轮到它展示，下次它自己触发时会用自己的 fromVersion/toVersion 重新
+    // announce 一次。提示随 renderer 半场收尾发出：非解压启动（绝大多数启动，
+    // 含全部崩溃回退场景）renderer 半场毫秒级兑现，时序与旧版一致；仅有的
+    // 延迟场景是首启/装新 seed（该场景两个半场都不可能有 crash fallback）。
+    const crashFallbackNotice =
+      buildCrashFallbackNotice("server", server) || buildCrashFallbackNotice("renderer", renderer);
+    if (crashFallbackNotice) {
+      announceCrashFallbackNotice(crashFallbackNotice);
+    }
 
-  // 拆箱目录 GC：boot 决议（含可能的 promote/demote）
-  // 完成后，对两个 kind 各自的版本目录做一次"只留 current+previous"清理。
-  // gcArtifactKind 内部永不抛出，这里不需要额外 try/catch。
-  await artifactGc.gcArtifactKind({
-    homeDir: jarvisHome,
-    kind: "server",
+    // 拆箱目录 GC：boot 决议（含可能的 promote/demote）
+    // 完成后，对两个 kind 各自的版本目录做一次"只留 current+previous"清理。
+    // gcArtifactKind 内部永不抛出，这里不需要额外 try/catch。GC 挂在 renderer
+    // 收尾之后台化：首启解压期间（数秒）不再挡 spawn。
+    artifactGc.gcArtifactKind({
+      homeDir: jarvisHome,
+      kind: "server",
+      channel: bootChannel,
+      log: (msg) => console.log(redactMainLogText(msg)),
+    }).catch((err) => console.warn(`[desktop] artifact GC (server) failed: ${redactMainLogText(err?.message || err)}`));
+    artifactGc.gcArtifactKind({
+      homeDir: jarvisHome,
+      kind: "renderer",
+      channel: _rendererBootChannel,
+      log: (msg) => console.log(redactMainLogText(msg)),
+    }).catch((err) => console.warn(`[desktop] artifact GC (renderer) failed: ${redactMainLogText(err?.message || err)}`));
+    return renderer;
+  });
+  // serverPromise 拒绝（fail-loud 启动失败路径）时 rendererReady 可能永远
+  // 无人 await：挂 no-op catch 防 unhandled rejection。正常路径的真实消费
+  // 是 startServer 末尾的 await（.catch 返回新 promise，不影响原 promise 的
+  // reject 传递）。
+  rendererReady.catch(() => {});
+
+  // A4：把本次 renderer 半场句柄暴露给 whenReady 的窗口先行路径
+  // （waitForRendererBootHandle）——必须在 return 前赋值。
+  _rendererBootHandle = { rendererReady, rendererDecisionPromise };
+
+  return {
+    serverRoot: server.versionDir,
+    train: server.train,
     channel: bootChannel,
-    log: (msg) => console.log(redactMainLogText(msg)),
-  });
-  await artifactGc.gcArtifactKind({
-    homeDir: jarvisHome,
-    kind: "renderer",
-    channel: _rendererBootChannel,
-    log: (msg) => console.log(redactMainLogText(msg)),
-  });
-
-  return { serverRoot: boot.server.versionDir, train: boot.server.train, channel: bootChannel };
+    rendererDecisionPromise,
+    rendererReady,
+  };
 }
 
 /**
@@ -1719,10 +1848,23 @@ async function triggerArtifactRepairFlow() {
   });
   if (result.response !== 0) return; // 取消
 
-  await artifactRepair.repairArtifacts({
+  const repairResult = await artifactRepair.repairArtifacts({
     homeDir: jarvisHome,
+    resourcesPath: app.isPackaged ? (process.resourcesPath || "") : "",
+    platformArch: `${process.platform}-${process.arch}`,
     log: (msg) => console.log(redactMainLogText(msg)),
   });
+  // A5.2 守卫：归档已被启动后清理移除时拒绝 repair（清空 artifacts 会失去
+  // 唯一恢复路径）——给出"重装/OTA"的明确指引，不动现有 artifact 状态。
+  if (repairResult.skippedReason) {
+    dialog.showErrorBox(
+      mt("dialog.repairArtifactsTitle", null, "Repair Components"),
+      mt("dialog.repairArtifactsUnavailable", {
+        reason: repairResult.skippedReason,
+      }, "Cannot repair right now: " + repairResult.skippedReason),
+    );
+    return;
+  }
 
   isExitingServer = true;
   isQuitting = true;
@@ -1741,6 +1883,7 @@ async function triggerArtifactRepairFlow() {
  *   `artifactBoot.SEED_CHANNEL`；原因见文件头 `_artifactBootChannel` 注释。
  */
 async function _spawnServerOnce(serverInfoPath, artifactBootContext) {
+  const spawnT0 = Date.now();
   _serverLogs = [];
   _lastServerProgressAtMs = null;
   reusedServerPid = null;
@@ -1766,12 +1909,21 @@ async function _spawnServerOnce(serverInfoPath, artifactBootContext) {
   // must not inherit Pi's global agent directory. Jarvis supplies all SDK paths
   // explicitly so a host-level Pi installation cannot redirect Jarvis's data.
   delete serverEnv.PI_CODING_AGENT_DIR;
-  // packaged 模式下 `_distRenderer` 已经被 `resolvePackagedArtifactBoot`
-  // （本函数调用前必然跑过一次，见调用点 :1186 附近）重指向 renderer 的
-  // 已激活版本目录；把它转交给 server，让 /mobile、/desktop 的远程网页
-  // 客户端从此供货热更新激活的 renderer，不再是 server 内容包里冗余携带、
-  // 永远滞后于热更新的那份旧拷贝。dev 模式（artifactBootContext 为 null）
+  // packaged 模式下 `_distRenderer` 由 `resolvePackagedArtifactBoot`
+  // （本函数调用前必然跑过一次，见调用点 :1186 附近）在 renderer 半场收尾时
+  // 重指向 renderer 的已激活版本目录；把它转交给 server，让 /mobile、/desktop
+  // 的远程网页客户端从此供货热更新激活的 renderer，不再是 server 内容包里冗余
+  // 携带、永远滞后于热更新的那份旧拷贝。dev 模式（artifactBootContext 为 null）
   // 不设——server 走自己的源码树开发形态，逐字节不变。
+  // A5.1（renderer 解压后台化）：这里等的是 `rendererDecisionPromise`——
+  // 毫秒级的决策快照（promote/降级/resolveBoot 完成、解压开始前兑现），
+  // 而不是整个 renderer 半场（首启解压 74MB 要数秒，不能挡 spawn）：
+  // - action === "boot"（绝大多数启动，含 OTA 应用后的重启、崩溃回退）：快照
+  //   即终局目录，直接采用；
+  // - activate-seed（首启/装新 seed）：快照 versionDir 为 null，回退
+  //   `_distRenderer` 的 asar 内置副本——该场景 seed renderer 与安装包内置
+  //   副本同源同版本（同一发布产物），内容等价；OTA train > 0 激活路径不解压，
+  //   快照必非 null，无此回退。
   // 已知边界：renderer 崩溃降级会在本次 spawn 之后重新赋值
   // `_distRenderer`（见 `handleRendererArtifactLoadFailure`），但这里已经
   // 把当时的值复制进了 server 的 env，此后不会再变——server 进程的生命周
@@ -1779,21 +1931,30 @@ async function _spawnServerOnce(serverInfoPath, artifactBootContext) {
   // 议一次，不逐请求判断"的语义一致，重启进程后两者自然重新对齐，不在
   // 本次修复范围内。
   if (artifactBootContext) {
-    serverEnv.JARVIS_RENDERER_DIST = _distRenderer;
+    const rendererDecision = artifactBootContext.rendererDecisionPromise
+      ? await artifactBootContext.rendererDecisionPromise
+      : null;
+    serverEnv.JARVIS_RENDERER_DIST = (rendererDecision && rendererDecision.versionDir) || _distRenderer;
   }
   serverEnv = await serverEnvironmentForNetworkProxy(serverEnv);
   serverEnv = withWindowsSystemCaEnv(serverEnv);
-  // Windows: 注入 bundled Git runtime（MinGit）路径，并从注册表补齐当前系统 / 用户 PATH。
+  // Windows: 注入 Git 运行时路径，并从注册表补齐当前系统 / 用户 PATH。
   if (process.platform === "win32") {
-    // MinGit 结构：cmd/git.exe, usr/bin/*（含 sh.exe）, mingw64/bin/*；
-    // bin/ 是老 PortableGit 布局的遗留，不存在时被 existsSync 过滤
-    const gitRoot = path.join(process.resourcesPath || "", "git");
-    const gitPaths = [
+    // B3（docs/SIZE_AND_STARTUP_OPT.md §6）：git 运行时解析顺序——
+    // JARVIS_HOME/runtime/git（按需下载 MinGit 的落点，B3 后续步骤的目标
+    // 位置）→ 随包 resources/git（当前仍随包分发）。系统 git 本就在 PATH
+    // 上，无需前置。MinGit 目录结构：cmd/git.exe, usr/bin/*（含 sh.exe）,
+    // mingw64/bin/*；bin/ 是老 PortableGit 布局的遗留，不存在时被过滤。
+    const gitRoots = [
+      path.join(jarvisHome || "", "runtime", "git"),
+      path.join(process.resourcesPath || "", "git"),
+    ];
+    const gitPaths = gitRoots.flatMap((gitRoot) => [
+      path.join(gitRoot, "cmd"),
       path.join(gitRoot, "bin"),
       path.join(gitRoot, "usr", "bin"),
       path.join(gitRoot, "mingw64", "bin"),
-      path.join(gitRoot, "cmd"),
-    ].filter(p => fs.existsSync(p));
+    ]).filter(p => p && fs.existsSync(p));
     serverEnv = await buildWin32ServerEnv(serverEnv, {
       prependPathEntries: gitPaths,
     });
@@ -1941,6 +2102,17 @@ async function _spawnServerOnce(serverInfoPath, artifactBootContext) {
       channel: artifactBootContext.channel,
       log: (msg) => console.warn(redactMainLogText(msg)),
     });
+  }
+  // boot-summary（P0 基线采集，docs/SIZE_AND_STARTUP_OPT.md §8）：spawn 到
+  // server-info 就绪的桌面侧耗时；server 侧的 import/init 段耗时看 server
+  // stdout 的 [server-bootstrap] / ✿ 初始化完成 日志。
+  const spawnToReadyMs = Date.now() - spawnT0;
+  console.log(`[desktop] boot-summary: spawnToReadyMs=${spawnToReadyMs}`);
+  // A6（docs/SIZE_AND_STARTUP_OPT.md §5）：启动段异常漫长的机器，大概率是
+  // Defender 实时保护在逐文件扫描 server 运行时（#719/#736 根因）。写一条
+  // 可行动的引导进诊断日志（不弹窗、不自动改用户安全配置）。
+  if (spawnToReadyMs > 20_000) {
+    console.warn(`[desktop] slow boot detected (spawnToReadyMs=${spawnToReadyMs}ms). If this machine runs Windows Defender real-time protection, adding the install directory and JARVIS_HOME (${jarvisHome}) to the exclusion list usually removes the delay. See diagnostics/desktop-launch/ logs.`);
   }
 }
 
@@ -5221,7 +5393,11 @@ function readBundledUpdateDigestHistory() {
 
 // About 页的历史是“当前网站上最近发布的版本”，不能由安装时冻结的包内文件
 // 充当真相。包内 v2 史册只在网络不可用时显式回退，并由 renderer 标注来源。
+// fetchImpl 显式换成 Electron net（Chromium 栈，跟随系统代理）：undici 的
+// globalThis.fetch 无视系统代理，依赖代理上网的用户在 api.github.com 上
+// 必然失败，历史永远退到包内兜底（见 electron-net-fetch-once.cjs 的头注）。
 const loadUpdateDigestHistory = createUpdateDigestHistoryLoader({
+  fetchImpl: loadElectronNetFetch() || globalThis.fetch,
   normalize: normalizeReleaseDigest,
   readBundledEntries: readBundledUpdateDigestHistory,
   log: (message) => console.warn(`[update-history] ${redactMainLogText(message)}`),
@@ -6129,10 +6305,17 @@ app.whenReady().then(async () => {
     // 重新解压出来，一条代码路径，没有特例。清理失败静默记日志，不阻塞启动。
     if (process.argv.includes("--repair-artifacts")) {
       console.log("[desktop] --repair-artifacts flag detected; resetting artifact components before startup");
-      await artifactRepair.repairArtifacts({
+      const flagRepair = await artifactRepair.repairArtifacts({
         homeDir: jarvisHome,
+        resourcesPath: app.isPackaged ? (process.resourcesPath || "") : "",
+        platformArch: `${process.platform}-${process.arch}`,
         log: (msg) => console.log(redactMainLogText(msg)),
       });
+      // A5.2 守卫：归档缺失时 repair 被拒绝——保留现有 artifact 状态继续启动
+      // （若 current 指针仍可用则正常 boot；否则激活分支给出明确的重装报错）。
+      if (flagRepair.skippedReason) {
+        console.warn(`[desktop] --repair-artifacts skipped: ${flagRepair.skippedReason}`);
+      }
     }
 
     _startHiddenAtLogin = getAutoLaunchStatus({ app }).openedAtLogin === true && isSetupComplete();
@@ -6149,7 +6332,12 @@ app.whenReady().then(async () => {
     await applyDesktopNetworkProxy(readNetworkProxyPreference(), { reason: "startup" });
     keepAwakeManager.setEnabled(readKeepAwakePreference());
 
-    // 2. 后台启动 server（PATH 已就绪）
+    // 2. 后台启动 server（PATH 已就绪）。
+    // A4（docs/SIZE_AND_STARTUP_OPT.md §5）：startServer 不先 await——
+    // "已完成配置"的机器走主窗口先行路径：renderer artifact 半场就绪后立即
+    // 建窗，renderer 的加载/解析与 server 冷 import/engine.init 并行。
+    // onboarding/教程路径（本地未判定完成配置，需要 server 做迁移判定）仍在
+    // server 就绪后走原串行流程。
     if (process.platform === "win32") {
       markGpuStartupPhase({
         jarvisHome,
@@ -6159,7 +6347,37 @@ app.whenReady().then(async () => {
       });
     }
     console.log("[desktop] 启动 Jarvis Server...");
-    await startServer();
+    const serverBootPromise = startServer();
+    const earlyMainWindow = isSetupComplete();
+    if (earlyMainWindow) {
+      const bootHandle = await waitForRendererBootHandle();
+      if (bootHandle?.rendererReady) await bootHandle.rendererReady;
+      // splash 最短展示预算在建窗前消费（server 冷启动继续并行）
+      const elapsedEarly = Date.now() - splashShownAt;
+      const minSplashMsEarly = 3000;
+      if (splashWindow && elapsedEarly < minSplashMsEarly) {
+        await new Promise(r => setTimeout(r, minSplashMsEarly - elapsedEarly));
+      }
+      if (process.platform === "win32") {
+        markGpuStartupPhase({
+          jarvisHome,
+          platform: process.platform,
+          phase: "main-window-starting",
+          startupId: desktopStartupId,
+        });
+      }
+      createMainWindow();
+      registerQuickChatShortcutBestEffort();
+      if (process.platform === "win32") {
+        markGpuStartupPhase({
+          jarvisHome,
+          platform: process.platform,
+          phase: "main-window-created",
+          startupId: desktopStartupId,
+        });
+      }
+    }
+    await serverBootPromise;
     await settleLegacyGpuPreferenceAfterServerStart();
     if (process.platform === "win32") {
       markGpuStartupPhase({
@@ -6170,6 +6388,8 @@ app.whenReady().then(async () => {
       });
     }
     console.log(`[desktop] Server 就绪，端口: ${serverPort}`);
+    // A5.2：稳定 boot 90 秒后清理随包 seed 归档（条件不满足时内部自行跳过）
+    scheduleSeedArchiveCleanup();
     monitorServer();
     setupBrowserCommands();
     createTray();
@@ -6177,16 +6397,17 @@ app.whenReady().then(async () => {
       app.dock.hide();
     }
 
-    // 3. 确保 splash 至少显示 3 秒；登录项后台启动没有 splash，也不需要等待
-    const elapsed = Date.now() - splashShownAt;
-    const minSplashMs = 3000;
-    if (splashWindow && elapsed < minSplashMs) {
-      await new Promise(r => setTimeout(r, minSplashMs - elapsed));
-    }
+    if (!earlyMainWindow) {
+      // 3. 确保 splash 至少显示 3 秒；登录项后台启动没有 splash，也不需要等待
+      const elapsed = Date.now() - splashShownAt;
+      const minSplashMs = 3000;
+      if (splashWindow && elapsed < minSplashMs) {
+        await new Promise(r => setTimeout(r, minSplashMs - elapsed));
+      }
 
-    // 4. 检测是否需要 onboarding
-    const migratedSetupComplete = await migrateSetupCompleteViaServerIfNeeded();
-    if (isSetupComplete() || migratedSetupComplete) {
+      // 4. 检测是否需要 onboarding
+      const migratedSetupComplete = await migrateSetupCompleteViaServerIfNeeded();
+      if (isSetupComplete() || migratedSetupComplete) {
       // 已完成配置：直接创建主窗口
       if (process.platform === "win32") {
         markGpuStartupPhase({
@@ -6246,7 +6467,8 @@ app.whenReady().then(async () => {
           startupId: desktopStartupId,
         });
       }
-    }
+      }
+    } // end if (!earlyMainWindow)
 
     // 5. 后台检查更新（不阻塞启动）
     // 从 preferences.json 同步更新通道（同一个设置项同时驱动壳与列车，见

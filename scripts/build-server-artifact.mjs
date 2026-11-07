@@ -68,10 +68,34 @@ const activation = require("../shared/artifact-core/activation.cjs");
  */
 function spawnPackTree(srcDir, archivePath) {
   const helper = path.join(__dirname, "_pack-tree-helper.cjs");
+  const startedAt = Date.now();
+  console.log(`[pack-tree] child packing ${srcDir} → ${archivePath}`);
   execFileSync(process.execPath, [helper, srcDir, archivePath], {
     stdio: "inherit",
     env: process.env,
   });
+  console.log(`[pack-tree] child done in ${Math.round((Date.now() - startedAt) / 1000)}s`);
+}
+
+/**
+ * 在独立子进程中计算文件 sha256。为什么不用进程内 streaming sha256
+ * （activation.sha256File 的实现完全正确）：种子装箱阶段发生在 npm install /
+ * nft trace / 清理之后，Windows 上父进程的事件循环会在这里被同步计算占死
+ * ——100% CPU、零 I/O、await 永不返回，而同一个文件在独立进程里 0.3s 完事
+ * （2026-11-06 Store 打包排查实录，见 _sha256-helper.cjs 头注）。父进程只在
+ * 这里做一次 execFileSync 阻塞等待，绕开这个坑。
+ */
+function spawnSha256File(filePath) {
+  const helper = path.join(__dirname, "_sha256-helper.cjs");
+  const hex = execFileSync(process.execPath, [helper, filePath], {
+    stdio: ["ignore", "pipe", "inherit"],
+    env: process.env,
+    maxBuffer: 1024,
+  }).toString("ascii").trim();
+  if (!/^[0-9a-f]{64}$/.test(hex)) {
+    throw new Error(`[build-server] sha256 helper produced no digest for ${filePath}: "${hex.slice(0, 80)}"`);
+  }
+  return hex;
 }
 const manifestModule = require("../shared/artifact-core/manifest.cjs");
 const { loadPinnedKeyset } = require("../shared/artifact-core/keyset.cjs");
@@ -349,7 +373,7 @@ export async function packServerArchive({ outDir, artifactOutDir, version, platf
     signMachOFiles = defaultSignMachOFiles,
     smokeTestNodeStartup = defaultSmokeTestNodeStartup,
     packTree = ustar.packTree,
-    sha256File = activation.sha256File,
+    sha256File = spawnSha256File,
     statSize = (filePath) => fs.statSync(filePath).size,
   } = deps;
 
@@ -372,6 +396,7 @@ export async function packServerArchive({ outDir, artifactOutDir, version, platf
   // 在子进程中执行 packTree 以获得干净的 fd 表（避免 Windows EMFILE）
   spawnPackTree(outDir, archivePath);
 
+  log(`[build-server] seed: hashing ${archiveName}`);
   const sha256 = await sha256File(archivePath);
   const size = statSize(archivePath);
   log(`[build-server] seed: packed ${archiveName} → ${artifactOutDir}`);
@@ -403,7 +428,7 @@ export async function packRendererArtifact({ rendererDistDir, artifactOutDir, ve
   const {
     findMachOFiles: findMachOFilesDep = findMachOFiles,
     packTree = ustar.packTree,
-    sha256File = activation.sha256File,
+    sha256File = spawnSha256File,
     statSize = (filePath) => fs.statSync(filePath).size,
   } = deps;
 
@@ -417,6 +442,7 @@ export async function packRendererArtifact({ rendererDistDir, artifactOutDir, ve
   // Office HTML→PDF helper resolves fonts from the activated renderer artifact.
   // Refuse to create a renderer box whose CSS or referenced font files are
   // incomplete: Chromium would otherwise silently print with fallback fonts.
+  log("[build-server] seed: validating renderer Office PDF font assets");
   try {
     assertOfficePdfFontAssets({ themesDir: path.join(rendererDistDir, "themes") });
   } catch (err) {
@@ -427,6 +453,7 @@ export async function packRendererArtifact({ rendererDistDir, artifactOutDir, ve
   }
 
   // ── 装箱前断言：renderer 树不含 Mach-O（纯 web 静态资源，装箱后无法再签名）──
+  log("[build-server] seed: scanning renderer tree for Mach-O files");
   const macho = findMachOFilesDep(rendererDistDir);
   if (macho.length > 0) {
     throw new Error(
@@ -608,7 +635,9 @@ export async function packDualKindSeed({
   }
 
   // ── 两个归档都打完 ──
+  log("[build-server] seed: packing server archive");
   const serverPack = await packServerArchive({ outDir, artifactOutDir, version, platform, arch, env, log, deps });
+  log("[build-server] seed: server archive done");
   const rendererPackShared = prebuiltRendererArchive
     ? await usePrebuiltRendererArchive({
         archivePath: prebuiltRendererArchive,
@@ -624,6 +653,7 @@ export async function packDualKindSeed({
         log,
         deps,
       });
+  log("[build-server] seed: renderer archive done");
   // renderer 归档平台无关，先落共享目录（dist-renderer-artifact/），再复制一份
   // 进这次构建的 per-platform seed 目录，跟 server 归档同箱（extraResources
   // 按 ${os}-${arch} 取整个目录）。

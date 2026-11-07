@@ -4,8 +4,23 @@
  * This is intentionally small and dependency-light. It uses jsdom as the HTML
  * parser, removes page chrome, chooses the most likely content root, then emits
  * Markdown so the model does not have to reason over raw navigation/footer DOM.
+ *
+ * A2（docs/SIZE_AND_STARTUP_OPT.md）：jsdom 及其解析链（css-tree / parse5 /
+ * whatwg-* 等，实测约 930 个文件）只有 web_fetch 真正解析网页时才需要。这里是
+ * bundled 源码里 jsdom 的唯一静态导入点，改为首次调用时的动态 import，把整条
+ * 解析链从 server 冷启动的模块图里摘出去。type-only import 构建期擦除，
+ * 不产生运行时加载。
  */
-import { JSDOM } from "jsdom";
+import type { JSDOM as JSDOMClass } from "jsdom";
+
+let jsdomModule: { JSDOM: typeof JSDOMClass } | null = null;
+
+async function loadJSDOM(): Promise<typeof JSDOMClass> {
+  if (!jsdomModule) {
+    jsdomModule = await import("jsdom");
+  }
+  return jsdomModule.JSDOM;
+}
 
 const CHROME_SELECTOR = [
   "script",
@@ -195,6 +210,7 @@ function normalizeMarkdown(markdown) {
 }
 
 export async function htmlToMarkdownDocument(html, url) {
+  const JSDOM = await loadJSDOM();
   const dom = new JSDOM(String(html || ""), { url });
   try {
     const { document } = dom.window;

@@ -1,5 +1,4 @@
 import os from "os";
-import QRCode from "qrcode";
 import { Hono } from "hono";
 import { createDeviceCredential, loadDeviceAccessRegistries } from "../../core/device-registry.ts";
 import {
@@ -72,6 +71,8 @@ export function createAccessRoute({
     if (!url) {
       return c.json({ error: "lan_address_unavailable" }, 400);
     }
+    // A2（docs/SIZE_AND_STARTUP_OPT.md）：qrcode 按需加载，不进冷启动模块图
+    const QRCode = (await import("qrcode")).default;
     const svg = await QRCode.toString(url, {
       type: "svg",
       margin: 1,

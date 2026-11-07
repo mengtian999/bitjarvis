@@ -1,8 +1,11 @@
 /**
  * Settings > About update history.
  *
- * GitHub Releases is the release source of truth. The installed v2 anthology is
- * only an explicit offline fallback because older app packages cannot contain
+ * GitHub Releases is the release source of truth. The installed v2 anthology
+ * plays two roles: it fills the permanent gaps of the online scan (releases
+ * whose tags predate the `vX.Y.Z` pattern can never be discovered online)
+ * beneath the online entries, and it is the explicit offline fallback when
+ * the network is unreachable, because older app packages cannot contain
  * releases published after they were built.
  */
 
@@ -19,6 +22,34 @@ const MAX_DIGEST_BODY_CHARS = 128 * 1024;
 function versionFromTag(tag) {
   const match = /^v(\d+\.\d+\.\d+)$/.exec(String(tag || "").trim());
   return match ? match[1] : null;
+}
+
+function compareVersionDesc(a, b) {
+  const pa = String(a || "").split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const pb = String(b || "").split(".").map((part) => Number.parseInt(part, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff > 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * Online entries win, bundled entries fill the permanent gaps (older
+ * releases whose tags don't match the `vX.Y.Z` scan pattern — e.g. the
+ * pre-rename v0.0.1 tag — can never be discovered online), then newest
+ * first, capped at HISTORY_LIMIT.
+ */
+function mergeWithBundled(onlineEntries, bundledEntries) {
+  const seen = new Set(onlineEntries.map((entry) => entry && entry.version).filter(Boolean));
+  const merged = [...onlineEntries];
+  for (const entry of Array.isArray(bundledEntries) ? bundledEntries : []) {
+    if (!entry || typeof entry.version !== "string" || seen.has(entry.version)) continue;
+    seen.add(entry.version);
+    merged.push(entry);
+  }
+  merged.sort((a, b) => compareVersionDesc(a.version, b.version));
+  return merged.slice(0, HISTORY_LIMIT);
 }
 
 function hasDigestAsset(release) {
@@ -111,7 +142,7 @@ function createUpdateDigestHistoryLoader({
         const entries = await loadOnlineEntries({ fetchImpl, normalize, timeoutMs });
         if (entries.length === 0) throw new Error("no valid release digests found");
         const result = {
-          entries,
+          entries: mergeWithBundled(entries, readBundledEntries()),
           source: "online",
           complete: entries.length === HISTORY_LIMIT,
         };

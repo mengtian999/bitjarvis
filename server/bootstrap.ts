@@ -1,6 +1,8 @@
 import path from "path";
 import { pathToFileURL } from "url";
 import { Worker } from "worker_threads";
+import { enableCompileCache } from "node:module";
+import os from "node:os";
 
 function log(line) {
   try {
@@ -21,6 +23,23 @@ log(`[server-bootstrap] process started pid=${process.pid} platform=${process.pl
 log(`[server-bootstrap] node=${process.version} jarvisHome=${process.env.JARVIS_HOME || "unset"}`);
 log(`[server-bootstrap] root=${jarvisRoot}`);
 log(`[server-bootstrap] entry=${serverEntry}`);
+
+// V8 compile cache：把 bundle + external 依赖的 parse 产物缓存到磁盘，二次启动
+// 跳过重新 parse（docs/SIZE_AND_STARTUP_OPT.md A1）。必须在 import server entry
+// 之前启用。缓存落 JARVIS_HOME（随其清理策略走）；JARVIS_HOME 不可用时回退系统
+// 临时目录；enableCompileCache 自身失败只降级为无缓存，绝不阻断启动。
+const NODE_DISABLE_COMPILE_CACHE = process.env.NODE_DISABLE_COMPILE_CACHE === "1";
+if (!NODE_DISABLE_COMPILE_CACHE && typeof enableCompileCache === "function") {
+  try {
+    const cacheDir = process.env.JARVIS_HOME
+      ? path.join(process.env.JARVIS_HOME, "cache", "v8-compile")
+      : path.join(os.tmpdir(), "jarvis-v8-compile-cache");
+    const cacheStatus = enableCompileCache(cacheDir);
+    log(`[server-bootstrap] compile cache dir=${cacheDir} status=${cacheStatus?.status ?? "unknown"}`);
+  } catch (err) {
+    log(`[server-bootstrap] compile cache unavailable: ${err?.message || err}`);
+  }
+}
 
 const importStartedAt = Date.now();
 const importTimer = setInterval(() => {
@@ -60,7 +79,10 @@ try {
 try {
   log("[server-bootstrap] importing server entry");
   await import(pathToFileURL(serverEntry).href);
-  log("[server-bootstrap] server entry import completed");
+  // boot-summary（docs/SIZE_AND_STARTUP_OPT.md §8）：server entry 的 import
+  // 段耗时——冷启动最大头（Defender 扫描 + V8 parse；A1 compile cache 只省
+  // parse 段，扫描面靠 A2 依赖内联缩减）。
+  log(`[server-bootstrap] server entry import completed in ${((Date.now() - importStartedAt) / 1000).toFixed(1)}s`);
 } catch (err) {
   logError(`[server-bootstrap] failed to import server entry: ${err?.stack || err?.message || String(err)}`);
   process.exitCode = 1;

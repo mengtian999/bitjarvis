@@ -6,6 +6,7 @@ import {
   withThinkingFormatCompat,
 } from "../shared/model-capabilities.ts";
 import { inferOllamaModelMetadata } from "../shared/ollama-model-metadata.ts";
+import { normalizeModelLanguages } from "../shared/prompt-locale.ts";
 
 const RUNTIME_ENRICHED_PROVIDERS = new Set(["kimi-coding", "ollama", "volcengine-coding"]);
 const KIMI_CODING_PROVIDER = "kimi-coding";
@@ -109,6 +110,12 @@ export function enrichModelFromKnownMetadata(model) {
   const visionCapabilities = image ? normalizeVisionCapabilities(known?.visionCapabilities) : null;
   if (visionCapabilities && !normalizedModel.visionCapabilities) {
     patch.visionCapabilities = visionCapabilities;
+  }
+
+  // 语言能力是人工策展字段（known-models.json），只补缺、不覆盖运行时已有值。
+  const knownLanguages = normalizeModelLanguages(known?.languages);
+  if (knownLanguages && !normalizedModel.languages) {
+    patch.languages = knownLanguages;
   }
 
   const withPatch = Object.keys(patch).length > 0 ? { ...normalizedModel, ...patch } : normalizedModel;

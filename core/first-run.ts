@@ -19,6 +19,7 @@ import {
 import { createModuleLogger } from "../lib/debug-log.ts";
 import { USER_PROFILE_FILENAME } from "../lib/user-profile-store.ts";
 import { isValidAgentId } from "../shared/agent-id.ts";
+import { normalizePromptLang, resolveTemplatePath } from "../shared/prompt-locale.ts";
 
 const log = createModuleLogger("first-run");
 
@@ -225,9 +226,7 @@ function seedDefaultAgent(agentsDir, productDir, userDir) {
       }
     } catch { }
   }
-  const isZh = String(locale || "en").startsWith("zh");
-  const langDir = isZh ? "" : "en/";
-  const firstExisting = (paths) => paths.find((p) => fs.existsSync(p));
+  const promptLang = normalizePromptLang(locale || "en");
 
   // identity.md / ishiki.md 不再在首启播种时落盘（惰性材料化）：缺失时运行时
   // 按 agent.resolveLocale() 现选 lib 模板（core/persona-source.ts 的
@@ -238,10 +237,12 @@ function seedDefaultAgent(agentsDir, productDir, userDir) {
 
   // public-ishiki.md（对外意识模板）：消费侧 Agent._readPublicIshiki 本来就
   // 有独立回落链，不受此改动影响，这里继续按原策略播种。
-  const publicIshikiSrc = firstExisting([
-    path.join(productDir, "public-ishiki-templates", `${langDir}${agentId}.md`),
-    path.join(productDir, "public-ishiki-templates", `${agentId}.md`),
-  ]);
+  const publicIshikiSrc = resolveTemplatePath(
+    path.join(productDir, "public-ishiki-templates"),
+    `${agentId}.md`,
+    promptLang,
+    (candidate) => fs.existsSync(candidate),
+  );
   if (publicIshikiSrc) {
     fs.copyFileSync(publicIshikiSrc, path.join(agentDir, "public-ishiki.md"));
   }

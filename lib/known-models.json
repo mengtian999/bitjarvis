@@ -1,5 +1,5 @@
 {
-  "_comment": "模型参考词典。provider + model 为唯一键。model-sync.js 对表时查询。image/video/reasoning 缺省为 false，quirks 缺省为 []。image/video 映射到 Pi SDK Model.input 数组。",
+  "_comment": "模型参考词典。provider + model 为唯一键。model-sync.js 对表时查询。image/video/reasoning 缺省为 false，quirks 缺省为 []。image/video 映射到 Pi SDK Model.input 数组。languages 为人工策展字段（scripts/sync-known-models-from-pi.mjs 的 FIELD_MAP 禁止加入它，避免上游覆盖）：数组取值 ∈ [zh, en, ja, ko, fr, de]；字段缺失 = 未知 = 按支持任意语言处理（乐观默认）；[\"en\"] = 单语，非 en 一律回退 en；含目标语言 = 支持。zh-TW 复用 zh 的能力判定。通用 fallback 条目不写 languages。",
   "agnes": {
     "agnes-2.0-flash": {
       "name": "Agnes 2.0 Flash",
@@ -23,7 +23,15 @@
         "supportsTools": true,
         "dialect": "openai",
         "toolResultFormat": "message"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "office": {
       "name": "办公友好",
@@ -35,7 +43,15 @@
         "supportsTools": true,
         "dialect": "openai",
         "toolResultFormat": "message"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "coding": {
       "name": "编程友好",
@@ -47,7 +63,15 @@
         "supportsTools": true,
         "dialect": "openai",
         "toolResultFormat": "message"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "role": {
       "name": "角色友好",
@@ -59,7 +83,15 @@
         "supportsTools": true,
         "dialect": "openai",
         "toolResultFormat": "message"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "opencode-go": {
@@ -99,7 +131,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3.5-max": {
       "name": "Qwen 3.5 Max",
@@ -118,7 +158,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3.5-flash": {
       "name": "Qwen 3.5 Flash",
@@ -137,7 +185,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3.6-plus": {
       "name": "Qwen 3.6 Plus",
@@ -156,7 +212,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3.6-flash": {
       "name": "Qwen 3.6 Flash",
@@ -175,7 +239,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3.6-max-preview": {
       "name": "Qwen 3.6 Max Preview",
@@ -194,7 +266,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "qwen",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3-plus": {
       "name": "Qwen 3 Plus",
@@ -204,6 +284,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-max": {
@@ -214,6 +302,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-mini": {
@@ -224,30 +320,70 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen-plus": {
       "name": "Qwen Plus",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-turbo": {
       "name": "Qwen Turbo",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-max": {
       "name": "Qwen Max",
       "context": 32768,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-long": {
       "name": "Qwen Long",
       "context": 10000000,
-      "maxOutput": 16384
+      "maxOutput": 16384,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "text-embedding-v4": {
       "name": "Text Embedding V4",
@@ -264,25 +400,57 @@
       "context": 262144,
       "maxOutput": 262144,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-k2": {
       "name": "Kimi K2",
       "context": 131072,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-coder": {
       "name": "Qwen Coder",
       "context": 1000000,
       "maxOutput": 16384,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-flash": {
       "name": "Qwen Flash",
       "context": 997952,
       "maxOutput": 32768,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-flash-2025-07-28": {
       "name": "Qwen Flash 2025.07.28",
@@ -564,7 +732,9 @@
       "maxOutput": 65536,
       "image": true,
       "reasoning": true,
-      "quirks": ["enable_thinking"],
+      "quirks": [
+        "enable_thinking"
+      ],
       "visionCapabilities": {
         "grounding": true,
         "boxes": true,
@@ -581,7 +751,9 @@
       "maxOutput": 8192,
       "image": true,
       "reasoning": true,
-      "quirks": ["enable_thinking"]
+      "quirks": [
+        "enable_thinking"
+      ]
     },
     "qwen3.5-plus-2026-02-15": {
       "name": "Qwen 3.5 Plus (2026-02-15)",
@@ -589,7 +761,9 @@
       "maxOutput": 65536,
       "image": true,
       "reasoning": true,
-      "quirks": ["enable_thinking"],
+      "quirks": [
+        "enable_thinking"
+      ],
       "visionCapabilities": {
         "grounding": true,
         "boxes": true,
@@ -606,7 +780,9 @@
       "maxOutput": 8192,
       "image": true,
       "reasoning": true,
-      "quirks": ["enable_thinking"]
+      "quirks": [
+        "enable_thinking"
+      ]
     },
     "qwen3-vl-flash-2026-01-22": {
       "name": "Qwen3 VL Flash (2026-01-22)",
@@ -614,7 +790,9 @@
       "maxOutput": 32768,
       "image": true,
       "video": true,
-      "quirks": ["enable_thinking"],
+      "quirks": [
+        "enable_thinking"
+      ],
       "visionCapabilities": {
         "grounding": true,
         "boxes": true,
@@ -652,20 +830,44 @@
       "name": "DeepSeek Chat",
       "context": 128000,
       "maxOutput": 8192,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-reasoner": {
       "name": "DeepSeek Reasoner",
       "context": 128000,
       "maxOutput": 64000,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-v3.2": {
       "name": "DeepSeek V3.2",
       "context": 163840,
       "maxOutput": 65536,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-v4-pro": {
       "name": "DeepSeek V4 Pro",
@@ -673,7 +875,15 @@
       "maxOutput": 384000,
       "image": false,
       "reasoning": true,
-      "xhigh": true
+      "xhigh": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-v4-flash": {
       "name": "DeepSeek V4 Flash",
@@ -681,7 +891,15 @@
       "maxOutput": 384000,
       "image": false,
       "reasoning": true,
-      "xhigh": true
+      "xhigh": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-coder": {
       "name": "Deepseek Coder",
@@ -694,13 +912,29 @@
       "context": 65536,
       "maxOutput": 8192,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-v3": {
       "name": "Deepseek V3",
       "context": 65536,
       "maxOutput": 8192,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "openai": {
@@ -717,7 +951,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4o-mini": {
       "name": "GPT-4o Mini",
@@ -732,7 +974,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4.1": {
       "name": "GPT-4.1",
@@ -747,7 +997,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4.1-mini": {
       "name": "GPT-4.1 Mini",
@@ -762,7 +1020,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4.1-nano": {
       "name": "GPT-4.1 Nano",
@@ -777,7 +1043,10 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "o3": {
       "name": "o3",
@@ -793,13 +1062,19 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "o3-mini": {
       "name": "o3 Mini",
       "context": 200000,
       "maxOutput": 100000,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "en"
+      ]
     },
     "o4-mini": {
       "name": "o4 Mini",
@@ -815,7 +1090,10 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "gpt-5.1": {
       "name": "GPT-5.1",
@@ -831,7 +1109,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.1-codex-mini": {
       "name": "GPT-5.1 Codex Mini",
@@ -863,7 +1149,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.2-codex": {
       "name": "GPT-5.2 Codex",
@@ -927,7 +1221,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.5": {
       "name": "GPT-5.5",
@@ -943,7 +1245,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.6": {
       "name": "GPT-5.6",
@@ -952,7 +1262,13 @@
       "image": true,
       "reasoning": true,
       "api": "openai-responses",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
@@ -966,12 +1282,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-responses",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.6-terra": {
       "name": "GPT-5.6 Terra",
@@ -980,12 +1310,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-responses",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.6-luna": {
       "name": "GPT-5.6 Luna",
@@ -994,12 +1338,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-responses",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "text-embedding-3-large": {
       "name": "Text Embedding 3 Large",
@@ -1110,7 +1468,15 @@
     "gpt-3.5-turbo": {
       "name": "Gpt 3.5 Turbo",
       "context": 16385,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-3.5-turbo-0125": {
       "name": "Gpt 3.5 Turbo 0125",
@@ -1130,7 +1496,15 @@
     "gpt-4": {
       "name": "Gpt 4",
       "context": 8192,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4-0125-preview": {
       "name": "Gpt 4.0125 Preview",
@@ -1165,7 +1539,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-4-turbo-2024-04-09": {
       "name": "Gpt 4 Turbo 2024.04.09",
@@ -1457,7 +1839,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.1-2025-11-13": {
       "name": "Gpt 5.1.2025.11.13",
@@ -1569,7 +1959,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5.4-nano": {
       "name": "Gpt 5.4 Nano",
@@ -1585,7 +1983,10 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "gpt-5-2025-08-07": {
       "name": "Gpt 5.2025.08.07",
@@ -1649,7 +2050,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-5-mini-2025-08-07": {
       "name": "Gpt 5 Mini 2025.08.07",
@@ -1681,7 +2090,10 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "gpt-5-nano-2025-08-07": {
       "name": "Gpt 5 Nano 2025.08.07",
@@ -1733,7 +2145,10 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "en"
+      ]
     },
     "o1-2024-12-17": {
       "name": "O1.2024.12.17",
@@ -1874,7 +2289,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-sonnet-5": {
       "name": "Claude Sonnet 5",
@@ -1895,7 +2318,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-fable-5": {
       "name": "Claude Fable 5",
@@ -1953,7 +2384,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-6": {
       "name": "Claude Opus 4.6",
@@ -1969,7 +2408,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-sonnet-4-6": {
       "name": "Claude Sonnet 4.6",
@@ -1985,7 +2432,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-sonnet-4-5": {
       "name": "Claude Sonnet 4.5",
@@ -2001,7 +2456,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-5": {
       "name": "Claude Opus 4.5",
@@ -2017,7 +2480,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-1": {
       "name": "Claude Opus 4.1",
@@ -2033,7 +2504,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-sonnet-4-20250514": {
       "name": "Claude Sonnet 4",
@@ -2049,7 +2528,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-20250514": {
       "name": "Claude Opus 4",
@@ -2065,7 +2552,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-3-7-sonnet": {
       "name": "Claude 3.7 Sonnet",
@@ -2081,7 +2576,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-3-5-sonnet": {
       "name": "Claude 3.5 Sonnet",
@@ -2096,7 +2599,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-3-5-haiku": {
       "name": "Claude 3.5 Haiku",
@@ -2111,7 +2622,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-haiku-4-5": {
       "name": "Claude Haiku 4.5",
@@ -2127,7 +2646,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-haiku-4-5-20251001": {
       "name": "Claude Haiku 4.5 20251001",
@@ -2143,7 +2670,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-3-7-sonnet-20250219": {
       "name": "Claude 3.7 Sonnet 20250219",
@@ -2174,7 +2709,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-3-opus-20240229": {
       "name": "Claude 3 Opus 20240229",
@@ -2189,7 +2732,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-4-opus-20250514": {
       "name": "Claude 4 Opus 20250514",
@@ -2205,7 +2756,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-4-sonnet-20250514": {
       "name": "Claude 4 Sonnet 20250514",
@@ -2221,7 +2780,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-sonnet-4-5-20250929": {
       "name": "Claude Sonnet 4.5 20250929",
@@ -2237,7 +2804,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-1-20250805": {
       "name": "Claude Opus 4.1 20250805",
@@ -2253,7 +2828,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-5-20251101": {
       "name": "Claude Opus 4.5 20251101",
@@ -2269,7 +2852,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "claude-opus-4-6-20260205": {
       "name": "Claude Opus 4.6 20260205",
@@ -2285,7 +2876,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "gemini": {
@@ -2304,7 +2903,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-2.5-flash": {
       "name": "Gemini 2.5 Flash",
@@ -2321,7 +2928,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-2.0-flash": {
       "name": "Gemini 2.0 Flash",
@@ -2337,7 +2952,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-robotics-er-1.5-preview": {
       "name": "Gemini Robotics Er 1.5 Preview",
@@ -2385,7 +3008,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-2.5-flash-lite": {
       "name": "Gemini 2.5 Flash Lite",
@@ -2402,7 +3033,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-2.5-flash-lite-preview-09-2025": {
       "name": "Gemini 2.5 Flash Lite Preview 09.2025",
@@ -2453,7 +3092,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-flash-lite-latest": {
       "name": "Gemini Flash Lite Latest",
@@ -2470,7 +3117,15 @@
         "boxOrder": "yxyx",
         "outputFormat": "gemini",
         "groundingMode": "native"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemini-2.5-flash-lite-preview-06-17": {
       "name": "Gemini 2.5 Flash Lite Preview 06.17",
@@ -2735,7 +3390,11 @@
       "context": 1048576,
       "image": true,
       "reasoning": true,
-      "thinkingLevels": ["medium", "high", "max"],
+      "thinkingLevels": [
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "low": "low",
@@ -2750,7 +3409,11 @@
       "context": 262144,
       "image": true,
       "reasoning": true,
-      "thinkingLevels": ["medium", "high", "max"],
+      "thinkingLevels": [
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "low": "low",
@@ -2766,7 +3429,12 @@
       "maxOutput": 32768,
       "image": true,
       "reasoning": true,
-      "thinkingLevels": ["off", "low", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "low": "low",
@@ -2853,7 +3521,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-k2.5": {
       "name": "Kimi K2.5",
@@ -2869,7 +3545,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-k2": {
       "name": "Kimi K2",
@@ -2884,22 +3568,42 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "moonshot-v1-128k": {
       "name": "Moonshot V1 128K",
       "context": 131072,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "moonshot-v1-32k": {
       "name": "Moonshot V1 32K",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "moonshot-v1-8k": {
       "name": "Moonshot V1 8K",
       "context": 8192,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "kimi-k2-0711-preview": {
       "name": "Kimi K2.0711 Preview",
@@ -2929,7 +3633,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-latest-128k": {
       "name": "Kimi Latest 128k",
@@ -2944,7 +3656,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-latest-32k": {
       "name": "Kimi Latest 32k",
@@ -2959,7 +3679,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-latest-8k": {
       "name": "Kimi Latest 8k",
@@ -2974,7 +3702,15 @@
         "boxOrder": "xyxy",
         "outputFormat": "anchor",
         "groundingMode": "prompted"
-      }
+      },
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-thinking-preview": {
       "name": "Kimi Thinking Preview",
@@ -2995,13 +3731,29 @@
       "name": "Kimi K2 Thinking",
       "context": 262144,
       "maxOutput": 262144,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-k2-thinking-turbo": {
       "name": "Kimi K2 Thinking Turbo",
       "context": 262144,
       "maxOutput": 262144,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "moonshot-v1-128k-0430": {
       "name": "Moonshot V1.128k 0430",
@@ -3066,7 +3818,11 @@
     "moonshot-v1-auto": {
       "name": "Moonshot V1 Auto",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "zh",
+        "en"
+      ]
     }
   },
   "volcengine": {
@@ -3074,35 +3830,78 @@
       "name": "Doubao Seed 1.6 Flash",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "doubao-seed-2-0-pro-260215": {
       "name": "Doubao Seed 2.0 Pro",
       "context": 262144,
       "maxOutput": 16384,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "doubao-seed-2-0-mini-260215": {
       "name": "Doubao Seed 2.0 Mini",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "en"
+      ]
     },
     "doubao-pro-256k": {
       "name": "Doubao Pro 256K",
       "context": 262144,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "doubao-pro-128k": {
       "name": "Doubao Pro 128K",
       "context": 131072,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "doubao-pro-32k": {
       "name": "Doubao Pro 32K",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "doubao-pro-4k": {
       "name": "Doubao Pro 4K",
@@ -3112,12 +3911,20 @@
     "doubao-lite-128k": {
       "name": "Doubao Lite 128K",
       "context": 131072,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "doubao-lite-32k": {
       "name": "Doubao Lite 32K",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "doubao-lite-4k": {
       "name": "Doubao Lite 4K",
@@ -3204,21 +4011,45 @@
       "context": 500000,
       "maxOutput": 128000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "MiniMax-M2": {
       "name": "MiniMax M2",
       "context": 204800,
       "maxOutput": 204800,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "MiniMax-M2.1": {
       "name": "MiniMax M2.1",
       "context": 204800,
       "maxOutput": 204800,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "MiniMax-M2.1-highspeed": {
       "name": "MiniMax M2.1 Highspeed",
@@ -3232,7 +4063,15 @@
       "context": 204800,
       "maxOutput": 204800,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "MiniMax-M2.5-highspeed": {
       "name": "MiniMax M2.5 Highspeed",
@@ -3246,7 +4085,15 @@
       "context": 204800,
       "maxOutput": 131072,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "MiniMax-M2.7-highspeed": {
       "name": "MiniMax M2.7 Highspeed",
@@ -3335,28 +4182,60 @@
       "maxOutput": 131072,
       "image": false,
       "reasoning": true,
-      "xhigh": true
+      "xhigh": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5.1": {
       "name": "GLM-5.1",
       "context": 200000,
       "maxOutput": 128000,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5": {
       "name": "GLM-5",
       "context": 200000,
       "maxOutput": 128000,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5-turbo": {
       "name": "GLM-5 Turbo",
       "context": 205000,
       "maxOutput": 131072,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5v-turbo": {
       "name": "GLM-5V Turbo",
@@ -3370,19 +4249,43 @@
       "context": 200000,
       "maxOutput": 128000,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-4-plus": {
       "name": "GLM-4 Plus",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-4-flash": {
       "name": "GLM-4 Flash",
       "context": 131072,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "zhipu-coding": {
@@ -3420,55 +4323,96 @@
     "llama3.1": {
       "name": "Llama 3.1",
       "context": 131072,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "en"
+      ]
     },
     "llama3.2": {
       "name": "Llama 3.2",
       "context": 131072,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "en"
+      ]
     },
     "qwen2.5": {
       "name": "Qwen 2.5",
       "context": 131072,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "qwen3": {
       "name": "Qwen 3",
       "context": 131072,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gemma2": {
       "name": "Gemma 2",
       "context": 8192,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "en"
+      ]
     },
     "gemma3": {
       "name": "Gemma 3",
       "context": 131072,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "en"
+      ]
     },
     "mistral": {
       "name": "Mistral",
       "context": 32768,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "en"
+      ]
     },
     "deepseek-r1": {
       "name": "DeepSeek R1",
       "context": 131072,
       "maxOutput": 8192,
       "reasoning": true,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "phi3": {
       "name": "Phi 3",
       "context": 131072,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "en"
+      ]
     },
     "phi4": {
       "name": "Phi 4",
       "context": 16384,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "en"
+      ]
     },
     "codellama": {
       "name": "Code Llama",
@@ -3478,7 +4422,11 @@
     "codegeex4": {
       "name": "Codegeex4",
       "context": 32768,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "deepseek-coder-v2-instruct": {
       "name": "Deepseek Coder V2 Instruct",
@@ -3493,27 +4441,48 @@
     "deepseek-v3.1:671b-cloud": {
       "name": "Deepseek V3.1:671b Cloud",
       "context": 163840,
-      "maxOutput": 163840
+      "maxOutput": 163840,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "gpt-oss:120b-cloud": {
       "name": "Gpt Oss:120b Cloud",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "en"
+      ]
     },
     "gpt-oss:20b-cloud": {
       "name": "Gpt Oss:20b Cloud",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "en"
+      ]
     },
     "internlm2_5-20b-chat": {
       "name": "Internlm2.5 20b Chat",
       "context": 32768,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "llama2": {
       "name": "Llama2",
       "context": 4096,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "en"
+      ]
     },
     "llama2:13b": {
       "name": "Llama2:13b",
@@ -3533,7 +4502,10 @@
     "llama3": {
       "name": "Llama3",
       "context": 8192,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "en"
+      ]
     },
     "llama3:70b": {
       "name": "Llama3:70b",
@@ -3573,19 +4545,33 @@
     "qwen3-coder:480b-cloud": {
       "name": "Qwen3 Coder:480b Cloud",
       "context": 262144,
-      "maxOutput": 262144
+      "maxOutput": 262144,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "groq": {
     "llama-3.1-8b-instant": {
       "name": "Llama 3.1.8b Instant",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "en"
+      ]
     },
     "llama-3.3-70b-versatile": {
       "name": "Llama 3.3.70b Versatile",
       "context": 131072,
-      "maxOutput": 32768
+      "maxOutput": 32768,
+      "languages": [
+        "en"
+      ]
     },
     "gemma-7b-it": {
       "name": "Gemma 7b It",
@@ -3612,19 +4598,33 @@
     "moonshotai/kimi-k2-instruct-0905": {
       "name": "Moonshotai/Kimi K2 Instruct 0905",
       "context": 262144,
-      "maxOutput": 16384
+      "maxOutput": 16384,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "openai/gpt-oss-120b": {
       "name": "Openai/Gpt Oss 120b",
       "context": 131072,
       "maxOutput": 65536,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "en"
+      ]
     },
     "openai/gpt-oss-20b": {
       "name": "Openai/Gpt Oss 20b",
       "context": 131072,
       "maxOutput": 65536,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "en"
+      ]
     },
     "openai/gpt-oss-safeguard-20b": {
       "name": "Openai/Gpt Oss Safeguard 20b",
@@ -3636,7 +4636,15 @@
       "name": "Qwen/Qwen3.32b",
       "context": 131072,
       "maxOutput": 40960,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "together": {
@@ -5104,7 +6112,10 @@
     "codestral-latest": {
       "name": "Codestral Latest",
       "context": 256000,
-      "maxOutput": 8191
+      "maxOutput": 8191,
+      "languages": [
+        "en"
+      ]
     },
     "codestral-mamba-latest": {
       "name": "Codestral Mamba Latest",
@@ -5140,7 +6151,10 @@
     "devstral-latest": {
       "name": "Devstral Latest",
       "context": 262144,
-      "maxOutput": 262144
+      "maxOutput": 262144,
+      "languages": [
+        "en"
+      ]
     },
     "devstral-medium-latest": {
       "name": "Devstral Medium Latest",
@@ -5174,7 +6188,15 @@
       "name": "Magistral Medium Latest",
       "context": 128000,
       "maxOutput": 16384,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "magistral-small-2506": {
       "name": "Magistral Small 2506",
@@ -5213,7 +6235,15 @@
       "name": "Mistral Large Latest",
       "context": 262144,
       "maxOutput": 262144,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "mistral-large-3": {
       "name": "Mistral Large 3",
@@ -5247,7 +6277,15 @@
       "name": "Mistral Medium Latest",
       "context": 262144,
       "maxOutput": 262144,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "mistral-medium-3-1-2508": {
       "name": "Mistral Medium 3.1 2508",
@@ -5264,7 +6302,15 @@
       "name": "Mistral Small Latest",
       "context": 256000,
       "maxOutput": 256000,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "mistral-small-3-2-2506": {
       "name": "Mistral Small 3.2 2506",
@@ -5376,7 +6422,10 @@
     "llama-3.1-70b-instruct": {
       "name": "Llama 3.1.70b Instruct",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "en"
+      ]
     },
     "llama-3.1-8b-instruct": {
       "name": "Llama 3.1.8b Instruct",
@@ -5391,7 +6440,10 @@
     "mixtral-8x7b-instruct": {
       "name": "Mixtral 8x7b Instruct",
       "context": 4096,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "en"
+      ]
     },
     "pplx-70b-chat": {
       "name": "Pplx 70b Chat",
@@ -5415,7 +6467,15 @@
     },
     "sonar": {
       "name": "Sonar",
-      "context": 128000
+      "context": 128000,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "sonar-deep-research": {
       "name": "Sonar Deep Research",
@@ -5435,12 +6495,28 @@
     "sonar-pro": {
       "name": "Sonar Pro",
       "context": 200000,
-      "maxOutput": 8000
+      "maxOutput": 8000,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "sonar-reasoning": {
       "name": "Sonar Reasoning",
       "context": 128000,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "sonar-reasoning-pro": {
       "name": "Sonar Reasoning Pro",
@@ -5462,7 +6538,15 @@
     "grok-2": {
       "name": "Grok 2",
       "context": 131072,
-      "maxOutput": 131072
+      "maxOutput": 131072,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-2-1212": {
       "name": "Grok 2.1212",
@@ -5478,7 +6562,15 @@
       "name": "Grok 2 Vision",
       "context": 32768,
       "maxOutput": 32768,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-2-vision-1212": {
       "name": "Grok 2 Vision 1212",
@@ -5495,7 +6587,15 @@
     "grok-3": {
       "name": "Grok 3",
       "context": 131072,
-      "maxOutput": 8192
+      "maxOutput": 8192,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-3-beta": {
       "name": "Grok 3 Beta",
@@ -5521,7 +6621,15 @@
       "name": "Grok 3 Mini",
       "context": 131072,
       "maxOutput": 131072,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-3-mini-beta": {
       "name": "Grok 3 Mini Beta",
@@ -5558,14 +6666,30 @@
       "context": 500000,
       "maxOutput": 128000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4.5-latest": {
       "name": "Grok 4.5 Latest",
       "context": 500000,
       "maxOutput": 128000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-build-latest": {
       "name": "Grok Build Latest",
@@ -5579,55 +6703,119 @@
       "context": 1000000,
       "maxOutput": 128000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4": {
       "name": "Grok 4",
       "context": 256000,
       "maxOutput": 256000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-fast-reasoning": {
       "name": "Grok 4 Fast Reasoning",
       "context": 2000000,
       "maxOutput": 2000000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-fast-non-reasoning": {
       "name": "Grok 4 Fast Non Reasoning",
       "context": 2000000,
       "maxOutput": 2000000,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-0709": {
       "name": "Grok 4.0709",
       "context": 256000,
       "maxOutput": 256000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-latest": {
       "name": "Grok 4 Latest",
       "context": 256000,
       "maxOutput": 256000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-1-fast": {
       "name": "Grok 4.1 Fast",
       "context": 2000000,
       "maxOutput": 2000000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-1-fast-reasoning": {
       "name": "Grok 4.1 Fast Reasoning",
       "context": 2000000,
       "maxOutput": 2000000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-1-fast-reasoning-latest": {
       "name": "Grok 4.1 Fast Reasoning Latest",
@@ -5640,7 +6828,15 @@
       "name": "Grok 4.1 Fast Non Reasoning",
       "context": 2000000,
       "maxOutput": 2000000,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4-1-fast-non-reasoning-latest": {
       "name": "Grok 4.1 Fast Non Reasoning Latest",
@@ -5660,7 +6856,15 @@
       "context": 2000000,
       "maxOutput": 2000000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4.20-beta-0309-reasoning": {
       "name": "Grok 4.20 Beta 0309 Reasoning",
@@ -5674,7 +6878,15 @@
       "context": 2000000,
       "maxOutput": 2000000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-4.20-beta-0309-non-reasoning": {
       "name": "Grok 4.20 Beta 0309 Non Reasoning",
@@ -5686,7 +6898,15 @@
       "name": "Grok 4.20 Non Reasoning",
       "context": 2000000,
       "maxOutput": 2000000,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "grok-beta": {
       "name": "Grok Beta",
@@ -5727,12 +6947,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "openai/gpt-5.6-sol-pro": {
       "name": "OpenAI GPT-5.6 Sol Pro",
@@ -5741,7 +6975,13 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
@@ -5755,12 +6995,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "openai/gpt-5.6-terra-pro": {
       "name": "OpenAI GPT-5.6 Terra Pro",
@@ -5769,7 +7023,13 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
@@ -5783,12 +7043,26 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
       },
-      "defaultThinkingLevel": "medium"
+      "defaultThinkingLevel": "medium",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "openai/gpt-5.6-luna-pro": {
       "name": "OpenAI GPT-5.6 Luna Pro",
@@ -5797,7 +7071,13 @@
       "image": true,
       "reasoning": true,
       "api": "openai-completions",
-      "thinkingLevels": ["off", "low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "off",
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": "none",
         "xhigh": "max"
@@ -5808,41 +7088,89 @@
       "name": "Anthropic/Claude 3 Haiku",
       "context": 200000,
       "image": true,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-3.5-sonnet": {
       "name": "Anthropic/Claude 3.5 Sonnet",
       "context": 200000,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-3.7-sonnet": {
       "name": "Anthropic/Claude 3.7 Sonnet",
       "context": 200000,
       "maxOutput": 128000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-opus-4": {
       "name": "Anthropic/Claude Opus 4",
       "context": 200000,
       "maxOutput": 32000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-opus-4.1": {
       "name": "Anthropic/Claude Opus 4.1",
       "context": 200000,
       "maxOutput": 32000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-sonnet-4": {
       "name": "Anthropic/Claude Sonnet 4",
       "context": 1000000,
       "maxOutput": 64000,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "anthropic/claude-sonnet-4.6": {
       "name": "Anthropic/Claude Sonnet 4.6",
@@ -5934,7 +7262,15 @@
       "name": "Deepseek/Deepseek Chat V3.1",
       "context": 163840,
       "maxOutput": 32768,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek/deepseek-v3.2": {
       "name": "Deepseek/Deepseek V3.2",
@@ -5989,7 +7325,15 @@
         "outputFormat": "gemini",
         "groundingMode": "native"
       },
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "google/gemini-2.5-pro": {
       "name": "Google/Gemini 2.5 Pro",
@@ -6005,7 +7349,15 @@
         "outputFormat": "gemini",
         "groundingMode": "native"
       },
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "google/gemini-3-pro-preview": {
       "name": "Google/Gemini 3 Pro Preview",
@@ -6281,7 +7633,11 @@
     "qwen/qwen-2.5-coder-32b-instruct": {
       "name": "Qwen/Qwen 2.5 Coder 32b Instruct",
       "context": 33792,
-      "maxOutput": 33792
+      "maxOutput": 33792,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "qwen/qwen-vl-plus": {
       "name": "Qwen/Qwen Vl Plus",
@@ -6301,66 +7657,146 @@
     "qwen/qwen3-coder": {
       "name": "Qwen/Qwen3 Coder",
       "context": 1048576,
-      "maxOutput": 65536
+      "maxOutput": 65536,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3-coder-plus": {
       "name": "Qwen/Qwen3 Coder Plus",
       "context": 1000000,
       "maxOutput": 65536,
-      "reasoning": false
+      "reasoning": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3-235b-a22b-2507": {
       "name": "Qwen/Qwen3.235b A22b 2507",
       "context": 262144,
-      "maxOutput": 16384
+      "maxOutput": 16384,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3-235b-a22b-thinking-2507": {
       "name": "Qwen/Qwen3.235b A22b Thinking 2507",
       "context": 262144,
       "maxOutput": 262144,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-35b-a3b": {
       "name": "Qwen/Qwen3.5.35b A3b",
       "context": 262144,
       "maxOutput": 81920,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-27b": {
       "name": "Qwen/Qwen3.5.27b",
       "context": 262144,
       "maxOutput": 65536,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-122b-a10b": {
       "name": "Qwen/Qwen3.5.122b A10b",
       "context": 262144,
       "maxOutput": 262144,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-flash-02-23": {
       "name": "Qwen/Qwen3.5 Flash 02.23",
       "context": 1000000,
       "maxOutput": 65536,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-plus-02-15": {
       "name": "Qwen/Qwen3.5 Plus 02.15",
       "context": 1000000,
       "maxOutput": 65536,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen/qwen3.5-397b-a17b": {
       "name": "Qwen/Qwen3.5.397b A17b",
       "context": 256000,
       "maxOutput": 65536,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "switchpoint/router": {
       "name": "Switchpoint/Router",
@@ -6376,7 +7812,15 @@
       "context": 256000,
       "maxOutput": 256000,
       "reasoning": true,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "z-ai/glm-4.6": {
       "name": "Z Ai/Glm 4.6",
@@ -6454,20 +7898,44 @@
       "name": "DeepSeek Chat",
       "context": 128000,
       "maxOutput": 8192,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-reasoner": {
       "name": "DeepSeek Reasoner",
       "context": 128000,
       "maxOutput": 64000,
       "reasoning": true,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-v3.2": {
       "name": "DeepSeek V3.2",
       "context": 163840,
       "maxOutput": 65536,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen3-max": {
       "name": "Qwen 3 Max",
@@ -6477,6 +7945,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-plus": {
@@ -6487,6 +7963,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-mini": {
@@ -6497,6 +7981,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3.5-plus": {
@@ -6507,6 +7999,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3.5-max": {
@@ -6517,6 +8017,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3.5-flash": {
@@ -6527,6 +8035,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "kimi-k2.5": {
@@ -6534,20 +8050,44 @@
       "context": 262144,
       "maxOutput": 262144,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "kimi-k2": {
       "name": "Kimi K2",
       "context": 131072,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5": {
       "name": "GLM-5",
       "context": 200000,
       "maxOutput": 128000,
       "image": false,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "glm-5-turbo": {
       "name": "GLM-5 Turbo",
@@ -6585,6 +8125,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3.5-max": {
@@ -6595,6 +8143,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3.5-flash": {
@@ -6605,6 +8161,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-max": {
@@ -6615,6 +8179,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-plus": {
@@ -6625,6 +8197,14 @@
       "reasoning": true,
       "quirks": [
         "enable_thinking"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
       ]
     },
     "qwen3-mini": {
@@ -6641,32 +8221,72 @@
       "name": "Qwen Plus",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-turbo": {
       "name": "Qwen Turbo",
       "context": 131072,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "qwen-max": {
       "name": "Qwen Max",
       "context": 32768,
       "maxOutput": 16384,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-chat": {
       "name": "DeepSeek Chat",
       "context": 128000,
       "maxOutput": 8192,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "deepseek-reasoner": {
       "name": "DeepSeek Reasoner",
       "context": 128000,
       "maxOutput": 64000,
       "reasoning": true,
-      "image": false
+      "image": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     }
   },
   "baidu-cloud": {
@@ -6674,45 +8294,77 @@
       "name": "ERNIE 4.5 8K",
       "context": 8192,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-4.5-128k": {
       "name": "ERNIE 4.5 128K",
       "context": 131072,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-4.0-8k": {
       "name": "ERNIE 4.0 8K",
       "context": 8192,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-4.0-turbo-8k": {
       "name": "ERNIE 4.0 Turbo 8K",
       "context": 8192,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-3.5-8k": {
       "name": "ERNIE 3.5 8K",
       "context": 8192,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-speed-8k": {
       "name": "ERNIE Speed 8K",
       "context": 8192,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-lite-8k": {
       "name": "ERNIE Lite 8K",
       "context": 8192,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "ernie-tiny-8k": {
       "name": "ERNIE Tiny 8K",
       "context": 8192,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     }
   },
   "hunyuan": {
@@ -6721,35 +8373,75 @@
       "context": 262144,
       "maxOutput": 16384,
       "image": true,
-      "reasoning": true
+      "reasoning": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "hunyuan-turbos-latest": {
       "name": "Hunyuan TurboS",
       "context": 131072,
       "maxOutput": 8192,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "hunyuan-turbo-latest": {
       "name": "Hunyuan Turbo",
       "context": 131072,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "hunyuan-pro-latest": {
       "name": "Hunyuan Pro",
       "context": 32768,
       "maxOutput": 4096,
-      "image": true
+      "image": true,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "fr",
+        "de"
+      ]
     },
     "hunyuan-standard-latest": {
       "name": "Hunyuan Standard",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "hunyuan-lite-latest": {
       "name": "Hunyuan Lite",
       "context": 16384,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "hunyuan-vision-latest": {
       "name": "Hunyuan Vision",
@@ -6762,17 +8454,29 @@
     "Baichuan4-Air": {
       "name": "Baichuan 4 Air",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "Baichuan4-Turbo": {
       "name": "Baichuan 4 Turbo",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     },
     "Baichuan3-Turbo": {
       "name": "Baichuan 3 Turbo",
       "context": 32768,
-      "maxOutput": 4096
+      "maxOutput": 4096,
+      "languages": [
+        "zh",
+        "en"
+      ]
     }
   },
   "infini": {
@@ -6902,7 +8606,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": "low",
@@ -6917,7 +8626,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": "low",
@@ -6932,7 +8646,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": "low",
@@ -6947,7 +8666,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": "low",
@@ -6962,7 +8686,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": "low",
@@ -6979,7 +8708,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": null,
@@ -6995,7 +8729,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": null,
@@ -7011,7 +8750,12 @@
       "image": true,
       "reasoning": true,
       "api": "openai-codex-responses",
-      "thinkingLevels": ["low", "medium", "high", "max"],
+      "thinkingLevels": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ],
       "thinkingLevelMap": {
         "off": null,
         "minimal": null,

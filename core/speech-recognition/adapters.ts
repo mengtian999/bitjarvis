@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { spawn } from "child_process";
-import { resolveSherpaBin, resolveSherpaDir } from "../realtime-voice/sherpa-paths.ts";
+import { resolveSherpaBin, resolveSherpaDir, resolveSherpaModelDirMultiRoot } from "../realtime-voice/sherpa-paths.ts";
 import { getSpeechLanguage } from "../speech/speech-languages.ts";
 
 const DEFAULT_MIME = "audio/wav";
@@ -167,8 +167,8 @@ function resolveAsrLanguageModelDir(baseDir, language) {
   const entry = getSpeechLanguage(language);
   const preferred = entry?.sherpaAsrModelDir;
   if (!preferred) return null;
-  const candidate = path.join(baseDir, "models", "asr", preferred);
-  return fs.existsSync(candidate) ? candidate : null;
+  // B1：多根解析——引擎目录优先，用户级按需下载目录（JARVIS_HOME/speech-models）兜底
+  return resolveSherpaModelDirMultiRoot(baseDir, "asr", preferred);
 }
 
 function runSherpaOfflineAsr(wavPath, model, conf, language) {
@@ -179,6 +179,14 @@ function runSherpaOfflineAsr(wavPath, model, conf, language) {
     ? [path.join(modelDir, "model.int8.onnx"), path.join(modelDir, "model.onnx")].find((p) => fs.existsSync(p))
     : "";
   if (senseVoiceModel) return runSenseVoiceAsr(wavPath, conf, modelDir, senseVoiceModel);
+  // Whisper 多语种离线模型(*-encoder*.onnx 为标志,fr/de 等语种):
+  // 同样走 sherpa-onnx-offline CLI,参数族不同
+  const whisperEncoder = modelDir
+    ? pickAsrModelFile(model, "encoder", ["base-encoder.int8.onnx", "base-encoder.onnx", "tiny-encoder.int8.onnx", "tiny-encoder.onnx"], modelDir)
+    : "";
+  if (whisperEncoder && fs.existsSync(whisperEncoder)) {
+    return runWhisperAsr(wavPath, model, conf, modelDir, whisperEncoder);
+  }
   return runStreamingZipformerAsr(wavPath, model, conf, modelDir);
 }
 
@@ -192,6 +200,41 @@ function runSenseVoiceAsr(wavPath, conf, modelDir, senseVoiceModel) {
     `--tokens=${path.join(modelDir, "tokens.txt")}`,
     // ITN:数字归一 + 标点恢复,听写/对话文本可直接使用
     "--sense-voice-use-itn=1",
+    "--provider=cpu",
+    wavPath,
+  ];
+  return new Promise(function (resolve, reject) {
+    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout2 = "";
+    let stderr2 = "";
+    child.stdout.on("data", (chunk) => { stdout2 += chunk.toString(); });
+    child.stderr.on("data", (chunk) => { stderr2 += chunk.toString(); });
+    child.on("error", (err) => reject(new Error(`sherpa-onnx asr spawn failed: ${err?.message || err}`)));
+    child.on("close", (code) => {
+      if (code !== 0) { reject(new Error(`sherpa-onnx asr failed (exit ${code}): ${stderr2.trim()}`)); return; }
+      resolve(parseSherpaResults(stdout2 + stderr2));
+    });
+  });
+}
+
+/** Whisper 多语种 ASR(fr/de):sherpa-onnx-offline CLI 的 --whisper-* 参数族。 */
+function runWhisperAsr(wavPath, model, conf, modelDir, encoderPath) {
+  const bin = resolveSherpaBin(conf.dir, "sherpa-onnx-offline") || conf.bin;
+  if (!bin || !fs.existsSync(bin)) {
+    throw new Error("sherpa-onnx offline asr binary not found; configure the sherpa dir in settings");
+  }
+  const decoderPath = pickAsrModelFile(model, "decoder", ["base-decoder.int8.onnx", "base-decoder.onnx", "tiny-decoder.int8.onnx", "tiny-decoder.onnx"], modelDir);
+  const tokensPath = pickAsrModelFile(model, "tokens", ["base-tokens.txt", "tiny-tokens.txt", "tokens.txt"], modelDir);
+  if (!decoderPath || !fs.existsSync(decoderPath)) {
+    throw new Error(`sherpa-onnx whisper decoder not found in ${modelDir}`);
+  }
+  if (!tokensPath || !fs.existsSync(tokensPath)) {
+    throw new Error(`sherpa-onnx whisper tokens not found in ${modelDir}`);
+  }
+  const args = [
+    `--whisper-encoder=${encoderPath}`,
+    `--whisper-decoder=${decoderPath}`,
+    `--whisper-tokens=${tokensPath}`,
     "--provider=cpu",
     wavPath,
   ];

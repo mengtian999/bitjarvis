@@ -20,6 +20,10 @@
  *     their explicit `devBypass` opt — the desktop shell always wants the
  *     real module's behavior, so it's injected unconditionally rather than
  *     left to each call site
+ *   - inject the default proxy-aware `fetchOnce` transport (Electron `net`,
+ *     see electron-net-fetch-once.cjs) into the same entry points — an
+ *     explicit `opts.fetchOnce` always wins, and without Electron the core
+ *     falls back to its own Node https transport
  *   - own the recurring background CHECK-ONLY timer loop
  *     (`scheduleBackgroundOtaChecks`) — setTimeout/setInterval cadence and
  *     the `onAvailable` broadcast callback are shell wiring, not pipeline
@@ -35,8 +39,25 @@ const otaCore = require("../../../shared/artifact-core/ota-core.cjs");
 // Static specifier on purpose — see artifact-ota-dev-bypass.cjs's header
 // comment; vite.config.main.js's alias keys off this exact literal.
 const devBypass = require("./artifact-ota-dev-bypass.cjs");
+const { loadElectronNetFetchOnce } = require("./electron-net-fetch-once.cjs");
 
 const { SEED_CHANNEL } = artifactBoot;
+
+/**
+ * Default transport for every OTA request made by the desktop shell.
+ *
+ * Electron's `net` stack (Chromium) follows the OS proxy configuration,
+ * which Node's `https.request` ignores — and reaching GitHub from a direct
+ * connection is not possible for many users (checkOnce then reports a
+ * transport error on every manual and background check). Callers that pass
+ * their own `fetchOnce` (the whole test suite, the local-path dev override)
+ * always win; when Electron is unavailable (unit tests, plain Node) the
+ * resolver returns undefined and ota-core falls back to its built-in
+ * Node https transport.
+ */
+function resolveDefaultFetchOnce(opts) {
+  return (opts && opts.fetchOnce) || loadElectronNetFetchOnce() || undefined;
+}
 
 /**
  * Schedules the recurring background CHECK-ONLY loop (deliberately fixed
@@ -66,7 +87,7 @@ function scheduleBackgroundOtaChecks(opts) {
   } = opts || {};
 
   const runOnce = () => {
-    otaCore.checkOnce({ homeDir, keyset, currentShellVersion, platformArch, channel, log, devBypass })
+    otaCore.checkOnce({ homeDir, keyset, currentShellVersion, platformArch, channel, log, devBypass, fetchOnce: resolveDefaultFetchOnce(opts) })
       .then((result) => {
         log(`[ota] cycle: ${result.outcome}${result.error ? ` (${result.error})` : ""}`);
         if ((result.outcome === "available" || result.outcome === "minshell-blocked") && typeof onAvailable === "function") {
@@ -111,9 +132,9 @@ module.exports = {
   fetchWithRedirects: otaCore.fetchWithRedirects,
   fetchBuffer: otaCore.fetchBuffer,
   downloadToFile: otaCore.downloadToFile,
-  fetchChannelManifest: (opts) => otaCore.fetchChannelManifest({ ...opts, devBypass }),
-  checkOnce: (opts) => otaCore.checkOnce({ ...opts, devBypass }),
-  downloadAndApplyArtifacts: (opts) => otaCore.downloadAndApplyArtifacts({ ...opts, devBypass }),
+  fetchChannelManifest: (opts) => otaCore.fetchChannelManifest({ ...opts, devBypass, fetchOnce: resolveDefaultFetchOnce(opts) }),
+  checkOnce: (opts) => otaCore.checkOnce({ ...opts, devBypass, fetchOnce: resolveDefaultFetchOnce(opts) }),
+  downloadAndApplyArtifacts: (opts) => otaCore.downloadAndApplyArtifacts({ ...opts, devBypass, fetchOnce: resolveDefaultFetchOnce(opts) }),
   scheduleBackgroundOtaChecks,
   hasDevOverrideConfigured,
   bothNextPointersReady: otaCore.bothNextPointersReady,

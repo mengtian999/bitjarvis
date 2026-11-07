@@ -10,6 +10,7 @@
  */
 import { readFileSync } from "fs";
 import { fromRoot } from "./jarvis-root.ts";
+import { normalizeModelLanguages } from "./prompt-locale.ts";
 
 let _raw = null;
 let _fallbacks = null;
@@ -120,4 +121,14 @@ export function listKnownProviderModels(provider) {
   return providerModels && typeof providerModels === "object"
     ? Object.keys(providerModels)
     : [];
+}
+
+/**
+ * 查询模型声明的语言能力（known-models.json 的 languages 字段）。
+ *
+ * 返回 null 表示**未知**——调用方必须按「支持任意语言」处理，不能当成
+ * 「什么语言都不支持」。字段语义见 docs/AGENT_I18N.md §4.3。
+ */
+export function lookupModelLanguages(provider, modelId) {
+  return normalizeModelLanguages(lookupKnown(provider, modelId)?.languages);
 }

@@ -46,6 +46,7 @@ const THINKING_I18N = {
 
 const LOCALE_LABELS = {
   "zh-CN": "简体中文", "zh-TW": "繁體中文", "ja": "日本語", "ko": "한국어", "en": "English",
+  "fr": "Français", "de": "Deutsch",
 };
 
 const MCP_SETTINGS_ACTIONS = {
@@ -154,11 +155,24 @@ const SETTINGS_REGISTRY = {
   locale: {
     type: "list",
     get label() { return t("toolDef.updateSettings.locale"); },
-    options: ["zh-CN", "zh-TW", "ja", "ko", "en"],
+    options: ["zh-CN", "zh-TW", "ja", "ko", "en", "fr", "de"],
     optionLabels: LOCALE_LABELS,
-    searchTerms: ["language", "国际化", "言語", "언어"],
+    searchTerms: ["language", "国际化", "言語", "언어", "langue", "sprache"],
     get: (engine, _agent) => engine.preferences.getLocale() || "zh-CN",
     apply: (engine, _agent, v) => engine.setLocale(v),
+  },
+  agent_prompt_locale: {
+    type: "list",
+    get label() { return t("toolDef.updateSettings.agentPromptLocale"); },
+    get description() { return t("toolDef.updateSettings.agentPromptLocaleDesc"); },
+    options: ["follow", "en", "zh", "ja", "ko", "fr", "de"],
+    optionLabels: {
+      follow: "Follow UI locale（跟随界面语言）",
+      en: "English", zh: "中文", ja: "日本語", ko: "한국어", fr: "Français", de: "Deutsch",
+    },
+    searchTerms: ["prompt", "agent language", "提示语言", "プロンプト言語", "프롬프트 언어", "langue du prompt"],
+    get: (engine, _agent) => engine.preferences.getAgentPromptLocale?.() || "follow",
+    apply: (engine, _agent, v) => engine.setAgentPromptLocale?.(v),
   },
   timezone: {
     type: "text",

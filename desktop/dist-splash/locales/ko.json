@@ -1288,7 +1288,9 @@
       "zhTW": "繁體中文",
       "ja": "日本語",
       "ko": "한국어",
-      "en": "English"
+      "en": "English",
+      "fr": "프랑스어",
+      "de": "독일어"
     },
     "agent": {
       "title": "에이전트",
@@ -1442,11 +1444,6 @@
       "keepAwake": "잠금 중에도 계속 실행",
       "betaUpdates": "베타 업데이트 수신",
       "autoCheckUpdates": "업데이트 자동 확인",
-      "updateSource": "업데이트 소스",
-      "updateSourceHint": "자동 모드는 시스템 시간대로 판단합니다(중국 본토는 Gitee, 다운로드가 빠름). 수동으로 지정할 수도 있습니다.",
-      "updateSourceAuto": "자동(시간대 기준)",
-      "updateSourceGithub": "GitHub(해외)",
-      "updateSourceGitee": "Gitee(중국 본토)",
       "inviteSectionTitle": "테스트 채널",
       "inviteCodeLabel": "초대 코드",
       "inviteCodeHint": "초대 코드는 테스트 채널을 여는 용도입니다. 앱 사용 조건이 아닙니다.",
@@ -1748,7 +1745,17 @@
       "defaultOption": "기본값",
       "qualityLow": "낮음",
       "qualityMedium": "중간",
-      "qualityHigh": "높음"
+      "qualityHigh": "높음",
+      "sherpaModelsDownload": "음성 모델 다운로드",
+      "sherpaModelsDownloadHint": "음성 인식/합성 모델은 설치 패키지에 포함되지 않습니다. 로컬 음성을 처음 사용할 때 필요에 따라 다운로드하며, 다운로드하지 않아도 온라인 음성을 사용할 수 있습니다.",
+      "sherpaModelInstall": "다운로드",
+      "sherpaModelInstalled": "설치됨",
+      "sherpaModelDownloading": "다운로드 중…",
+      "sherpaModelExtracting": "압축 해제 중…",
+      "sherpaModelVerifying": "검증 중…",
+      "sherpaModelError": "실패",
+      "sherpaModelRetry": "재시도",
+      "sherpaModelBusy": "다른 다운로드가 진행 중입니다"
     },
     "voice": {
       "language": "음성 언어",
@@ -1759,7 +1766,9 @@
         "zh-TW": "번체 중국어",
         "ja": "일본어",
         "ko": "한국어",
-        "en": "English"
+        "en": "English",
+        "fr": "프랑스어",
+        "de": "독일어"
       },
       "currentLanguage": "현재 언어",
       "preview": "미리 듣기",
@@ -2490,6 +2499,17 @@
       "dropOrClick": "캐릭터 카드를 끌어다 놓거나 클릭해 열기",
       "readFailed": "캐릭터 카드 읽기 실패",
       "importFailed": "캐릭터 카드 가져오기 실패"
+    },
+    "agentPromptLocale": {
+      "label": "Agent 프롬프트 언어",
+      "hint": "Agent의 시스템 프롬프트와 페르소나 템플릿 언어. UI 언어와 독립적으로 설정하며, 모델이 지원하지 않으면 자동으로 영어로 대체됩니다.",
+      "follow": "UI 언어 따르기",
+      "en": "English",
+      "zh": "中文",
+      "ja": "日本語",
+      "ko": "한국어",
+      "fr": "Français",
+      "de": "Deutsch"
     }
   },
   "onboarding": {
@@ -3236,7 +3256,8 @@
       "repairArtifactsBody": "이 작업은 Bit Jarvis의 앱 구성 요소를 설치 당시 버전으로 재설정하고 앱을 다시 시작해요. 데이터(에이전트, 세션, 설정)는 영향을 받지 않아요.",
       "repairArtifactsConfirm": "복구 후 재시작",
       "repairArtifactsCancel": "취소",
-      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n업데이트 적용 실패:\n{error}\n\n앱을 다시 시작해 주세요."
+      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n업데이트 적용 실패:\n{error}\n\n앱을 다시 시작해 주세요.",
+      "repairArtifactsUnavailable": "지금은 구성 요소를 복구할 수 없습니다: {reason}"
     },
     "notification": {
       "ready": "알림이 준비되었어요",
@@ -3437,7 +3458,9 @@
       "theme": "테마",
       "chatModel": "채팅 모델",
       "fileBackup": "파일 백업",
-      "fileBackupDesc": "AI 수정 전 파일 자동 백업"
+      "fileBackupDesc": "AI 수정 전 파일 자동 백업",
+      "agentPromptLocale": "Agent 프롬프트 언어",
+      "agentPromptLocaleDesc": "Agent의 시스템 프롬프트와 페르소나 템플릿 언어를 UI 언어와 독립적으로 지정합니다. \"follow\"는 UI 언어를 따르며, 모델이 해당 언어를 지원하지 않으면 자동으로 영어로 대체됩니다."
     },
     "generateImage": {
       "description": "텍스트 설명으로 이미지를 생성해요. 비동기: 제출 후 즉시 반환하고, 완료되면 자동으로 표시돼요.",

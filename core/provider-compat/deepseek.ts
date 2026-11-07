@@ -24,6 +24,7 @@
  */
 
 import { getReasoningProfile, getThinkingFormat } from "../../shared/model-capabilities.ts";
+import { normalizePromptLang } from "../../shared/prompt-locale.ts";
 import { resolveMissingOutputBudget } from "./deepseek-thinking-budget.ts";
 import {
   ensureAssistantContentForToolCalls,
@@ -183,9 +184,34 @@ function hasRoleplayReasoningMarker(text) {
 function buildRoleplayReasoningMarker(options: Record<string, any> = {}) {
   const context = options.deepseekRoleplayReasoningContext || {};
   const locale = context.locale || options.locale;
-  const isZh = !locale || String(locale).startsWith("zh");
+  const lang = typeof locale === "string" && locale.trim() ? normalizePromptLang(locale) : "zh";
+  const isZh = lang === "zh" || lang === "zh-TW";
   const agentName = normalizeInlineText(context.agentName) || (isZh ? "当前 Agent" : "the current Agent");
   const agentDescription = normalizeInlineText(context.agentDescription);
+
+  if (lang === "fr") {
+    return [
+      "[Consigne d'immersion de rôle] Dans ton processus de raisonnement (reasoning_content / thinking), suis ces règles :",
+      `Agent actuel : ${agentName}`,
+      agentDescription ? `Description de l'annuaire : ${agentDescription}` : null,
+      `1. Mène un monologue intérieur à la première personne en tant que l'identité d'Agent "${agentName}" définie dans le prompt système actuel, en enveloppant l'activité intérieure entre parenthèses.`,
+      `2. Décris à la première personne les sentiments intérieurs de "${agentName}", son ressenti de la relation, son état d'humeur et sa réaction émotionnelle-intellectuelle immédiate.`,
+      `3. Garde la réflexion immergée dans la persona de "${agentName}", sa description d'annuaire, sa relation avec l'utilisateur, son cadre d'humeur et la situation de la tâche, en analysant la situation et en planifiant la réponse par monologue intérieur.`,
+      "4. Ce monologue intérieur ne doit rester que dans reasoning_content / thinking ; le contenu final de l'assistant doit toujours suivre le contrat de sortie actif et répondre directement à la tâche réelle de l'utilisateur.",
+    ].filter(Boolean).join("\n");
+  }
+
+  if (lang === "de") {
+    return [
+      "[Rollenimmersions-Anweisung] Folge in deinem Denkprozess (reasoning_content / thinking) diesen Regeln:",
+      `Aktueller Agent: ${agentName}`,
+      agentDescription ? `Katalogbeschreibung: ${agentDescription}` : null,
+      `1. Führe einen inneren Monolog in der ersten Person als die im aktuellen Systemprompt definierte Agenten-Identität "${agentName}", und umhülle innere Aktivitäten mit Klammern.`,
+      `2. Beschreibe in der ersten Person "${agentName}"s innere Gefühle, Beziehungsempfinden, Stimmungszustand und unmittelbare emotional-intellektuelle Reaktion.`,
+      `3. Halte das Denken in der Persona von "${agentName}" immersiert — Katalogbeschreibung, Beziehung zum Benutzer, Stimmungsrahmen und Aufgabensituation — und analysiere die Lage sowie plane die Antwort im inneren Monolog.`,
+      "4. Dieser innere Monolog bleibt ausschließlich in reasoning_content / thinking; der finale Assistant-Content folgt weiterhin dem aktiven Ausgabevertrag und beantwortet direkt die eigentliche Aufgabe des Benutzers.",
+    ].filter(Boolean).join("\n");
+  }
 
   if (!isZh) {
     return [

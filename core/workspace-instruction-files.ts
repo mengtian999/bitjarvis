@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { normalizePromptLang, pickPromptText } from "../shared/prompt-locale.ts";
 
 const WORKSPACE_INSTRUCTION_FILES = [
   { filename: "AGENTS.md", key: "inject_agents_md" },
@@ -98,13 +99,18 @@ export function collectWorkspaceInstructionFiles({ cwd, workspaceContext }: { cw
 export function formatWorkspaceInstructionFiles(files: any, { locale }: { locale?: any } = {}) {
   const items = Array.isArray(files) ? files : [];
   if (items.length === 0) return "";
-  const isZh = String(locale || "").startsWith("zh");
+  const lang = normalizePromptLang(String(locale || ""));
   const body = items.map((file) => {
     const content = typeof file.content === "string"
       ? file.content.trim()
-      : (isZh
-        ? `无法读取该文件：${file.error || "未知错误"}`
-        : `Could not read this file: ${file.error || "unknown error"}`);
+      : pickPromptText(lang, {
+          zh: `无法读取该文件：${file.error || "未知错误"}`,
+          ja: `このファイルを読み取れませんでした：${file.error || "不明なエラー"}`,
+          ko: `이 파일을 읽을 수 없습니다: ${file.error || "알 수 없는 오류"}`,
+          fr: `Impossible de lire ce fichier : ${file.error || "erreur inconnue"}`,
+          de: `Diese Datei konnte nicht gelesen werden: ${file.error || "unbekannter Fehler"}`,
+          en: `Could not read this file: ${file.error || "unknown error"}`,
+        });
     return [
       `### ${file.filename || path.basename(file.path || "")}`,
       file.path ? `Path: ${file.path}` : "",
@@ -113,9 +119,14 @@ export function formatWorkspaceInstructionFiles(files: any, { locale }: { locale
     ].filter((line, index) => index !== 1 || line).join("\n");
   }).join("\n\n");
 
-  return isZh
-    ? `\n## 工作区说明\n\n以下内容来自主工作台目录链路中的 AGENTS.md / CLAUDE.md。它们是项目级工作规则，只对当前工作区上下文生效。\n\n${body}`
-    : `\n## Workspace Instructions\n\nThe following content comes from AGENTS.md / CLAUDE.md files in the primary workbench's directory chain. Treat them as project-level working rules for this workspace context.\n\n${body}`;
+  return pickPromptText(lang, {
+    zh: `\n## 工作区说明\n\n以下内容来自主工作台目录链路中的 AGENTS.md / CLAUDE.md。它们是项目级工作规则，只对当前工作区上下文生效。\n\n${body}`,
+    ja: `\n## ワークスペース指示\n\n以下の内容は、メインワークベンチのディレクトリ連鎖にある AGENTS.md / CLAUDE.md から取得したものです。これらはプロジェクトレベルの作業ルールであり、現在のワークスペースコンテキストにのみ適用されます。\n\n${body}`,
+    ko: `\n## 워크스페이스 지침\n\n다음 내용은 메인 워크벤치 디렉터리 체인의 AGENTS.md / CLAUDE.md에서 가져온 것입니다. 이것들은 프로젝트 수준의 작업 규칙이며, 현재 워크스페이스 컨텍스트에만 적용됩니다.\n\n${body}`,
+    fr: `\n## Instructions de l'espace de travail\n\nLe contenu suivant provient des fichiers AGENTS.md / CLAUDE.md de la chaîne de répertoires du plan de travail principal. Considérez-les comme des règles de travail au niveau projet pour ce contexte d'espace de travail.\n\n${body}`,
+    de: `\n## Arbeitsbereichsanweisungen\n\nDer folgende Inhalt stammt aus AGENTS.md / CLAUDE.md-Dateien in der Verzeichniskette des primären Arbeitsplatzes. Betrachte sie als projektbezogene Arbeitsregeln für diesen Arbeitsbereichskontext.\n\n${body}`,
+    en: `\n## Workspace Instructions\n\nThe following content comes from AGENTS.md / CLAUDE.md files in the primary workbench's directory chain. Treat them as project-level working rules for this workspace context.\n\n${body}`,
+  });
 }
 
 export function buildWorkspaceInstructionPrompt({ cwd, workspaceContext, locale }: { cwd?: string; workspaceContext?: unknown; locale?: string } = {}) {

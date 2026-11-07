@@ -1,16 +1,18 @@
 /**
- * 五语种语音目录(简体中文/繁體中文/日本語/한국어/English)。
+ * 七语种语音目录(简体中文/繁體中文/日本語/한국어/English/Français/Deutsch)。
  *
  * 单一数据源,供三方使用:
  * - lib/providers/microsoft-speech.ts:Edge TTS provider 静态声明的音色列表
  * - core/tts/adapters.ts、core/speech-recognition/adapters.ts:按语言选默认音色/SSML 语言/本地模型目录
  * - 桌面端设置「语音」页:语言选择、音色过滤、试听示例句
  *
- * Edge TTS 在线覆盖全部五语种(免费、无需 Key);sherpa-onnx 本地引擎按目录就绪情况
- * 提供子集(zh/en/ja 走 kokoro 或 vits,ko 走 mimic3,ASR 走 SenseVoice 多语种单模型)。
+ * Edge TTS 在线覆盖全部七语种(免费、无需 Key);sherpa-onnx 本地引擎按目录就绪情况
+ * 提供子集(zh/en 走 kokoro 或 vits,ja 走 kokoro,fr 走 kokoro(ff_siwis),ko 走 vits,
+ * de 本地 TTS 暂无 kokoro speaker 走 Edge 兜底;ASR 的 zh/en/ja/ko 走 SenseVoice
+ * 多语种单模型,fr/de 走 whisper 多语种模型,按需下载)。
  */
 
-export type SpeechLanguageId = "zh-CN" | "zh-TW" | "ja" | "ko" | "en";
+export type SpeechLanguageId = "zh-CN" | "zh-TW" | "ja" | "ko" | "en" | "fr" | "de";
 
 export interface SpeechVoiceOption {
   /** Edge TTS voice 名,如 zh-CN-XiaoxiaoNeural。 */
@@ -125,6 +127,37 @@ export const SPEECH_LANGUAGES: SpeechLanguageEntry[] = [
     sherpaAsrModelDir: "sense-voice",
     sampleText: "Hello, this is your voice assistant. How can I help you today?",
   },
+  {
+    id: "fr",
+    label: "Français",
+    ssmlLang: "fr-FR",
+    edgeVoices: [
+      { id: "fr-FR-DeniseNeural", label: "Denise", gender: "female" },
+      { id: "fr-FR-HenriNeural", label: "Henri", gender: "male" },
+      { id: "fr-FR-VivienneMultilingualNeural", label: "Vivienne (multilingue)", gender: "female" },
+    ],
+    edgeDefaultVoice: "fr-FR-DeniseNeural",
+    sherpaTtsModelDir: "kokoro-multi",
+    sherpaKokoroVoice: "ff_siwis",
+    sherpaAsrModelDir: "whisper-base",
+    sampleText: "Bonjour, je suis votre assistant vocal. Comment puis-je vous aider aujourd'hui ?",
+  },
+  {
+    id: "de",
+    label: "Deutsch",
+    ssmlLang: "de-DE",
+    edgeVoices: [
+      { id: "de-DE-KatjaNeural", label: "Katja", gender: "female" },
+      { id: "de-DE-ConradNeural", label: "Conrad", gender: "male" },
+      { id: "de-DE-AmalaNeural", label: "Amala", gender: "female" },
+    ],
+    edgeDefaultVoice: "de-DE-KatjaNeural",
+    // kokoro v1.1 无德语 speaker,本地 TTS 缺位;Edge 在线音色始终可用
+    sherpaTtsModelDir: null,
+    sherpaKokoroVoice: null,
+    sherpaAsrModelDir: "whisper-base",
+    sampleText: "Hallo, ich bin dein Sprachassistent. Wie kann ich dir heute helfen?",
+  },
 ];
 
 export const DEFAULT_SPEECH_LANGUAGE: SpeechLanguageId = "zh-CN";
@@ -144,6 +177,8 @@ export function resolveSpeechLanguageFromLocale(locale: unknown): SpeechLanguage
   if (normalized.startsWith("ja")) return BY_ID.get("ja")!;
   if (normalized.startsWith("ko")) return BY_ID.get("ko")!;
   if (normalized.startsWith("en")) return BY_ID.get("en")!;
+  if (normalized.startsWith("fr")) return BY_ID.get("fr")!;
+  if (normalized.startsWith("de")) return BY_ID.get("de")!;
   return BY_ID.get(DEFAULT_SPEECH_LANGUAGE)!;
 }
 

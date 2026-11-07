@@ -1,6 +1,6 @@
 {
   "name": "jarvis",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "description": "Bit Jarvis - a personal AI agent with memory and soul",
   "license": "Apache-2.0",
@@ -38,6 +38,7 @@
     "build:theme": "vite build --config vite.config.theme.js",
     "build:preload": "vite build --config vite.config.preload.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.test.json",
+    "validate:languages": "node scripts/validate-model-languages.mjs",
     "cli": "node scripts/launch.js cli",
     "server": "node scripts/launch.js server",
     "build:main": "vite build --config vite.config.main.js",
@@ -71,8 +72,9 @@
     "lint:boundary": "node scripts/lint-open-boundary.mjs",
     "test:watch": "vitest --exclude '**/.claude/**' --exclude '**/.cache/**' --exclude '**/dist/**' --exclude '**/dist-server/**' --exclude '**/dist-computer-use/**' --exclude '**/dist-sandbox/**'",
     "postinstall": "node scripts/patch-pi-sdk.cjs",
-    "stage:sherpa": "node scripts/download-sherpa-onnx.mjs --models",
-    "stage:sherpa:optional": "node scripts/download-sherpa-onnx.mjs --models --optional"
+    "stage:sherpa": "node scripts/download-sherpa-onnx.mjs",
+    "stage:sherpa:models": "node scripts/download-sherpa-onnx.mjs --models",
+    "stage:sherpa:optional": "node scripts/download-sherpa-onnx.mjs"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
@@ -201,6 +203,8 @@
           "!**/lib/*.lib",
           "!**/lib/onnxruntime.dll",
           "!**/lib/sherpa-onnx-c-api.dll",
+          "!**/models/asr/**",
+          "!**/models/tts/**",
           "!**/models/tts/ko/**",
           "!**/models/tts/kokoro-multi/**",
           "!**/bin/sherpa-onnx-keyword-spotter.exe",
@@ -224,7 +228,9 @@
       {
         "from": "im/build/web/",
         "to": "im-web/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "afterSign": "./scripts/notarize.cjs",
@@ -239,10 +245,15 @@
       "category": "public.app-category.productivity",
       "icon": "desktop/src/icon.icns",
       "artifactName": "${productName}-${version}-macOS-${arch}.${ext}",
-      "protocols": [{
-        "name": "Jarvis",
-        "schemes": ["jarvis", "im.bitjarvis"]
-      }],
+      "protocols": [
+        {
+          "name": "Jarvis",
+          "schemes": [
+            "jarvis",
+            "im.bitjarvis"
+          ]
+        }
+      ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "desktop/entitlements.mac.plist",
@@ -283,10 +294,15 @@
       "executableName": "BitJarvis",
       "artifactName": "${productName}-${version}-Windows-${arch}.${ext}",
       "requestedExecutionLevel": "asInvoker",
-      "protocols": [{
-        "name": "Jarvis",
-        "schemes": ["jarvis", "im.bitjarvis"]
-      }],
+      "protocols": [
+        {
+          "name": "Jarvis",
+          "schemes": [
+            "jarvis",
+            "im.bitjarvis"
+          ]
+        }
+      ],
       "extraResources": [
         {
           "from": "vendor/mingit",
@@ -336,4 +352,3 @@
     }
   }
 }
-

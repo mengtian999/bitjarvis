@@ -12,6 +12,7 @@
 import fs from "fs";
 import path from "path";
 import { atomicWriteSync } from "../../shared/safe-fs.ts";
+import { normalizePromptLang } from "../../shared/prompt-locale.ts";
 import { createHash } from "crypto";
 import { Type, StringEnum } from "../pi-sdk/index.ts";
 import { debugLog, createModuleLogger } from "../debug-log.ts";
@@ -605,7 +606,9 @@ export function createHeartbeat({
   intervalMinutes, emitDevLog,
   overwatchPath, locale,
 }) {
-  const isZh = !locale || String(locale).startsWith("zh");
+  // TODO(P3): 巡检上下文构建的 fr/de 母语化（当前 fr/de 沿用 en 占位）
+  const lang = typeof locale === "string" && locale.trim() ? normalizePromptLang(locale) : "zh";
+  const isZh = lang === "zh" || lang === "zh-TW";
   const devlog = (text, level = "heartbeat") => {
     emitDevLog?.(text, level);
   };

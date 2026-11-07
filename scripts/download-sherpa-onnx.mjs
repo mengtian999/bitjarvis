@@ -73,12 +73,16 @@ const LANG_TTS_DIRS = {
   "ko": "ko",
 };
 
+// B1（docs/SIZE_AND_STARTUP_OPT.md §6）：可按需下载的模型清单的单一数据源在
+// shared/sherpa-models.json——server 端运行时下载器（server/routes/sherpa.ts +
+// lib/sherpa/model-downloader.ts）与这里的构建期 staging 共用同一份，防止漂移。
+// VAD 模型极小（~600KB）且始终随包，保留本地定义。
+const SHERPA_MODELS_MANIFEST = JSON.parse(
+  fs.readFileSync(new URL("../shared/sherpa-models.json", import.meta.url), "utf8"),
+);
 const MODELS = [
   { kind: "vad", dir: "", name: "silero_vad.onnx", url: `${ASR_REL}/silero_vad.onnx`, sha256: "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6" },
-  { kind: "asr", dir: "sense-voice", name: "sense-voice-zh-en-ja-ko-yue-int8.tar.bz2", url: `${ASR_REL}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2` },
-  { kind: "tts", dir: "zh", name: "vits-zh-hf-fanchen-C.tar.bz2", url: `${TTS_REL}/vits-zh-hf-fanchen-C.tar.bz2` },
-  { kind: "tts", dir: "kokoro-multi", name: "kokoro-multi-lang-v1_1.tar.bz2", url: `${TTS_REL}/kokoro-multi-lang-v1_1.tar.bz2` },
-  { kind: "tts", dir: "ko", name: "vits-mimic3-ko_KO-kss_low.tar.bz2", url: `${TTS_REL}/vits-mimic3-ko_KO-kss_low.tar.bz2` },
+  ...SHERPA_MODELS_MANIFEST.models.map((m) => ({ kind: m.kind, dir: m.dir, name: m.archive, url: m.url })),
 ];
 function log(msg) { console.log(`[download-sherpa] ${msg}`); }
 

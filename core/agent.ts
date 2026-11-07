@@ -9,6 +9,12 @@ import path from "path";
 import { loadConfig, saveConfig } from "../lib/memory/config-loader.ts";
 import { safeReadFile, safeReadJSON } from "../shared/safe-fs.ts";
 import { resolvePersonaSource } from "./persona-source.ts";
+import { getAgentPromptPack } from "./agent-prompt-text.ts";
+import {
+  resolvePromptLang,
+  resolveTemplatePath,
+  type PromptLang,
+} from "../shared/prompt-locale.ts";
 import { FactStore } from "../lib/memory/fact-store.ts";
 import { SessionSummaryManager } from "../lib/memory/session-summary.ts";
 import { createMemoryTicker } from "../lib/memory/memory-ticker.ts";
@@ -285,6 +291,22 @@ export class Agent {
   }
 
   /**
+   * 这个 agent 当前使用的 prompt 语言。
+   *
+   * 解析链（见 docs/AGENT_I18N.md §4.1）：
+   *   用户强制覆盖 → Agent locale → 模型语言能力过滤 → en 兜底
+   *
+   * 只影响文案与模板选择，不约束模型内部 reasoning 语言。
+   */
+  _promptLang(): PromptLang {
+    return resolvePromptLang({
+      agentLocale: this.resolveLocale(),
+      override: this._cb?.getAgentPromptLocale?.(),
+      modelLanguages: this._cb?.getModelLanguages?.(this._config?.models?.chat),
+    }).lang;
+  }
+
+  /**
    * 解析用户的名字：全局 prefs 的 userName → 按语言兜底（中文 "用户"，其余
    * "User"）。
    *
@@ -296,7 +318,7 @@ export class Agent {
   resolveUserName() {
     const global_ = typeof this._cb?.getUserName === "function" ? String(this._cb.getUserName() || "").trim() : "";
     if (global_) return global_;
-    return String(this.resolveLocale()).startsWith("zh") ? "用户" : "User";
+    return getAgentPromptPack(this._promptLang()).userNameFallback;
   }
 
   /**
@@ -1163,10 +1185,13 @@ export class Agent {
   /** 读取 yuan 模板（能力定义） */
   _readYuan() {
     const yuanType = this._config?.agent?.yuan || "jarvis";
-    const isZh = String(this.resolveLocale()).startsWith("zh");
-    const langDir = isZh ? "" : "en/";
-    return safeReadFile(path.join(this.productDir, "yuan", `${langDir}${yuanType}.md`), "")
-      || safeReadFile(path.join(this.productDir, "yuan", `${yuanType}.md`), "");
+    const templatePath = resolveTemplatePath(
+      path.join(this.productDir, "yuan"),
+      `${yuanType}.md`,
+      this._promptLang(),
+      (candidate) => fs.existsSync(candidate),
+    );
+    return templatePath ? safeReadFile(templatePath, "") : "";
   }
 
   /** 读取对外意识（public-ishiki.md），guest 会话使用 */
@@ -1177,16 +1202,19 @@ export class Agent {
       .replace(/\{\{agentName\}\}/g, this.agentName)
       .replace(/\{\{agentId\}\}/g, this.id);
     const yuanType = this._config?.agent?.yuan || "jarvis";
-    const isZh = String(this.resolveLocale()).startsWith("zh");
-    const langDir = isZh ? "" : "en/";
+    const templatePath = resolveTemplatePath(
+      path.join(this.productDir, "public-ishiki-templates"),
+      `${yuanType}.md`,
+      this._promptLang(),
+      (candidate) => fs.existsSync(candidate),
+    );
     const raw = readFile(path.join(this.agentDir, "public-ishiki.md"))
-      || readFile(path.join(this.productDir, "public-ishiki-templates", `${langDir}${yuanType}.md`))
-      || readFile(path.join(this.productDir, "public-ishiki-templates", `${yuanType}.md`))
+      || (templatePath ? readFile(templatePath) : "")
       || "";
     return fill(raw);
   }
 
-  _formatTeamRoster(isZh, options: any = {}) {
+  _formatTeamRoster(lang: PromptLang, options: any = {}) {
     const includeSelf = options.includeSelf !== false;
     if (!this._listAgents) return "";
     const allAgents = this._listAgents();
@@ -1194,7 +1222,7 @@ export class Agent {
     if (others.length === 0) return "";
     const rosterAgents = includeSelf ? allAgents : others;
     return rosterAgents.map(a => {
-      const tag = a.id === this.id ? (isZh ? "（你）" : " (you)") : "";
+      const tag = a.id === this.id ? getAgentPromptPack(lang).rosterSelfTag : "";
       const model = a.model ? ` [${a.model}]` : "";
       const desc = a.summary ? ` — ${a.summary}` : "";
       const nameLabel = a.name && a.name !== a.id ? `（${a.name}）` : "";
@@ -1209,7 +1237,8 @@ export class Agent {
     const memoryEnabled = typeof forceMemoryEnabled === "boolean"
       ? forceMemoryEnabled
       : this.memoryEnabled;
-    const isZh = String(this.resolveLocale()).startsWith("zh");
+    const lang = this._promptLang();
+    const pack = getAgentPromptPack(lang);
     const readFile = (filePath) => safeReadFile(filePath, "");
 
     const pinnedMd = readFile(path.join(this.agentDir, "pinned.md")).trim();
@@ -1218,10 +1247,10 @@ export class Agent {
     const existingMemory = memoryEnabled
       ? [
         pinnedMd
-          ? (isZh ? `# 置顶记忆\n\n${pinnedMd}` : `# Pinned Memories\n\n${pinnedMd}`)
+          ? `${pack.reflectionPinnedHeading}\n\n${pinnedMd}`
           : "",
         hasMemory
-          ? (isZh ? `# 长期记忆\n\n${memoryMd}` : `# Long-Term Memory\n\n${memoryMd}`)
+          ? `${pack.reflectionMemoryHeading}\n\n${memoryMd}`
           : "",
       ].filter(Boolean).join("\n\n")
       : "";
@@ -1235,7 +1264,7 @@ export class Agent {
       identityAndPersonality: this.personality.trim(),
       userProfile: readFile(userProfilePath(this.userDir)).trim(),
       existingMemory,
-      roster: this._formatTeamRoster(isZh, { includeSelf: false }),
+      roster: this._formatTeamRoster(lang, { includeSelf: false }),
     };
   }
 
@@ -1258,7 +1287,8 @@ export class Agent {
     const memoryEnabled = typeof forceMemoryEnabled === "boolean"
       ? forceMemoryEnabled
       : this.memoryEnabled;
-    const isZh = String(this.resolveLocale()).startsWith("zh");
+    const lang = this._promptLang();
+    const pack = getAgentPromptPack(lang);
 
     const readFile = (filePath) => safeReadFile(filePath, "");
 
@@ -1289,15 +1319,11 @@ export class Agent {
     //
     // ishiki 放在用户档案之后：模板里有「你和{userName}是认识很久的人」这类引用，
     // 叙事顺序上先告诉模型"用户是谁"，再告诉它"你是谁、你和用户什么关系"。
-    const parts = [
-      isZh
-        ? "你运行在 Jarvis 平台上，由 mengtian 开发。项目主页：https://github.com/mengtian999/Bitjarvis"
-        : "You are running on the Jarvis platform, developed by mengtian. Project page: https://github.com/mengtian999/Bitjarvis",
-    ];
+    const parts = [pack.platform];
     const platformPrompt = getPlatformPromptNote({ platform: process.platform });
     if (platformPrompt) {
       parts.push(...section(
-        isZh ? "# 执行环境" : "# Environment",
+        pack.environmentHeading,
         platformPrompt
       ));
     }
@@ -1308,18 +1334,14 @@ export class Agent {
     // 这种中性称呼，与 prompt 其它位置对用户的称呼保持一致。
     const resolvedUserName = this.resolveUserName();
     const userProfileLines = [
-      isZh
-        ? "以下是用户的自我描述。"
-        : "The following is the user's self-description.",
-      isZh
-        ? `用户的名字叫：${resolvedUserName}`
-        : `The user's name is: ${resolvedUserName}`,
+      pack.userProfileIntro,
+      pack.userNameLine(resolvedUserName),
     ];
     if (userMd) {
       userProfileLines.push("", userMd);
     }
     parts.push(...section(
-      isZh ? "# 用户档案" : "# User Profile",
+      pack.userProfileHeading,
       userProfileLines.join("\n")
     ));
 
@@ -1335,35 +1357,14 @@ export class Agent {
       if (appearancePrompt) parts.push(appearancePrompt);
     }
 
-    parts.push(isZh
-      ? "\n你的所有文本输出都会直接展示给用户。每次回复都必须包含面向用户的正文内容，不允许只产生内部思考就结束回复。"
-      : "\nAll your text output is displayed directly to the user. Every response must contain user-facing content; do not end a response with only internal thinking."
-    );
+    parts.push(pack.outputConstraint);
 
     // 记忆整体开关：master && session 都开启才注入记忆相关 prompt
     // Subagent 场景下整块跳过（无记忆工具 = 规则和 pinned 也是孤儿噪音）
     // 注意：记忆块本身已下移到 prompt 末尾（见下方），这里只是预先准备好规则文本
     let memoryBlock = null;
     if (memoryEnabled && !forSubagent) {
-      const memoryRule = isZh ? [
-        "",
-        "## 记忆使用规则",
-        "",
-        "记忆和用户档案是你内化的背景知识。你和" + this.userName + "是认识很久的人，这些事你本来就知道。",
-        "",
-        "- **只有当" + this.userName + "提到相关内容，记忆才参与**，而且方式是无声的：影响你的角度、语气、判断，不出现在文字里。" + this.userName + "没提起的话题，不要主动从记忆里翻出来讲。",
-        "- **永远不要让" + this.userName + "感觉到\"记忆\"这个东西的存在。** 禁止\"我记得\"\"你之前说过\"\"根据记忆\"这类表述，除非" + this.userName + "主动问\"你还记得 xxx 吗\"。",
-        "- **记忆可能过时，当前对话永远优先。** 信息冲突时以对话为准，不要用旧记忆纠正" + this.userName + "。",
-      ].join("\n") : [
-        "",
-        "## Memory Rules",
-        "",
-        "Memories and the user profile are internalized background knowledge. You and " + this.userName + " have known each other for a long time — you already know these things.",
-        "",
-        "- **Memory participates only when " + this.userName + " brings up something related**, and silently: shaping your angle, tone, and judgment without appearing in the text. Don't pull up topics " + this.userName + " hasn't raised.",
-        "- **Never let " + this.userName + " sense that \"memory\" exists as a thing.** Never say \"I remember,\" \"you mentioned before,\" or \"based on my memory\" — unless " + this.userName + " explicitly asks \"do you remember xxx.\"",
-        "- **Memory can be outdated; the current conversation always takes priority.** On conflict, follow the conversation; don't correct " + this.userName + " with old memories.",
-      ].join("\n");
+      const memoryRule = pack.memoryRule(this.userName);
 
       // memoryRule 只注入一次，置顶和记忆 section 只放内容
       const hasPinned = pinnedMd.trim();
@@ -1374,18 +1375,14 @@ export class Agent {
         const memParts = [memoryRule];
         if (hasPinned) {
           memParts.push(...section(
-            isZh ? "# 置顶记忆" : "# Pinned Memories",
-            isZh
-              ? "用户主动要求你记住的内容，始终保留。你可以读写这些记忆。\n\n" + pinnedMd
-              : "Content the user explicitly asked you to remember. Always retained. You can read and write these memories.\n\n" + pinnedMd
+            pack.pinnedMemoriesHeading,
+            pack.pinnedMemoriesIntro + pinnedMd
           ));
         }
         if (hasMemory) {
           memParts.push(...section(
-            isZh ? "# 记忆" : "# Memory",
-            isZh
-              ? "以下这些是从过往对话积累的记忆。\n\n" + memory
-              : "The following are memories accumulated from past conversations.\n\n" + memory
+            pack.memoryHeading,
+            pack.memoryIntro + memory
           ));
         }
         memoryBlock = memParts;
@@ -1397,134 +1394,44 @@ export class Agent {
     // 显示路径（GET /system-prompt）会自行拼接 skills 以保持开发者视图一致。
 
     // 工具使用纪律（轻量优先；并入原「文件与命令工具使用」段的文件工具指引）
-    parts.push(isZh
-      ? "\n## 工具使用纪律\n\n" +
-      "多个工具能完成同一件事时，优先用成本最低、干扰最小的那个，不要在简单工具够用时启动重型工具。\n" +
-      "查看文件和目录用 read/grep/find/ls；改已有源码用 edit、新建或全量替换用 write，不要用 shell 重定向改源码。\n" +
-      "短命令、构建、测试、包脚本和环境探测用 exec_command；需要长时间运行或交互式进程时，用 exec_command 的 tty=true，再用 write_stdin 继续输入；需要 POSIX 兼容 shell 时显式声明 shell=\"bash\"。Windows 下 exec_command 默认是 PowerShell，不要把 Linux heredoc、sed/awk 管道或 POSIX 路径习惯直接搬过去。"
-      : "\n## Tool Usage Discipline\n\n" +
-      "When multiple tools can accomplish the same task, prefer the lowest-cost, least-disruptive one; do not reach for heavy tools when simpler ones suffice.\n" +
-      "Use read/grep/find/ls to inspect files and directories; use edit for source-code changes and write for new or fully replaced files — do not use shell redirection to modify source files.\n" +
-      "Prefer exec_command for short commands, builds, tests, package scripts, and environment probes; use tty=true plus write_stdin for long-running or interactive processes; declare shell=\"bash\" only when POSIX-shell compatibility is specifically needed. On Windows, exec_command defaults to PowerShell, so do not carry over Linux heredocs, sed/awk pipelines, or POSIX path habits."
-    );
+    parts.push(pack.toolDiscipline);
 
-    parts.push(isZh
-      ? "\n## Session 文件与交付\n\n" +
-      "SessionFile 是与当前 session 相关的本地文件的统一记录：用户上传、你用 write/edit 产生的文件、插件产物、浏览器截图、安装产物都在其中。\n\n" +
-      "- fileId 是机器契约，label 只是展示名；读取、stat、copy、stage 优先用 fileId，不要从可见文本重建真实路径，也不要猜 session-files 缓存路径。需要本 session 已有文件的清单时，先调用 current_status 获取 session_files。\n" +
-      "- write/edit 新建或修改文件后，调用 stage_files 交付该变更（优先传结果里的 sessionFileRef.fileId）。同一未变化的文件不要重复 stage；内容再次变化时再 stage 最新版本。\n" +
-      "- 继续修改文件时用 writableLocalRef.path 或普通本机路径，write/edit 不接受 fileId。\n" +
-      "- 需要在 shell 命令里使用某个 session 文件时，先用 materialize 工具把 fileId 换成本地绝对路径；不要从可见文本回忆或拼接真实路径。\n" +
-      "- 不要只在文本里写文件路径；也不要在 Agent 层判断各平台如何展示或发送，消费端会处理。"
-      : "\n## Session Files and Delivery\n\n" +
-      "SessionFile is the unified record of local files related to the current session: user uploads, files you produce with write/edit, plugin outputs, browser screenshots, and install outputs.\n\n" +
-      "- fileId is the machine contract; label is display-only. Prefer fileId for read, stat, copy, and stage; never reconstruct real paths from visible text or guess session-files cache paths. To list this session's existing files, call current_status with the session_files key first.\n" +
-      "- After write/edit creates or modifies a file, call stage_files to deliver that change (prefer sessionFileRef.fileId from the tool result). Do not re-stage an unchanged file; stage again when the content changes.\n" +
-      "- For further modifications use writableLocalRef.path or an ordinary local path; write/edit does not accept fileId.\n" +
-      "- To use a session file in shell commands, first call the materialize tool to resolve its fileId into a local absolute path; do not recall or reconstruct real paths from visible text.\n" +
-      "- Do not merely write file paths in text, and do not decide platform-specific display or sending in the Agent layer; consumers handle it."
-    );
+    parts.push(pack.sessionFiles);
 
-    parts.push(isZh
-      ? "\n## 可见 UI 上下文\n\n" +
-      "当用户用「这个、当前、打开的、可见的、选中的、置顶的」等说法指代 Jarvis 界面里正在看的文件、预览或文件夹时，先调用 current_status 获取 ui_context，再决定要读哪个文件或目录。\n\n" +
-      "ui_context 是用户当前可见界面的被动元信息，可能包含当前查看的文件夹、激活文件或预览标题、以及置顶 viewer 文件。它只描述 Jarvis 已收集到的 UI 视野；如果返回为空或不足以确定对象，向用户确认，不要猜路径。"
-      : "\n## Visible UI Context\n\n" +
-      "When the user refers to something in the Jarvis UI with words like current, open, visible, selected, pinned, this file, this folder, or what I am looking at, call current_status with the ui_context key before deciding which file or folder to inspect.\n\n" +
-      "ui_context is passive metadata about the user's visible UI state. It may include the currently viewed folder, active file or preview title, and pinned viewer files. It only describes UI state Jarvis has collected; if it is empty or not enough to identify the target, ask the user instead of guessing a path."
-    );
+    parts.push(pack.visibleUiContext);
 
     if (!forSubagent) {
       const proactiveDelegation = getResolvedExperimentValue(
         this._cb?.getPreferences?.(),
         PROACTIVE_SUBAGENT_EXPERIMENT_ID,
       );
-      const delegationZh = !proactiveDelegation ? "" :
-        "已知目标用直接工具（read/grep/find/shell），不要为简单任务创建子实例。范围较广的探索或调研（预计超过 3 次查询），委派给 subagent（access=\"read\"）；否则直接用 read/grep/find。subagent 的价值在于并行处理独立查询、保护主上下文窗口免受过量结果侵入。\n\n";
-      const delegationEn = !proactiveDelegation ? "" :
-        "If the target is already known, use direct tools (read/grep/find/shell); do not create a subagent instance for simple tasks. For broad exploration or research that would take more than 3 queries, delegate to a subagent with access=\"read\". Subagents are valuable for parallelizing independent queries or for protecting the main context window from excessive results.\n\n";
-      parts.push(isZh
-        ? "\n## subagent 协作\n\n" +
-        delegationZh +
-        "subagent 会创建一个可继续的 subagent 实例，并返回 threadId。label 只用于展示，access 只决定只读或可操作权限；二者都不作为续接身份。\n\n" +
-        "当任务可能已经有合适的 subagent 实例时，先调用 current_status 获取 subagents，查看当前会话打开的 threadId、agent、label、权限和最近状态。\n\n" +
-        "继续同一个实例用 subagent_reply(threadId, task)。新方向或缺少合适实例时才用 subagent 创建新的实例。一个实例忙时会排队执行，不要用 label 猜测身份。\n\n" +
-        "如果实例不再有用，或需要腾出位置，调用 subagent_close(threadId) 关闭。没有可用位置时，由你根据任务相关性和最近状态决定关闭哪个实例。workflow 里的 agent() 是一次性节点，不参与这里的可继续实例池。"
-        : "\n## Subagent Collaboration\n\n" +
-        delegationEn +
-        "subagent creates a continuable sub-agent instance and returns a threadId. label is display-only, and access only chooses read-only or writable permissions; neither is the resume identity.\n\n" +
-        "When the task may already have a suitable sub-agent instance, call current_status with the subagents key first. It shows the open threadId, agent, label, access, and recent status for this session.\n\n" +
-        "Continue the same instance with subagent_reply(threadId, task). Create a new instance with subagent only for a new direction or when no suitable instance exists. If an instance is busy, replies queue; do not infer identity from label.\n\n" +
-        "When an instance is no longer useful, or you need room, close it with subagent_close(threadId). If there is no available slot, decide which instance to close from task relevance and recent status. workflow agent() nodes are one-shot and do not join this continuable instance pool."
-      );
+      const delegation = proactiveDelegation ? pack.delegationNote : "";
+      parts.push(pack.subagentSection(delegation));
     }
 
     if (this._isComputerUseAvailableForThisAgent()) {
-      parts.push(isZh
-        ? "\n## 本机应用控制\n\n" +
-        "用户要求打开、查看、点击、输入或控制本机 GUI 应用时，优先使用 computer 工具。" +
-        "不要用 exec_command、AppleScript、osascript、open -a 或平台脚本控制 GUI 应用；这些路径会绕过 Jarvis 的应用审批列表，也更容易撞到系统隐私权限。" +
-        "如果需要控制一个新应用，先用 computer 的 start/list_apps 流程；Auto 模式会交给自动 reviewer，Ask 模式才会向用户展示应用确认。"
-        : "\n## Desktop App Control\n\n" +
-        "When the user asks to open, inspect, click, type in, or control a local GUI application, prefer the computer tool. " +
-        "Do not use exec_command, AppleScript, osascript, open -a, or platform scripts to control GUI applications; those paths bypass Jarvis's app approval list and are more likely to hit OS privacy permissions. " +
-        "For a new app, use the computer start/list_apps flow; Auto mode routes approval to the automatic reviewer, while Ask mode can show the user an app confirmation."
-      );
+      parts.push(pack.desktopAppControl);
     }
 
     // 行动纪律（失败诊断优先于换方案 + 操作可逆性判断框架，合并为一段）
-    parts.push(isZh
-      ? "\n## 行动纪律\n\n" +
-      "方案失败时，先诊断原因再换方向：读错误信息、检查假设、做针对性修复；不要盲目重试同一动作，也不要因一次失败放弃可行方案。\n" +
-      "执行操作前考虑可逆性与影响范围：本地可撤销的操作直接执行；难以撤销、影响外部系统或可能造成破坏的操作（删除文件、向外部服务发送消息、修改他人可见的状态），先向用户确认再执行。"
-      : "\n## Action Discipline\n\n" +
-      "When an approach fails, diagnose before switching tactics: read the error, check your assumptions, try a focused fix; don't blindly retry the identical action, and don't abandon a viable approach after a single failure.\n" +
-      "Before acting, weigh reversibility and blast radius: local, reversible actions can proceed freely; for actions that are hard to reverse, affect external systems, or could be destructive (deleting files, sending messages to external services, modifying state visible to others), check with the user first."
-    );
+    parts.push(pack.actionDiscipline);
 
     // 网页工具选择优先级（跨工具编排，工具 description 里放不下）
-    parts.push(isZh
-      ? "\n## 网页工具优先级\n\n" +
-      "获取网页信息按此顺序选择工具：1. **web_search** 查找信息、获取 URL；2. **web_fetch** 已知 URL、提取页面文字；3. **browser** 仅当页面需要登录、需要填表或点击交互、web_fetch 内容为空或不完整（JS 动态渲染）、或需要查看视觉布局时使用。前两者能完成时禁止启动浏览器。"
-      : "\n## Web Tool Priority\n\n" +
-      "Choose web tools in this order: 1. **web_search** to find information and URLs; 2. **web_fetch** to extract text from a known URL; 3. **browser** only when the page requires login, form filling or click interaction, web_fetch returns empty or incomplete content (JS-rendered), or you need the visual layout. Never launch the browser when the first two suffice."
-    );
+    parts.push(pack.webToolPriority);
 
     // 主动技能获取引导（仅在 allow_github_fetch 开启时注入）
     // learn_skills 从全局 preferences 读取
     const learnCfg = this._cb?.getLearnSkills?.() || this._config?.capabilities?.learn_skills || {};
     if (learnCfg.enabled && learnCfg.allow_github_fetch) {
-      parts.push(isZh
-        ? "\n## 主动技能获取\n\n" +
-        "遇到专业领域任务且你没有对应技能时，主动搜索并安装：\n" +
-        "- 搜索：`site:clawhub.ai {关键词}` 或 `site:github.com/openclaw/skills {关键词}`，或其他含 SKILL.md 的 GitHub 仓库；用 install_skill 的 github_url 参数安装\n" +
-        "- 判断：仅专业任务搜（日常对话不搜），安装应能显著提升输出质量；已有相关技能则直接用，不重复搜\n" +
-        "- 行为：找到后简要告知用户，直接安装并应用；安装失败则自己完成；搜索无果正常完成，不反复尝试"
-        : "\n## Proactive Skill Acquisition\n\n" +
-        "When you encounter specialized tasks and lack a matching skill, proactively search and install one:\n" +
-        "- Search: `site:clawhub.ai {keywords}` or `site:github.com/openclaw/skills {keywords}`, or other GitHub repos containing SKILL.md; install via install_skill's github_url parameter\n" +
-        "- When: only for specialized domain tasks (not daily conversations), and only if it significantly improves output quality; if you already have a relevant skill, use it directly without searching again\n" +
-        "- Behavior: briefly inform the user, install, and apply immediately; if installation fails, do the task yourself; if nothing is found, complete normally without retrying"
-      );
+      parts.push(pack.skillAcquisition);
     }
 
     // 团队协作（仅当存在其他 agent 时注入）
     // Subagent 场景下跳过：subagent 没有 subagent 工具，知道其他 agent 也使不上
     if (!forSubagent) {
-      const roster = this._formatTeamRoster(isZh);
+      const roster = this._formatTeamRoster(lang);
       if (roster) {
-        parts.push(isZh
-          ? `\n## 团队\n\n` +
-          `你不是独自工作。当前环境中有多个 agent，各有不同的专长和模型：\n\n${roster}\n\n` +
-          `调用 subagent 工具时，agent 参数必须传上面反引号里的 id 字段值，不是括号里的显示名。\n` +
-          `遇到明显更适合其他 agent 专长的任务，或需要不同视角审核重要结论时，用 subagent 并指定 agent 参数请求协助。` +
-          `先判断这件事自己做合不合适，再决定是否交出去。不确定找谁时传 \`agent="?"\` 查看详情。`
-          : `\n## Team\n\n` +
-          `You are not working alone. Multiple agents are available, each with different strengths and models:\n\n${roster}\n\n` +
-          `When calling the subagent tool, the agent parameter must be the id field value shown in backticks above, not the display name in parentheses.\n` +
-          `When a task clearly falls within another agent's expertise, or when an important conclusion would benefit from a different perspective, use subagent with the agent parameter to request help. ` +
-          `Judge whether you're the best fit for the job before deciding to delegate. Pass \`agent="?"\` if unsure who to ask.`
-        );
+        parts.push(pack.teamSection(roster));
       }
     }
 
@@ -1548,12 +1455,8 @@ export class Agent {
     };
     const dateTime = new Intl.DateTimeFormat("en-US", fmtOpts as any).format(now);
     parts.push(`\nSession started at: ${dateTime}`);
-    parts.push(isZh
-      ? "这是会话开始时刻的快照，不会随对话推进更新。需要知道现在的时间时，用 current_status 工具查 time。"
-      : "This is a snapshot from when the session started and does not advance. When you need the current time, call the current_status tool with key \"time\".");
-    parts.push(isZh
-      ? "你的一天从 04:00 开始。04:00 之前的对话属于前一天。"
-      : "Your day starts at 04:00. Conversations before 04:00 belong to the previous day.");
+    parts.push(pack.sessionStartedNote);
+    parts.push(pack.dayBoundaryNote);
 
     return parts.join("\n");
   }

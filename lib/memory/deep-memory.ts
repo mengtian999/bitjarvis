@@ -11,6 +11,7 @@
 import { callText, DEFAULT_CALL_TEXT_TIMEOUT_MS } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getLocale } from "../i18n.ts";
+import { normalizePromptLang, pickPromptText, type PromptLang } from "../../shared/prompt-locale.ts";
 import { attachPromptLayoutMetadata, buildUtilityPromptLayout } from "../llm/prompt-layout.ts";
 import { buildFactExtractionPrompt as buildFactExtractionPromptSpec } from "./prompts/fact-extraction.ts";
 import {
@@ -256,16 +257,16 @@ export async function processDirtySessions(summaryManager, factStore, resolvedMo
 async function extractFactsFromDiff(currentSummary, previousSnapshot, resolvedModel, timeContext = null) {
   const hasPrevious = !!previousSnapshot;
 
-  const isZh = getLocale().startsWith("zh");
+  const lang = normalizePromptLang(getLocale());
 
   let userContent;
-  const timeContextBlock = buildTimeContextBlock(timeContext, isZh);
+  const timeContextBlock = buildTimeContextBlock(timeContext, lang);
   if (hasPrevious) {
-    const prevLabel = isZh ? "## 上次快照" : "## Previous Snapshot";
-    const currLabel = isZh ? "## 当前摘要" : "## Current Summary";
+    const prevLabel = pickPromptText(lang, { zh: "## 上次快照", ja: "## 前回スナップショット", ko: "## 이전 스냅샷", fr: "## Instantané précédent", de: "## Vorheriger Schnappschuss", en: "## Previous Snapshot" });
+    const currLabel = pickPromptText(lang, { zh: "## 当前摘要", ja: "## 現在のサマリー", ko: "## 현재 요약", fr: "## Résumé actuel", de: "## Aktuelle Zusammenfassung", en: "## Current Summary" });
     userContent = `${timeContextBlock}\n\n${prevLabel}\n\n${previousSnapshot}\n\n${currLabel}\n\n${currentSummary}`;
   } else {
-    const label = isZh ? "## 摘要内容" : "## Summary Content";
+    const label = pickPromptText(lang, { zh: "## 摘要内容", ja: "## サマリー内容", ko: "## 요약 내용", fr: "## Contenu du résumé", de: "## Inhalt der Zusammenfassung", en: "## Summary Content" });
     userContent = `${timeContextBlock}\n\n${label}\n\n${currentSummary}`;
   }
 
@@ -325,21 +326,23 @@ async function extractFactsFromDiff(currentSummary, previousSnapshot, resolvedMo
   }
 }
 
-function buildTimeContextBlock(timeContext, isZh) {
+function buildTimeContextBlock(timeContext, lang: PromptLang) {
   const context = timeContext || {};
   const sourceRange = context.sourceRange || {};
   const timezone = resolveMemoryTimeZone(context.timezone);
+  const unknown = pickPromptText(lang, { zh: "未知", ja: "不明", ko: "알 수 없음", fr: "inconnu", de: "unbekannt", en: "unknown" });
+  const none = pickPromptText(lang, { zh: "无", ja: "なし", ko: "없음", fr: "aucun", de: "keine", en: "none" });
   const localDates = Array.isArray(context.localDates) && context.localDates.length > 0
     ? context.localDates.join(", ")
-    : isZh ? "未知" : "unknown";
+    : unknown;
   const range = sourceRange.start || sourceRange.end
     ? `${sourceRange.start || "?"} → ${sourceRange.end || "?"}`
-    : isZh ? "未知" : "unknown";
+    : unknown;
   const summaryDateTimes = Array.isArray(context.summaryDateTimes) && context.summaryDateTimes.length > 0
     ? context.summaryDateTimes.join(", ")
-    : isZh ? "无" : "none";
+    : none;
 
-  if (isZh) {
+  if (lang === "zh" || lang === "zh-TW") {
     return `## 时间上下文
 
 - 时区：${timezone}
@@ -348,6 +351,28 @@ function buildTimeContextBlock(timeContext, isZh) {
 - 摘要中明确出现的完整时间：${summaryDateTimes}
 
 时间规则：只允许使用本时间上下文或摘要正文中明确出现的日期。摘要只有 HH:MM 且会话来源只有一个本地日期时，才能把该日期和 HH:MM 合成 time；摘要跨多日本地日期且只有 HH:MM 时，time 填 null。不要从输出格式示例或说明文字中推断日期。`;
+  }
+
+  if (lang === "ja") {
+    return `## 時間コンテキスト
+
+- タイムゾーン：${timezone}
+- セッションソースの時間範囲：${range}
+- セッションソースのローカル日付：${localDates}
+- サマリーに明示された完全な時刻：${summaryDateTimes}
+
+時間ルール：この時間コンテキストまたはサマリー本文に明示された日付のみを使うこと。サマリーに HH:MM のみがあり、セッションソースのローカル日付が 1 つだけの場合にのみ、その日付と HH:MM を合成して time にできる。サマリーが複数のローカル日付にまたがり HH:MM のみの場合、time は null。出力フォーマットの例や説明文から日付を推測しないこと。`;
+  }
+
+  if (lang === "ko") {
+    return `## 시간 컨텍스트
+
+- 타임존: ${timezone}
+- 세션 소스 시간 범위: ${range}
+- 세션 소스 로컬 날짜: ${localDates}
+- 요약에 명시된 완전한 시각: ${summaryDateTimes}
+
+시간 규칙: 이 시간 컨텍스트 또는 요약 본문에 명시된 날짜만 사용할 것. 요약에 HH:MM만 있고 세션 소스의 로컬 날짜가 하나뿐일 때만 그 날짜와 HH:MM을 합성해 time에 넣을 수 있다. 요약이 여러 로컬 날짜에 걸쳐 있고 HH:MM만 있다면 time은 null. 출력 형식 예시나 설명 문구에서 날짜를 추론하지 말 것.`;
   }
 
   return `## Time Context

@@ -517,6 +517,22 @@ export class PreferencesManager {
   }
 
   /**
+   * 读取 Agent prompt 语言偏好（全局）。
+   * 默认 "follow"：跟随 Agent locale，并按模型语言能力回退。
+   * 值域见 shared/prompt-locale.ts。
+   */
+  getAgentPromptLocale() {
+    return this._cache.agent_prompt_locale || "follow";
+  }
+
+  /** 保存 Agent prompt 语言偏好（全局）。 */
+  setAgentPromptLocale(value) {
+    const prefs = this._mutableCopy();
+    prefs.agent_prompt_locale = typeof value === "string" ? value.trim() : "";
+    this.savePreferences(prefs);
+  }
+
+  /**
    * 读取用户名（全局）。名字描述的是使用者本人，不属于任何一个 agent，
    * 所以正源在这里，而不是各 agent 的 config.yaml。
    */

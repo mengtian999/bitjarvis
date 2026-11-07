@@ -15,6 +15,8 @@ export const LOCALES = [
   { value: 'ja',    label: '日本語' },
   { value: 'ko',    label: '한국어' },
   { value: 'en',    label: 'English' },
+  { value: 'fr',    label: 'Français' },
+  { value: 'de',    label: 'Deutsch' },
 ] as const;
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [

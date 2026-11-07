@@ -11,6 +11,7 @@ import fs, { promises as fsp } from "fs";
 import path from "path";
 import crypto from "crypto";
 import { getLocale, t } from "../i18n.ts";
+import { normalizePromptLang, pickPromptText } from "../../shared/prompt-locale.ts";
 
 export const MIN_CHANNEL_AGENT_MEMBERS = 2;
 
@@ -524,7 +525,16 @@ function formatTimestamp(date) {
  * @returns {string}
  */
 export function formatMessagesForLLM(messages) {
-  if (messages.length === 0) return getLocale().startsWith("zh") ? "(没有新消息)" : "(no new messages)";
+  if (messages.length === 0) {
+    return pickPromptText(normalizePromptLang(getLocale()), {
+      zh: "(没有新消息)",
+      ja: "(新しいメッセージはありません)",
+      fr: "(aucun nouveau message)",
+      de: "(keine neuen Nachrichten)",
+      ko: "(새 메시지 없음)",
+      en: "(no new messages)",
+    });
+  }
   return messages
     .map(m => `[${m.timestamp}] ${m.sender}: ${m.body}`)
     .join("\n\n");

@@ -19,6 +19,7 @@
  */
 
 import { estimateTextTokens } from "../lib/llm/estimate-text-tokens.ts";
+import { pickPromptText, type PromptLang } from "../shared/prompt-locale.ts";
 
 export type ToolCatalogOrigin = "mcp" | "builtin";
 
@@ -406,17 +407,27 @@ export function diffCatalogNames(before: readonly string[], after: readonly stri
  * reminder channel, which is short by design: the session is being told that
  * something moved, not handed a new listing. It can search for the details.
  */
-export function formatCatalogChangeLines(diff: ToolCatalogDiff, isZh: boolean): string[] {
+export function formatCatalogChangeLines(diff: ToolCatalogDiff, lang: PromptLang): string[] {
   const lines: string[] = [];
   if (diff.added.length > 0) {
-    lines.push(isZh
-      ? `外部工具新增：${diff.added.join("、")}`
-      : `External tools added: ${diff.added.join(", ")}`);
+    lines.push(pickPromptText(lang, {
+      zh: `外部工具新增：${diff.added.join("、")}`,
+      ja: `外部ツール追加：${diff.added.join("、")}`,
+      ko: `외부 도구 추가됨: ${diff.added.join(", ")}`,
+      fr: `Outils externes ajoutés : ${diff.added.join(", ")}`,
+      de: `Externe Werkzeuge hinzugefügt: ${diff.added.join(", ")}`,
+      en: `External tools added: ${diff.added.join(", ")}`,
+    }));
   }
   if (diff.removed.length > 0) {
-    lines.push(isZh
-      ? `外部工具移除：${diff.removed.join("、")}`
-      : `External tools removed: ${diff.removed.join(", ")}`);
+    lines.push(pickPromptText(lang, {
+      zh: `外部工具移除：${diff.removed.join("、")}`,
+      ja: `外部ツール削除：${diff.removed.join("、")}`,
+      ko: `외부 도구 제거됨: ${diff.removed.join(", ")}`,
+      fr: `Outils externes retirés : ${diff.removed.join(", ")}`,
+      de: `Externe Werkzeuge entfernt: ${diff.removed.join(", ")}`,
+      en: `External tools removed: ${diff.removed.join(", ")}`,
+    }));
   }
   return lines;
 }

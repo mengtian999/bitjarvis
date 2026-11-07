@@ -69,9 +69,26 @@ function computeRepairTargets(artifactsRoot) {
  * Impure: deletes every repair target under `{homeDir}/artifacts/`.
  * Best-effort per item — one failure never stops the rest. Never throws.
  * @param {{homeDir: string, log?: (msg: string) => void}} opts
- * @returns {Promise<{removed: string[], failed: string[]}>}
+ * @returns {Promise<{removed: string[], failed: string[], skippedReason?: string}>}
  */
-async function repairArtifacts({ homeDir, log = () => {} }) {
+async function repairArtifacts({ homeDir, resourcesPath = "", platformArch = "", log = () => {} }) {
+  // A5.2 守卫（docs/SIZE_AND_STARTUP_OPT.md §5）：repair 的恢复契约是"清空
+  // artifacts → 下次启动从随包 seed 重新解压"。安装后归档被稳定启动清理
+  // （A5.2）移除时，这个契约不再成立——照常清空会把用户留在"无 current、
+  // 无归档"的死角。此时拒绝 repair 并返回 skippedReason，由调用方给出
+  // "重新安装/走 OTA"的明确指引。resourcesPath/platformArch 未传（dev/测试）
+  // 时跳过检查，保持原行为。
+  if (resourcesPath && platformArch && artifactBoot.hasSeed(resourcesPath, platformArch)) {
+    const archives = artifactBoot.seedArchivesPresent(resourcesPath, platformArch);
+    if (!archives.server || !archives.renderer) {
+      const missing = [!archives.server ? "server" : null, !archives.renderer ? "renderer" : null]
+        .filter(Boolean).join(" + ");
+      const reason = `seed archives missing (${missing}) after post-install disk cleanup; `
+        + "repairing would leave no recovery path — reinstall the app (or update over the air) instead";
+      log(`[artifact-repair] refused: ${reason}`);
+      return { removed: [], failed: [], skippedReason: reason };
+    }
+  }
   const artifactsRoot = pointerStore.artifactsRoot(homeDir);
   const targets = computeRepairTargets(artifactsRoot);
   const removed = [];

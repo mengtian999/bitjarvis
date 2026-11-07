@@ -46,6 +46,8 @@ function buildLocaleLabels(t: (k: string) => string): Record<string, string> {
     'ja': t('settings.locale.ja'),
     'ko': t('settings.locale.ko'),
     'en': t('settings.locale.en'),
+    'fr': t('settings.locale.fr'),
+    'de': t('settings.locale.de'),
   };
 }
 

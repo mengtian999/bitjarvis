@@ -14,6 +14,8 @@ import type {
   MemoryFactsPayload,
 } from "./env-change-ledger.ts";
 
+import type { PromptLang } from "../shared/prompt-locale.ts";
+import { pickPromptText } from "../shared/prompt-locale.ts";
 import { estimateTextTokens } from "../lib/llm/estimate-text-tokens.ts";
 
 export const REMINDER_BLOCK_PREFIX = "[jarvis_reminder";
@@ -233,15 +235,27 @@ function entriesVisibleToAgent(entries: EnvChangeEntry[], recipientAgentId: stri
   return entries.filter((entry) => entry.scope.agentId === recipientAgentId);
 }
 
-function formatMemoryFactsLine(payload: Readonly<MemoryFactsPayload>, isZh: boolean): string {
-  const lines = payload.addedLines.join(isZh ? "；" : "; ");
-  return isZh ? `记忆新增事实：${lines}` : `New memory facts recorded: ${lines}`;
+function formatMemoryFactsLine(payload: Readonly<MemoryFactsPayload>, lang: PromptLang): string {
+  const lines = payload.addedLines.join(lang === "zh" || lang === "zh-TW" || lang === "ja" ? "；" : "; ");
+  return pickPromptText(lang, {
+    zh: `记忆新增事实：${lines}`,
+    ja: `記憶に新しい事実を記録：${lines}`,
+    fr: `Nouveaux faits mémorisés : ${lines}`,
+    de: `Neue Gedächtnisfakten aufgezeichnet: ${lines}`,
+    ko: `새로운 기억 사실 기록됨: ${lines}`,
+    en: `New memory facts recorded: ${lines}`,
+  });
 }
 
-function formatCompactionLine(isZh: boolean): string {
-  return isZh
-    ? "上下文已压缩，早期对话已被总结"
-    : "Context has been compacted; earlier turns were summarized";
+function formatCompactionLine(lang: PromptLang): string {
+  return pickPromptText(lang, {
+    zh: "上下文已压缩，早期对话已被总结",
+    ja: "コンテキストが圧縮され、以前の対話は要約されました",
+    fr: "Le contexte a été compacté ; les tours précédents ont été résumés",
+    de: "Der Kontext wurde kompaktiert; frühere Runden wurden zusammengefasst",
+    ko: "컨텍스트가 압축되어 이전 대화가 요약되었습니다",
+    en: "Context has been compacted; earlier turns were summarized",
+  });
 }
 
 function normalizeUnavailableToolNames(value: unknown): string[] {
@@ -257,17 +271,22 @@ function sameNames(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((name, index) => name === right[index]);
 }
 
-function formatUnavailableToolsLine(names: readonly string[], isZh: boolean): string {
-  return isZh
-    ? `以下会话工具当前不可用：${names.join("、")}`
-    : `These session tools are currently unavailable: ${names.join(", ")}`;
+function formatUnavailableToolsLine(names: readonly string[], lang: PromptLang): string {
+  return pickPromptText(lang, {
+    zh: `以下会话工具当前不可用：${names.join("、")}`,
+    ja: `以下のセッションツールは現在利用できません：${names.join("、")}`,
+    fr: `Ces outils de session sont actuellement indisponibles : ${names.join(", ")}`,
+    de: `Diese Session-Werkzeuge sind derzeit nicht verfügbar: ${names.join(", ")}`,
+    ko: `다음 세션 도구를 현재 사용할 수 없습니다: ${names.join(", ")}`,
+    en: `These session tools are currently unavailable: ${names.join(", ")}`,
+  });
 }
 
-function selectUnavailableToolBatch(names: readonly string[], isZh: boolean): string[] {
+function selectUnavailableToolBatch(names: readonly string[], lang: PromptLang): string[] {
   const batch: string[] = [];
   for (const name of names) {
     const candidate = [...batch, name];
-    const line = `- ${formatUnavailableToolsLine(candidate, isZh)}`;
+    const line = `- ${formatUnavailableToolsLine(candidate, lang)}`;
     if (line.length > BLOCK_BODY_CHAR_LIMIT) break;
     batch.push(name);
   }
@@ -278,7 +297,7 @@ export function collectReminderBlock({
   sessionEntry,
   ledger,
   recipientAgentId,
-  isZh,
+  lang,
   unavailableToolNames = [],
   referenceText = "",
   referenceBudgetTokens = 0,
@@ -287,7 +306,8 @@ export function collectReminderBlock({
   sessionEntry: ReminderSessionEntry;
   ledger: EnvChangeLedger;
   recipientAgentId: string;
-  isZh: boolean;
+  /** prompt 语言（shared/prompt-locale.ts 的 PromptLang），替代改造前的 isZh 布尔值 */
+  lang: PromptLang;
   unavailableToolNames?: string[];
   /** Reference material to hand over once, such as a deferred-tool listing. */
   referenceText?: string;
@@ -328,7 +348,7 @@ export function collectReminderBlock({
   const stillAcceptedUnavailableToolNames = acceptedUnavailableToolNames.filter(
     (name) => currentUnavailableSet.has(name),
   );
-  const renderedUnavailableToolNames = selectUnavailableToolBatch(newUnavailableToolNames, isZh);
+  const renderedUnavailableToolNames = selectUnavailableToolBatch(newUnavailableToolNames, lang);
   const nextAcceptedUnavailableToolNames = normalizeUnavailableToolNames([
     ...stillAcceptedUnavailableToolNames,
     ...renderedUnavailableToolNames,
@@ -340,13 +360,13 @@ export function collectReminderBlock({
   );
 
   if (hasNewOutage) {
-    lines.push(`- ${formatUnavailableToolsLine(renderedUnavailableToolNames, isZh)}`);
+    lines.push(`- ${formatUnavailableToolsLine(renderedUnavailableToolNames, lang)}`);
   }
   const broadcastLines = Array.isArray(catalogBroadcast?.lines) ? catalogBroadcast.lines : [];
   for (const line of broadcastLines) lines.push(`- ${line}`);
-  if (hasPendingCompaction) lines.push(`- ${formatCompactionLine(isZh)}`);
+  if (hasPendingCompaction) lines.push(`- ${formatCompactionLine(lang)}`);
   for (const entry of memoryFactsEntries(entries)) {
-    lines.push(`- ${formatMemoryFactsLine(entry.payload as Readonly<MemoryFactsPayload>, isZh)}`);
+    lines.push(`- ${formatMemoryFactsLine(entry.payload as Readonly<MemoryFactsPayload>, lang)}`);
   }
 
   // The listing is delivered exactly once per session. Re-sending it would

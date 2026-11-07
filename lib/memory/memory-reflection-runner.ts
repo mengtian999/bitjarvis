@@ -1,6 +1,7 @@
 import { runSessionSnapshotSideTask } from "../llm/session-snapshot-side-task-runner.ts";
 import { scrubPII } from "../pii-guard.ts";
 import { getLocale } from "../i18n.ts";
+import { normalizePromptLang, pickPromptText } from "../../shared/prompt-locale.ts";
 import {
   MAX_ROLLING_SUMMARY_FORMAT_REPAIRS,
   buildRollingSummaryFormatRequirements,
@@ -14,10 +15,15 @@ export const MEMORY_REFLECTION_TEMPLATE_VERSION = "memory-reflection.v3";
 export const MEMORY_REFLECTION_REPAIR_TEMPLATE_VERSION = "memory-reflection-repair.v1";
 
 function buildTimelineTimestampInstruction(locale = "zh-CN") {
-  if (String(locale || "").startsWith("zh")) {
-    return "事情经过每个非空列表项都必须从上方 session 消息时间戳提取 YYYY-MM-DD HH:MM 时间标注；不要只写 HH:MM。工作内容只保留到大主题层级。";
-  }
-  return "Every non-empty Timeline list item must include a YYYY-MM-DD HH:MM timestamp copied from the session message timestamps above; do not use date-less HH:MM only. Keep work content at the broad-theme level.";
+  const lang = normalizePromptLang(String(locale || ""));
+  return pickPromptText(lang, {
+    zh: "事情经过每个非空列表项都必须从上方 session 消息时间戳提取 YYYY-MM-DD HH:MM 时间标注；不要只写 HH:MM。工作内容只保留到大主题层级。",
+    ja: "Timeline セクションの空でない各リスト項目には、上記の session メッセージのタイムスタンプから YYYY-MM-DD HH:MM の時刻表記を必ず取り込むこと。HH:MM のみで書かないこと。仕事関連の内容は大きなテーマ階層までしか残さないこと。",
+    ko: "Timeline 섹션의 비어 있지 않은 각 리스트 항목에는 위 session 메시지 타임스탬프에서 YYYY-MM-DD HH:MM 시각 표기를 반드시 뽑아 넣을 것. HH:MM만 쓰지 말 것. 업무 내용은 큰 주제 수준까지만 남길 것.",
+    fr: "Chaque élément de liste non vide de la section Timeline doit inclure un horodatage YYYY-MM-DD HH:MM copié depuis les horodatages des messages de session ci-dessus ; n'écris pas HH:MM seul. Ne conserve le contenu professionnel qu'au niveau des grands thèmes.",
+    de: "Jedes nicht leere Listenelement im Timeline-Abschnitt muss einen Zeitstempel YYYY-MM-DD HH:MM enthalten, kopiert aus den Session-Nachrichten-Zeitstempeln oben; schreibe nicht nur HH:MM. Behalte Arbeitsinhalte nur auf der Ebene der großen Themen.",
+    en: "Every non-empty Timeline list item must include a YYYY-MM-DD HH:MM timestamp copied from the session message timestamps above; do not use date-less HH:MM only. Keep work content at the broad-theme level.",
+  });
 }
 
 export function buildMemoryReflectionSuffix({ previousSummary = "", timeZone = "UTC", locale = "zh-CN" } = {}) {

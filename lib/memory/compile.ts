@@ -21,6 +21,7 @@ import { DAY_BOUNDARY_HOUR, getLogicalDay, getLogicalDayForDate, shiftLogicalDat
 import { callText, DEFAULT_CALL_TEXT_TIMEOUT_MS } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getLocale } from "../i18n.ts";
+import { normalizePromptLang, pickPromptText, type PromptLang } from "../../shared/prompt-locale.ts";
 import { atomicWriteSync, safeReadFile } from "../../shared/safe-fs.ts";
 import {
   normalizeCompiledLLMResult,
@@ -48,11 +49,22 @@ import { createModuleLogger } from "../debug-log.ts";
 
 const log = createModuleLogger("memory-compile");
 
-function _isZh() { return getLocale().startsWith("zh"); }
+function _promptLang(): PromptLang { return normalizePromptLang(getLocale()); }
+/** memory.md 标题与 compiled-memory-snapshot 解析器之间的兼容约束：只允许 zh / en */
+function _isZh() { const lang = _promptLang(); return lang === "zh" || lang === "zh-TW"; }
 
 const EMPTY_MEMORY_ZH = "（暂无记忆）\n";
 const EMPTY_MEMORY_EN = "(No memory yet)\n";
-export function getEmptyMemory() { return _isZh() ? EMPTY_MEMORY_ZH : EMPTY_MEMORY_EN; }
+export function getEmptyMemory() {
+  return pickPromptText(_promptLang(), {
+    zh: EMPTY_MEMORY_ZH,
+    ja: "（まだ記憶がありません）\n",
+    ko: "(아직 기억이 없습니다)\n",
+    fr: "(pas encore de mémoire)\n",
+    de: "(noch kein Gedächtnis)\n",
+    en: EMPTY_MEMORY_EN,
+  });
+}
 
 // editable-facts-state.json 只做增量编译水位线跟踪，与产物文件名（facts.md）解耦。
 export const EDITABLE_FACTS_STATE_FILE = "editable-facts-state.json";
@@ -276,11 +288,18 @@ function timelineEventsForLogicalDate(summaries, logicalDate, opts: { includeFal
 }
 
 function formatTimelineEventsForCompile(events, opts: { since?: any; includeRevisionMarker?: boolean } = {}) {
-  const isZh = _isZh();
+  const lang = _promptLang();
   return (events || []).map((event) => {
     const isRevision = opts.includeRevisionMarker && opts.since && !isAfterIso(event.summaryCreatedAt, opts.since);
     const marker = isRevision
-      ? (isZh ? "（取代先前相关记述）\n" : "(supersedes prior mention)\n")
+      ? pickPromptText(lang, {
+          zh: "（取代先前相关记述）\n",
+          ja: "（以前の関連記述を置き換え）\n",
+          ko: "(이전 관련 기술을 대체함)\n",
+          fr: "(remplace la mention antérieure)\n",
+          de: "(ersetzt die frühere Angabe)\n",
+          en: "(supersedes prior mention)\n",
+        })
       : "";
     return `${marker}- ${event.timeLabel} ${event.body}`.trim();
   }).join("\n");
@@ -352,18 +371,29 @@ export async function compileToday(summaryManager, outputPath, resolvedModel, op
   }
 
   const previousDraft = normalizeCompiledSectionBody(safeReadFile(outputPath, ""));
-  const isZh = _isZh();
+  const lang = _promptLang();
   const delta = formatTimelineEventsForCompile(events, {
     since: watermark,
     includeRevisionMarker: true,
   });
+  const deltaInput = pickPromptText(lang, {
+    zh: `## 新增或修订的时间线条目（delta）\n\n${delta}`,
+    ja: `## 追加・修正されたタイムラインエントリー（delta）\n\n${delta}`,
+    ko: `## 추가 또는 수정된 타임라인 항목(delta)\n\n${delta}`,
+    fr: `## Entrées de timeline ajoutées ou révisées (delta)\n\n${delta}`,
+    de: `## Neue oder überarbeitete Timeline-Einträge (delta)\n\n${delta}`,
+    en: `## New or revised timeline entries (delta)\n\n${delta}`,
+  });
   const input = previousDraft
-    ? (isZh
-        ? `## 上一版今日草稿\n\n${previousDraft}\n\n## 新增或修订的时间线条目（delta）\n\n${delta}`
-        : `## Previous today draft\n\n${previousDraft}\n\n## New or revised timeline entries (delta)\n\n${delta}`)
-    : (isZh
-        ? `## 新增或修订的时间线条目（delta）\n\n${delta}`
-        : `## New or revised timeline entries (delta)\n\n${delta}`);
+    ? pickPromptText(lang, {
+        zh: `## 上一版今日草稿\n\n${previousDraft}\n\n${deltaInput}`,
+        ja: `## 前回の今日ドラフト\n\n${previousDraft}\n\n${deltaInput}`,
+        ko: `## 이전 버전 오늘 초안\n\n${previousDraft}\n\n${deltaInput}`,
+        fr: `## Brouillon du jour précédent\n\n${previousDraft}\n\n${deltaInput}`,
+        de: `## Vorheriger heutiger Entwurf\n\n${previousDraft}\n\n${deltaInput}`,
+        en: `## Previous today draft\n\n${previousDraft}\n\n${deltaInput}`,
+      })
+    : deltaInput;
 
   const result = await _compactLLM(
     input,
@@ -662,14 +692,25 @@ export async function compileLongterm(content, longtermPath, resolvedModel) {
 
   const prevLongterm = safeReadFile(longtermPath, "").trim();
 
-  const isZh = _isZh();
+  const lang = _promptLang();
+  const newContentInput = pickPromptText(lang, {
+    zh: `## 新沉淀内容\n\n${newContent}`,
+    ja: `## 新しく定着した内容\n\n${newContent}`,
+    ko: `## 새로 정착된 내용\n\n${newContent}`,
+    fr: `## Contenu nouvellement consolidé\n\n${newContent}`,
+    de: `## Neu festgezogener Inhalt\n\n${newContent}`,
+    en: `## Newly settled content\n\n${newContent}`,
+  });
   const input = prevLongterm
-    ? (isZh
-        ? `## 上一份长期情况\n\n${prevLongterm}\n\n## 新沉淀内容\n\n${newContent}`
-        : `## Previous long-term context\n\n${prevLongterm}\n\n## Newly settled content\n\n${newContent}`)
-    : (isZh
-        ? `## 新沉淀内容\n\n${newContent}`
-        : `## Newly settled content\n\n${newContent}`);
+    ? pickPromptText(lang, {
+        zh: `## 上一份长期情况\n\n${prevLongterm}\n\n${newContentInput}`,
+        ja: `## 前回の長期状況\n\n${prevLongterm}\n\n${newContentInput}`,
+        ko: `## 이전 장기 상황\n\n${prevLongterm}\n\n${newContentInput}`,
+        fr: `## Situation long terme précédente\n\n${prevLongterm}\n\n${newContentInput}`,
+        de: `## Vorheriger Langzeitkontext\n\n${prevLongterm}\n\n${newContentInput}`,
+        en: `## Previous long-term context\n\n${prevLongterm}\n\n${newContentInput}`,
+      })
+    : newContentInput;
 
   const result = await _compactLLM(
     input,
@@ -987,14 +1028,25 @@ export async function compileEditableFacts(summaryManager, outputPath, resolvedM
 
   const prevFacts = normalizeCompiledSectionBody(safeReadFile(outputPath, ""));
   const newFacts = factParts.join("\n");
-  const isZh = _isZh();
+  const lang = _promptLang();
+  const newFactsInput = pickPromptText(lang, {
+    zh: `## 新增候选 Facts\n\n${newFacts}`,
+    ja: `## 新しい候補 Facts\n\n${newFacts}`,
+    ko: `## 새로운 후보 Facts\n\n${newFacts}`,
+    fr: `## Nouveaux faits candidats\n\n${newFacts}`,
+    de: `## Neue Kandidaten-Fakten\n\n${newFacts}`,
+    en: `## New Candidate Facts\n\n${newFacts}`,
+  });
   const combined = prevFacts
-    ? (isZh
-        ? `## 当前可信 Facts\n\n${prevFacts}\n\n## 新增候选 Facts\n\n${newFacts}`
-        : `## Current Trusted Facts\n\n${prevFacts}\n\n## New Candidate Facts\n\n${newFacts}`)
-    : (isZh
-        ? `## 新增候选 Facts\n\n${newFacts}`
-        : `## New Candidate Facts\n\n${newFacts}`);
+    ? pickPromptText(lang, {
+        zh: `## 当前可信 Facts\n\n${prevFacts}\n\n${newFactsInput}`,
+        ja: `## 現在の信頼できる Facts\n\n${prevFacts}\n\n${newFactsInput}`,
+        ko: `## 현재 신뢰할 수 있는 Facts\n\n${prevFacts}\n\n${newFactsInput}`,
+        fr: `## Faits fiables actuels\n\n${prevFacts}\n\n${newFactsInput}`,
+        de: `## Aktuell vertrauenswürdige Fakten\n\n${prevFacts}\n\n${newFactsInput}`,
+        en: `## Current Trusted Facts\n\n${prevFacts}\n\n${newFactsInput}`,
+      })
+    : newFactsInput;
   const result = await _compactLLM(
     combined,
     buildCompileEditableFactsPrompt(getLocale()),
@@ -1029,18 +1081,26 @@ export function assemble(factsPath, todayPath, weekPath, longtermPath, memoryMdP
 
 export function buildCompiledMemoryMarkdown({ facts = "", today = "", week = "", longterm = "" } = {}) {
   // 四个标题始终保留，空栏写占位符，避免格式漂移
-  const isZh = _isZh();
-  const empty = isZh ? "（暂无）" : "(none)";
+  // 标题保持 zh/en 二元：compiled-memory-snapshot.ts 的解析器只认识这两套标题别名
+  const lang = _promptLang();
+  const empty = pickPromptText(lang, {
+    zh: "（暂无）",
+    ja: "（まだありません）",
+    ko: "(아직 없음)",
+    fr: "(aucun pour l'instant)",
+    de: "(noch nichts)",
+    en: "(none)",
+  });
   const section = (title, content) =>
     `## ${title}\n\n${normalizeCompiledSectionBody(content) || empty}`;
   const weekSection = (title, content) =>
     `## ${title}\n\n${normalizeCompiledWeekSectionBody(content) || empty}`;
 
   return [
-    section(isZh ? "重要事实" : "Key facts", facts),
-    section(isZh ? "今天" : "Today", today),
-    weekSection(isZh ? "本周早些时候" : "Earlier this week", week),
-    section(isZh ? "长期情况" : "Long-term context", longterm),
+    section(_isZh() ? "重要事实" : "Key facts", facts),
+    section(_isZh() ? "今天" : "Today", today),
+    weekSection(_isZh() ? "本周早些时候" : "Earlier this week", week),
+    section(_isZh() ? "长期情况" : "Long-term context", longterm),
   ].join("\n\n") + "\n";
 }
 

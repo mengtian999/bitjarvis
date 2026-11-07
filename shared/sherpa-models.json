@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "comment": "sherpa-onnx 本地语音模型清单（B1 按需下载的单一数据源）。scripts/download-sherpa-onnx.mjs（构建期 staging）与 server 端运行时下载器（server/routes/sherpa.ts + lib/sherpa/model-downloader.ts）共用。verify 数组列出解压后必须存在且哈希一致的文件（相对 models/<kind>/<dir>/ 根）；sha256 于 2026-11-05 从 vendor 内已提取模型计算。",
+  "downloader": {
+    "timeoutMs": 1800000,
+    "fetchAttempts": 3
+  },
+  "models": [
+    {
+      "id": "asr-sense-voice",
+      "kind": "asr",
+      "dir": "sense-voice",
+      "archive": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+      "langs": [
+        "zh-CN",
+        "zh-TW",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "verify": [
+        {
+          "path": "model.int8.onnx",
+          "sha256": "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"
+        },
+        {
+          "path": "tokens.txt",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "id": "tts-zh",
+      "kind": "tts",
+      "dir": "zh",
+      "archive": "vits-zh-hf-fanchen-C.tar.bz2",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-zh-hf-fanchen-C.tar.bz2",
+      "langs": [
+        "zh-CN",
+        "zh-TW"
+      ],
+      "verify": [
+        {
+          "path": "vits-zh-hf-fanchen-C.onnx",
+          "sha256": "77c4bf60602d7d83f0e320063d15655e3bfc51d25b728d727203cd13e77521ab"
+        }
+      ]
+    },
+    {
+      "id": "tts-kokoro-multi",
+      "kind": "tts",
+      "dir": "kokoro-multi",
+      "archive": "kokoro-multi-lang-v1_1.tar.bz2",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2",
+      "langs": [
+        "en",
+        "ja",
+        "fr"
+      ],
+      "verify": [
+        {
+          "path": "model.onnx",
+          "sha256": "acc4adc175b9d9986106cd20060329673ad5a2e12ef3c557d2d3745b694f8b38"
+        },
+        {
+          "path": "voices.bin",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "id": "tts-ko",
+      "kind": "tts",
+      "dir": "ko",
+      "archive": "vits-mimic3-ko_KO-kss_low.tar.bz2",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-mimic3-ko_KO-kss_low.tar.bz2",
+      "langs": [
+        "ko"
+      ],
+      "verify": [
+        {
+          "path": "ko_KO-kss_low.onnx",
+          "sha256": "552af73776a1c2a705d828e1435592419eb42b1de9cc2bcb3bb5bcf6efb90cd9"
+        }
+      ]
+    },
+    {
+      "id": "asr-whisper-base",
+      "kind": "asr",
+      "dir": "whisper-base",
+      "archive": "sherpa-onnx-whisper-base.tar.bz2",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2",
+      "langs": [
+        "fr",
+        "de"
+      ],
+      "verify": [
+        {
+          "path": "tokens.txt",
+          "sha256": null
+        }
+      ]
+    }
+  ]
+}

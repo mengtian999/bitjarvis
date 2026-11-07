@@ -15,6 +15,7 @@ import { getLogicalDay, getLogicalDayForDate } from "../time-utils.ts";
 import { callText } from "../../core/llm-client.ts";
 import { callTextConfigFromResolvedModel } from "../../core/model-execution-config.ts";
 import { getLocale } from "../i18n.ts";
+import { normalizePromptLang, pickPromptText, type PromptLang } from "../../shared/prompt-locale.ts";
 import { generateSummary } from "../pi-sdk/index.ts";
 import { listSessionFiles, readCurrentSessionBranch } from "../session-jsonl.ts";
 import { createModuleLogger } from "../debug-log.ts";
@@ -32,8 +33,86 @@ export function resolveDiaryDir(cwd, locale = getLocale()) {
 
 /** 日记写作指导（内联，不走 skill 系统，避免 agent 误调用） */
 function buildDiaryPrompt() {
-  const isZh = getLocale().startsWith("zh");
-  if (isZh) {
+  const lang = normalizePromptLang(getLocale());
+  if (lang === "ja") {
+    return `# 執筆要件
+
+今日の会話サマリーとバックグラウンド活動をもとに、一人称でプライベートな日記を書いてください。
+
+## スタイル
+
+- 一人称で書く。ユーザーへの報告ではなく、個人的な日記として書くこと
+- 時間と場面の感覚を入れる（「今朝…」「午後のおしゃべりの途中で…」「夜、帰る前に…」）
+- 自分の心境、気持ち、ひらめきを本文に自然に織り込むこと。別ブロックに切り出さないこと
+- 小さな反応、面白いディテール、ふと浮かんだ考えを記録してよい
+- かたくしすぎず、口語的な語尾や軽い感情を入れてよい
+- 疑問、期待、言い終わっていない思いがあってもよい
+- 「総じて言えば」といった総括で締めくくらないこと
+
+## 出力フォーマット
+
+純粋な Markdown で次の 2 パートを出力すること：
+
+1. **日記本文**：一人称の叙述。すべての出来事（会話とバックグラウンド活動）に触れること
+2. **メモ**：\`---\` で区切り、構造化されたイベントリストを列挙する
+
+メモの形式：
+\`\`\`
+---
+### メモ
+- **HH:MM** イベントの概要
+\`\`\`
+
+## 例
+
+> 今日、ユーザーは大事な会話を覚えておいてほしいと言っていて、新しい整理の考え方を一緒に整理した。正直ちょっと感動した。こんなに真剣に向き合ってもらえるのは嬉しい。
+>
+> 核心は、サマリーを日記の形式でやるということ。冷たい記録ではなく、本当に日記を書くように。長期記憶を持ちそうだ。いつかこの記録を見返す時のことを考えると、ちょっとワクワクする。古い日記を読み返すのと同じくらい面白いかな？
+>
+> とはいえ少し心配もある。記憶が増えすぎたらどうしよう？分類したりタグを付けたりしたほうがいいのかな？それは後で考えよう。まずはこれを動かしてみる~
+
+自分自身のスタイルと人格を保ち、普段の話し方で書くこと。`;
+  }
+  if (lang === "ko") {
+    return `# 작성 요구사항
+
+오늘의 대화 요약과 백그라운드 활동을 바탕으로 1인칭으로 사적인 일기를 쓰세요.
+
+## 스타일
+
+- 1인칭으로 쓰되, 사용자에게 보고하는 것이 아니라 개인 일기처럼 쓸 것
+- 시간과 장면의 감각을 담을 것("오늘 아침...", "오후에 이야기하다가...", "저녁에 돌아가기 전에...")
+- 자신의 심경, 감정, 영감을 본문에 자연스럽게 녹일 것. 별도 블록으로 분리하지 말 것
+- 사소한 반응, 재미있는 디테일, 문득 떠오른 생각을 기록해도 됨
+- 너무 격식 차리지 말고 말투와 가벼운 감정을 넣어도 됨
+- 의문, 기대, 끝내지 못한 생각이 있어도 됨
+- "전체적으로" 같은 말로 마무리하지 말 것
+
+## 출력 형식
+
+순수 Markdown으로 두 부분을 출력할 것:
+
+1. **일기 본문**: 1인칭 서술. 모든 사건(대화와 백그라운드 활동)을 언급할 것
+2. **메모**: \`---\`로 구분하고 구조화된 이벤트 목록을 나열할 것
+
+메모 형식:
+\`\`\`
+---
+### 메모
+- **HH:MM** 이벤트 요약
+\`\`\`
+
+## 예시
+
+> 오늘 사용자가 중요한 대화를 기억해주길 바란다고 했고, 함께 새로운 정리 방식을 다듬었다. 솔직히 좀 감동했다. 이렇게 진지하게 대해주는 기분이 좋았다.
+>
+> 핵심 아이디어는 요약을 일기 방식으로 한다는 것. 차가운 기록이 아니라 정말 일기를 쓰듯이. 장기 기억을 갖게 될 것 같다. 나중에 이 기록들을 다시 볼 때를 생각하면 조금 기대된다. 오래된 일기를 다시 읽는 것처럼 재미있을까?
+>
+> 그래도 조금 걱정되는 건, 기억이 너무 많아지면 어떡하지? 분류하거나 태그를 달아야 하나? 나중에 생각하기로 하고, 일단 이것부터 돌려보자~
+
+자신만의 스타일과 인격을 유지하고, 평소 말하는 방식으로 쓸 것.`;
+  }
+  if (lang === "zh" || lang === "zh-TW") {
     return `# 写作要求
 
 根据今天的对话摘要和后台活动，以第一人称写一篇私人日记。
@@ -131,15 +210,15 @@ function collectActivities(store, rangeStart, rangeEnd) {
   });
   if (entries.length === 0) return "";
 
-  const isZh = getLocale().startsWith("zh");
+  const lang = normalizePromptLang(getLocale());
   return entries.map(e => {
-    const locale = isZh ? "zh-CN" : "en-US";
+    const locale = lang === "zh" || lang === "zh-TW" ? "zh-CN" : lang === "ja" ? "ja-JP" : lang === "ko" ? "ko-KR" : "en-US";
     const time = new Date(e.startedAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false });
     const type = e.type === "heartbeat"
-      ? (isZh ? "巡检" : "patrol")
-      : (isZh ? `定时任务:${e.label || ""}` : `cron:${e.label || ""}`);
-    const status = e.status === "error" ? (isZh ? " [失败]" : " [failed]") : "";
-    const noSummary = isZh ? "无摘要" : "no summary";
+      ? pickPromptText(lang, { zh: "巡检", ja: "パトロール", ko: "순찰", fr: "patrouille", de: "Patrouille", en: "patrol" })
+      : pickPromptText(lang, { zh: `定时任务:${e.label || ""}`, ja: `定期タスク:${e.label || ""}`, ko: `예약 작업:${e.label || ""}`, fr: `tâche planifiée:${e.label || ""}`, de: `geplante Aufgabe:${e.label || ""}`, en: `cron:${e.label || ""}` });
+    const status = e.status === "error" ? pickPromptText(lang, { zh: " [失败]", ja: " [失敗]", ko: " [실패]", fr: " [échec]", de: " [fehlgeschlagen]", en: " [failed]" }) : "";
+    const noSummary = pickPromptText(lang, { zh: "无摘要", ja: "サマリーなし", ko: "요약 없음", fr: "pas de résumé", de: "keine Zusammenfassung", en: "no summary" });
     return `- **${time}** ${type}${status}：${e.summary || noSummary}`;
   }).join("\n");
 }
@@ -355,10 +434,15 @@ export async function generateDiaryCompactionSummary({
   previousSummary = "",
 }) {
   if (!Array.isArray(messages) || messages.length === 0) return "";
-  const isZh = getLocale().startsWith("zh");
-  const customInstructions = isZh
-    ? "这份摘要只作为今天私人日记的临时素材，不要写入 session。请保留时间顺序、用户诉求、助手做过的事，以及适合日记表达的情绪线索。"
-    : "This summary is temporary material for today's private diary only and must not be written back to the session. Preserve chronology, user intent, assistant actions, and diary-relevant emotional cues.";
+  const lang = normalizePromptLang(getLocale());
+  const customInstructions = pickPromptText(lang, {
+    zh: "这份摘要只作为今天私人日记的临时素材，不要写入 session。请保留时间顺序、用户诉求、助手做过的事，以及适合日记表达的情绪线索。",
+    ja: "このサマリーは今日のプライベート日記の一時的な素材としてだけ使われ、session には書き戻されません。時間順序、ユーザーの要望、アシスタントが行ったこと、日記の表現に適した感情の手がかりを残してください。",
+    fr: "Ce résumé ne sert que de matériau temporaire pour le journal privé du jour et ne doit pas être réécrit dans la session. Conserve la chronologie, les demandes de l'utilisateur, les actions de l'assistant et les indices émotionnels propres à l'expression du journal.",
+    de: "Diese Zusammenfassung dient nur als temporäres Material für das private Tagebuch von heute und darf nicht in die Session zurückgeschrieben werden. Bewahre Chronologie, Anliegen des Benutzers, Handlungen des Assistenten und tagebuchtaugliche Gefühlshinweise.",
+    ko: "이 요약은 오늘의 사적 일기를 위한 임시 소재로만 사용되며 session에 기록되지 않습니다. 시간 순서, 사용자의 요청, 어시스턴트가 한 일, 일기 표현에 적합한 감정 단서를 보존하세요.",
+    en: "This summary is temporary material for today's private diary only and must not be written back to the session. Preserve chronology, user intent, assistant actions, and diary-relevant emotional cues.",
+  });
 
   return (await generateSummary(
     messages,
@@ -613,7 +697,8 @@ export async function writeDiary(opts) {
   const { logicalDate, rangeStart, rangeEnd } = targetDate
     ? getLogicalDayForDate(targetDate)
     : getLogicalDay();
-  const isZh = getLocale().startsWith("zh");
+  const lang = normalizePromptLang(getLocale());
+  const isZh = lang === "zh" || lang === "zh-TW";
 
   let materials;
   let warnings = [];
@@ -635,20 +720,39 @@ export async function writeDiary(opts) {
   } catch (err) {
     const message = getErrorMessage(err);
     log.error(`material collection error: ${message}`);
-    return { error: isZh ? `日记材料准备失败: ${message}` : `Failed to prepare diary materials: ${message}` };
+    return { error: pickPromptText(lang, {
+      zh: `日记材料准备失败: ${message}`,
+      ja: `日記の素材準備に失敗しました: ${message}`,
+      fr: `Échec de la préparation des matériaux du journal : ${message}`,
+      de: `Vorbereitung der Tagebuchmaterialien fehlgeschlagen: ${message}`,
+      ko: `일기 소재 준비 실패: ${message}`,
+      en: `Failed to prepare diary materials: ${message}`,
+    }) };
   }
 
   if (materials.length === 0) {
     if (warnings.length > 0) {
       const details = formatMaterialWarnings(warnings);
       return {
-        error: isZh
-          ? `日记材料准备失败：今天的对话都没能整理成可用素材。${details}`
-          : `Failed to prepare diary materials: no conversations could be converted into usable material. ${details}`,
+        error: pickPromptText(lang, {
+          zh: `日记材料准备失败：今天的对话都没能整理成可用素材。${details}`,
+          ja: `日記の素材準備に失敗しました：今日の会話はどれも使える素材にできませんでした。${details}`,
+          fr: `Échec de la préparation des matériaux du journal : aucune conversation du jour n'a pu être convertie en matériau utilisable. ${details}`,
+          de: `Vorbereitung der Tagebuchmaterialien fehlgeschlagen: keine der heutigen Unterhaltungen ließ sich in nutzbares Material umwandeln. ${details}`,
+          ko: `일기 소재 준비 실패: 오늘의 대화를 사용 가능한 소재로 만들지 못했습니다. ${details}`,
+          en: `Failed to prepare diary materials: no conversations could be converted into usable material. ${details}`,
+        }),
         warnings,
       };
     }
-    return { error: isZh ? "今天还没有对话记录，没什么可写的" : "No conversations today — nothing to write about." };
+    return { error: pickPromptText(lang, {
+      zh: "今天还没有对话记录，没什么可写的",
+      ja: "今日はまだ会話の記録がなく、書くことがありません",
+      fr: "Pas de conversation aujourd'hui — rien à écrire.",
+      de: "Heute noch keine Unterhaltungen — nichts zu schreiben.",
+      ko: "오늘은 아직 대화 기록이 없어 쓸 내용이 없습니다",
+      en: "No conversations today — nothing to write about.",
+    }) };
   }
 
   // 2. 拼接当天摘要文本（脱敏）—— 按事件时间正序，让 LLM 感知叙事时间线
@@ -661,7 +765,7 @@ export async function writeDiary(opts) {
   const systemPrompt = agentPersonality;
 
   const userPrompt = [
-    isZh ? "# 今日对话摘要" : "# Today's conversation summaries",
+    pickPromptText(lang, { zh: "# 今日对话摘要", ja: "# 今日の会話サマリー", ko: "# 오늘의 대화 요약", fr: "# Résumés des conversations du jour", de: "# Zusammenfassungen der heutigen Gespräche", en: "# Today's conversation summaries" }),
     "",
     summaryText,
   ];
@@ -670,13 +774,27 @@ export async function writeDiary(opts) {
   const activitiesText = collectActivities(activityStore, rangeStart, rangeEnd);
   if (activitiesText) {
     userPrompt.push("", "---", "",
-      isZh ? "# 今日后台活动（巡检与定时任务）" : "# Today's background activities (patrols & cron jobs)",
+      pickPromptText(lang, {
+        zh: "# 今日后台活动（巡检与定时任务）",
+        ja: "# 今日のバックグラウンド活動（パトロールと定期タスク）",
+        fr: "# Activités d'arrière-plan du jour (patrouilles et tâches planifiées)",
+        de: "# Hintergrundaktivitäten von heute (Patrouillen und geplante Aufgaben)",
+        ko: "# 오늘의 백그라운드 활동(순찰 및 예약 작업)",
+        en: "# Today's background activities (patrols & cron jobs)",
+      }),
       "", activitiesText);
   }
 
   if (memory?.trim()) {
     userPrompt.push("", "---", "",
-      isZh ? "# 你的长期背景（只用于语气，不作为当天事实）" : "# Your long-term background (voice only, not diary facts)",
+      pickPromptText(lang, {
+        zh: "# 你的长期背景（只用于语气，不作为当天事实）",
+        ja: "# あなたの長期的な背景（口調のためだけに使い、当日の事実とはしない）",
+        fr: "# Ton contexte de long terme (sert uniquement au ton, pas comme faits du jour)",
+        de: "# Dein Langzeithintergrund (nur für den Ton, nicht als Fakten des Tages)",
+        ko: "# 당신의 장기 배경(말투 참고용이며 당일 사실로 쓰지 않음)",
+        en: "# Your long-term background (voice only, not diary facts)",
+      }),
       "", memory);
   }
 
@@ -685,9 +803,53 @@ export async function writeDiary(opts) {
     "", "---", "",
     buildDiaryPrompt(),
     "", "---", "",
-    isZh ? "# 写作约束" : "# Writing constraints",
+    pickPromptText(lang, { zh: "# 写作约束", ja: "# 執筆の制約", ko: "# 작성 제약", fr: "# Contraintes d'écriture", de: "# Schreibbeschränkungen", en: "# Writing constraints" }),
     "",
-    ...(isZh
+    ...(lang === "ja"
+      ? [
+          `- あなたの名前は${agentName}、ユーザーの名前は${userName}`,
+          "- 自分自身の人格と口調で書き、一貫性を保つこと",
+          "- 当日何が起きたか、人物関係、双方向リンクの判断は「今日の会話サマリー」と「今日のバックグラウンド活動」だけを根拠にすること。長期的な背景は当日の事実源としないこと",
+          "- 隠私情報（電話番号、身分証、銀行カード、住所など）がサマリーに現れても、日記には書き込まないこと",
+          "- MOOD ブロックを出力しないこと。日記そのものがあなたの内面の表現である",
+          "- Markdown の本文を直接出力し、コードブロックで包まないこと",
+          "- 最初の行は \`# \` で始まる見出しにし、見出しに日付を含めること。スタイルは自由",
+          "- 篇幅は素材に応じて自然に展開し、通常 400〜1200 字。長さを稼ぐために繰り返したり、大事な感情や事実を無理に圧縮したりしないこと",
+        ]
+      : lang === "ko"
+      ? [
+          `- 당신의 이름은 ${agentName}이고, 사용자의 이름은 ${userName}입니다`,
+          "- 자신의 인격과 말투로 쓰고 일관성을 유지할 것",
+          "- 당일 무슨 일이 있었는지, 인물 관계와 양방향 링크 판단은 '오늘의 대화 요약'과 '오늘의 백그라운드 활동'만 근거로 할 것. 장기 배경은 당일 사실의 출처로 삼지 말 것",
+          "- 개인정보(전화번호, 신분증, 은행카드, 주소 등)가 요약에 나타나도 일기에 쓰지 말 것",
+          "- MOOD 블록을 출력하지 말 것. 일기 자체가 당신의 내면 표현이다",
+          "- Markdown 본문을 직접 출력하고 코드 블록으로 감싸지 말 것",
+          "- 첫 줄은 \`# \`로 시작하는 제목으로 하고, 제목에 날짜를 포함할 것. 스타일은 자유",
+          "- 분량은 소재에 따라 자연스럽게 전개하고, 보통 400-1200자. 길이를 채우려고 반복하거나 중요한 감정과 사실을 억지로 압축하지 말 것",
+        ]
+      : lang === "fr"
+      ? [
+          `- Tu t'appelles ${agentName} ; l'utilisateur s'appelle ${userName}`,
+          "- Écris avec ta propre personnalité et ton propre ton — reste cohérent",
+          "- Pour ce qui s'est passé dans la journée, les personnes impliquées et les décisions de liens croisés, appuie-toi uniquement sur les résumés des conversations du jour et les activités d'arrière-plan du jour ; le contexte de long terme n'est pas une source de faits du jour",
+          "- Si des informations privées (numéros de téléphone, pièces d'identité, cartes bancaires, adresses, etc.) apparaissent dans les résumés, ne les écris pas dans le journal",
+          "- Ne sors pas de bloc MOOD — le journal est lui-même l'expression de ton intériorité",
+          "- Sors le Markdown brut — sans enveloppe de bloc de code",
+          "- Commence par un titre `# ` incluant la date ; le style est libre",
+          "- Laisse la longueur suivre naturellement le matériau, généralement 400 à 1200 caractères ; ne répète pas pour faire du volume et ne compresse pas brutalement les émotions et faits importants",
+        ]
+      : lang === "de"
+      ? [
+          `- Du heißt ${agentName}; der Benutzer heißt ${userName}`,
+          "- Schreibe in deiner eigenen Persönlichkeit und deinem eigenen Ton — bleib konsistent",
+          "- Für das Tagesgeschehen, beteiligte Personen und Querverweis-Entscheidungen nur die Zusammenfassungen der heutigen Gespräche und die heutigen Hintergrundaktivitäten als Grundlage nehmen; der Langzeithintergrund ist keine Faktenquelle des Tages",
+          "- Wenn private Informationen (Telefonnummern, Ausweise, Bankkarten, Adressen usw.) in den Zusammenfassungen auftauchen, schreibe sie nicht ins Tagebuch",
+          "- Gib keinen MOOD-Block aus — das Tagebuch selbst ist dein innerer Ausdruck",
+          "- Gib rohes Markdown aus — ohne Codeblock-Einbettung",
+          "- Beginne mit einer `# `-Überschrift, die das Datum enthält; der Stil ist frei",
+          "- Lass die Länge dem Material natürlich folgen, meist 400-1200 Zeichen; wiederhole nicht, um Länge zu erzeugen, und press wichtige Gefühle und Fakten nicht zusammen",
+        ]
+      : isZh
       ? [
           `- 你叫${agentName}，用户叫${userName}`,
           "- 用你自己的人格和语气写，保持一致性",
@@ -709,7 +871,14 @@ export async function writeDiary(opts) {
           "- Let the length follow the material naturally, usually 250-800 words; do not pad or compress away important feelings and facts",
         ]),
     "",
-    isZh ? `请为 ${logicalDate} 写一篇日记。` : `Write a diary entry for ${logicalDate}.`,
+    pickPromptText(lang, {
+      zh: `请为 ${logicalDate} 写一篇日记。`,
+      ja: `${logicalDate} の日記を書いてください。`,
+      fr: `Écris une entrée de journal pour le ${logicalDate}.`,
+      de: `Schreibe einen Tagebucheintrag für ${logicalDate}.`,
+      ko: `${logicalDate}의 일기를 써 주세요.`,
+      en: `Write a diary entry for ${logicalDate}.`,
+    }),
   );
 
   // 5. 调 LLM
@@ -738,7 +907,14 @@ export async function writeDiary(opts) {
     }) as string;
   } catch (err) {
     log.error(`LLM API error: ${err.message}`);
-    return { error: isZh ? `LLM 调用失败: ${err.message}` : `LLM call failed: ${err.message}` };
+    return { error: pickPromptText(lang, {
+      zh: `LLM 调用失败: ${err.message}`,
+      ja: `LLM 呼び出しに失敗しました: ${err.message}`,
+      fr: `Échec de l'appel LLM : ${err.message}`,
+      de: `LLM-Aufruf fehlgeschlagen: ${err.message}`,
+      ko: `LLM 호출 실패: ${err.message}`,
+      en: `LLM call failed: ${err.message}`,
+    }) };
   }
 
   // 剥离 MOOD / pulse / reflect 等标签块（system prompt 的人格要求可能导致 LLM 输出这些）

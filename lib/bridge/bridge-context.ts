@@ -1,5 +1,6 @@
 import { parseSessionKey } from "./session-key.ts";
 import { interactionCapabilitiesForPlatform } from "./interaction-capabilities.ts";
+import { normalizePromptLang } from "../../shared/prompt-locale.ts";
 
 export const BRIDGE_NOTIFY_PLATFORMS = ["wechat", "feishu", "dingtalk", "telegram", "qq", "matrix"];
 
@@ -24,7 +25,9 @@ const PLATFORM_LABELS = {
 
 
 function localeKey(locale) {
-  return String(locale || "").startsWith("zh") ? "zh" : "en";
+  const lang = normalizePromptLang(String(locale || ""));
+  // 平台名是品牌名（微信除外），ja / ko 直接沿用英文标签；zh-TW 复用 zh
+  return lang === "zh" || lang === "zh-TW" ? "zh" : "en";
 }
 
 export function bridgePlatformLabel(platform, locale = "zh") {

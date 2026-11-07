@@ -9,6 +9,7 @@
 import { Type } from "../pi-sdk/index.ts";
 import { loadConfig } from "../memory/config-loader.ts";
 import { getLocale, t } from "../i18n.ts";
+import { normalizePromptLang } from "../../shared/prompt-locale.ts";
 import { safeParseResponse } from "../../shared/safe-parse.ts";
 import { BrowserManager } from "../browser/browser-manager.ts";
 import {
@@ -115,10 +116,11 @@ function maxResultsForDisplay(maxResults) {
 }
 
 function anySearchLanguage(locale) {
-  const normalized = String(locale || "").toLowerCase();
-  if (normalized.startsWith("zh")) return "zh-CN";
-  if (normalized.startsWith("ja")) return "ja";
-  if (normalized.startsWith("ko")) return "ko";
+  // 搜索区域语言映射（非 prompt 文案）：经 prompt-locale 归一化，未知语言回退 en
+  const lang = normalizePromptLang(String(locale || ""));
+  if (lang === "zh" || lang === "zh-TW") return "zh-CN";
+  if (lang === "ja") return "ja";
+  if (lang === "ko") return "ko";
   return "en";
 }
 

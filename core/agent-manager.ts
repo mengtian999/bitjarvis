@@ -28,6 +28,8 @@ import { detachAgentFromBundles } from "../lib/skill-bundles/store.ts";
 import { assertKnownYuan, getAgentConfigRepairState } from "./yuan-registry.ts";
 import { assertValidAgentId, isValidAgentId } from "../shared/agent-id.ts";
 import { resolvePersonaLocale, resolvePersonaSource } from "./persona-source.ts";
+import { getAgentPromptPack } from "./agent-prompt-text.ts";
+import { normalizePromptLang, resolveTemplatePath } from "../shared/prompt-locale.ts";
 
 const log = createModuleLogger("agent-mgr");
 const DELETED_AGENT_TOMBSTONE = ".deleted-agent.json";
@@ -108,7 +110,7 @@ function agentMatchesListOptions(agent, options: any = {}) {
 // 传入 engine.getLocale() 的结果，读不到时按 resolveLocale 的末端语义落 "en"。
 function fallbackUserNameForLocale(locale, globalLocale = "") {
   const effective = locale || globalLocale || "en";
-  return String(effective).startsWith("zh") ? "用户" : "User";
+  return getAgentPromptPack(normalizePromptLang(effective)).userNameFallback;
 }
 
 function renderIdentityTemplateForList(identityMd, cfg, agentId, globalLocale = "", globalUserName = "") {
@@ -694,17 +696,17 @@ export class AgentManager {
     // 链），用户日后改语言，未定制人格自动跟着换。文件只在用户于设置页编辑
     // 保存时才落盘。public-ishiki.md 的消费侧（Agent._readPublicIshiki）本来
     // 就有独立回落链，不受此改动影响，这里继续按原策略播种。
-    const isZh = String(
+    const promptLang = normalizePromptLang(
       currentAgent?.resolveLocale?.() || this._d.getEngine?.()?.getLocale?.() || "en"
-    ).startsWith("zh");
-    const langDir = isZh ? "" : "en/";
-    const firstExisting = (paths) => paths.find((p) => fs.existsSync(p));
+    );
 
     // public-ishiki.md（对外意识模板）
-    const publicIshikiSrc = firstExisting([
-      path.join(this._d.productDir, "public-ishiki-templates", `${langDir}${yuanType}.md`),
-      path.join(this._d.productDir, "public-ishiki-templates", `${yuanType}.md`),
-    ]);
+    const publicIshikiSrc = resolveTemplatePath(
+      path.join(this._d.productDir, "public-ishiki-templates"),
+      `${yuanType}.md`,
+      promptLang,
+      (candidate) => fs.existsSync(candidate),
+    );
     if (publicIshikiSrc) {
       fs.copyFileSync(publicIshikiSrc, path.join(agentDir, "public-ishiki.md"));
     }
@@ -1184,6 +1186,8 @@ export class AgentManager {
       getCwd:               () => getEngine()?.cwd ?? "",
       getTimezone:          () => getEngine()?.getTimezone?.() ?? "",
       getLocale:            () => getEngine()?.getLocale?.() ?? "",
+      getAgentPromptLocale: () => getEngine()?.getAgentPromptLocale?.() ?? "",
+      getModelLanguages:    (modelRef) => getEngine()?.getModelLanguages?.(modelRef) ?? null,
       getUserName:          () => getEngine()?.getUserName?.() ?? "",
       scheduleMemoryMaintenance: (agentId, reason) =>
         this.scheduleAgentMemoryMaintenance(agentId, reason, ag),

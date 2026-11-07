@@ -38,6 +38,10 @@ const dict = JSON.parse(raw);
 // 白名单字段映射：pi 条目 → Jarvis 词典字段。
 // image/reasoning 在词典中缺省为 false（见 known-models.json 的 _comment）；
 // context/maxOutput 无缺省，词典里缺失时按 undefined 对待并在报告中标注。
+//
+// 注意：`languages` 字段是人工策展（P3-F1），禁止加入 FIELD_MAP——
+// 加入会让上游 models.dev 的数据覆盖人工标注的语言能力，
+// 也无法表达"字段缺失 = 未知 = 乐观支持"的三态语义（docs/AGENT_I18N.md §4.3）。
 const FIELD_MAP = [
   {
     jarvisKey: "context",

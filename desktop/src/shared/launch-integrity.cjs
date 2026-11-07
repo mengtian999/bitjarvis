@@ -160,6 +160,29 @@ function findSeedManifestSignature(seedDir) {
 }
 
 /**
+ * A5.2（docs/SIZE_AND_STARTUP_OPT.md §5）：稳定启动 90 秒后会 best-effort 清理
+ * 随包 seed 归档（resources/seed/*.tar.gz，省 ~232MB 磁盘），manifest/.sig 保留。
+ * 因此"归档缺失"有两种含义：清理后的合法状态（artifacts 已激活过），或真安装
+ * 损坏（归档从未落地/被外部工具删掉且从未成功激活）。激活证据 =
+ * JARVIS_HOME/artifacts/pointers/*.current.json（任一通道的 current 指针在场）。
+ * @param {string|null} jarvisHome
+ * @returns {string|null} 指针文件路径（证据存在）或 null
+ */
+function findArtifactActivationEvidence(jarvisHome) {
+  if (!jarvisHome) return null;
+  const pointersDir = path.join(jarvisHome, "artifacts", "pointers");
+  try {
+    const entries = fs.readdirSync(pointersDir, { withFileTypes: true })
+      .filter(entry => entry.isFile() && entry.name.endsWith(".current.json"))
+      .map(entry => entry.name)
+      .sort();
+    return entries.length > 0 ? path.join(pointersDir, entries[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 是否运行在商店/打包容器里（MSIX 或 AppX）。Electron 在 AppX 容器内会把
  * process.windowsStore 置为 true。
  */
@@ -167,7 +190,7 @@ function isStoreManagedBuild() {
   return process.windowsStore === true;
 }
 
-function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath, storeManaged = isStoreManagedBuild() } = {}) {
+function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath, jarvisHome = "", storeManaged = isStoreManagedBuild() } = {}) {
   const executablePath = execPath || "";
   const appRoot = executablePath ? path.dirname(executablePath) : "";
   const resourcesRoot = resourcesPath || (appRoot ? path.join(appRoot, "resources") : "");
@@ -176,6 +199,10 @@ function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath, storeManage
   const seedSignaturePath = findSeedManifestSignature(seedRoot);
   const seedServerArchivePath = findSeedArchive(seedRoot, "server-");
   const seedRendererArchivePath = findSeedArchive(seedRoot, "renderer-");
+  // A5.2：归档可因稳定启动清理而缺席——只要 artifacts 已激活过（current 指针
+  // 在场），缺归档不是安装损坏。manifest/.sig 永远是硬要求（repair/重激活依赖）。
+  const activationEvidencePath = findArtifactActivationEvidence(jarvisHome);
+  const seedArchiveAllowedMissing = !!activationEvidencePath;
   const gitRoot = path.join(resourcesRoot, "git");
   const gitExe = path.join(gitRoot, "cmd", "git.exe");
   const appExecutableLabel = executablePath ? path.basename(executablePath) : "Jarvis.exe";
@@ -231,14 +258,17 @@ function buildWindowsInstallSurfaceChecks({ execPath, resourcesPath, storeManage
       relativePath: "resources/seed/server-*.tar.gz",
       // 找不到时展示扫描目录 + 通配模式作为诊断路径，而不是空字符串
       paths: [seedServerArchivePath || path.join(seedRoot, "server-*.tar.gz")],
-      exists: () => !!seedServerArchivePath && canRead(seedServerArchivePath),
+      // A5.2：清理后的合法状态（已激活过 artifact）下允许缺席
+      exists: () => (seedArchiveAllowedMissing && !seedServerArchivePath)
+        || (!!seedServerArchivePath && canRead(seedServerArchivePath)),
     },
     {
       id: "seed-renderer-archive",
       label: "resources/seed/renderer-*.tar.gz",
       relativePath: "resources/seed/renderer-*.tar.gz",
       paths: [seedRendererArchivePath || path.join(seedRoot, "renderer-*.tar.gz")],
-      exists: () => !!seedRendererArchivePath && canRead(seedRendererArchivePath),
+      exists: () => (seedArchiveAllowedMissing && !seedRendererArchivePath)
+        || (!!seedRendererArchivePath && canRead(seedRendererArchivePath)),
     },
     {
       id: "bundled-git",

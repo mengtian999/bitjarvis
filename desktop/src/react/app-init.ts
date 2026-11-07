@@ -119,7 +119,19 @@ export async function initApp(): Promise<void> {
   });
 
   // 1. 获取 server 连接信息并存入 Zustand
-  const serverPort = await platform.getServerPort();
+  // A4（docs/SIZE_AND_STARTUP_OPT.md §5）：主窗口可能先于 server 就绪创建
+  // （窗口先行路径），此时 getServerPort() 返回 null——server 还没写
+  // server-info.json。轮询等待而不是立即放弃；端口出现即代表 server 已就绪
+  // （server-info.json 在 engine init 完成后才写入）。超时上限对齐桌面端
+  // pollServerInfo 的 90s 首期限 + 宽限，超时后走原有 serverNotReady 早期退出。
+  let serverPort = await platform.getServerPort();
+  if (!serverPort) {
+    const waitForServerDeadline = Date.now() + 120_000;
+    while (!serverPort && Date.now() < waitForServerDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      serverPort = await platform.getServerPort();
+    }
+  }
   const serverToken = await platform.getServerToken();
   const localServerConnection = createLocalServerConnection({ serverPort, serverToken });
   const persistedConnections = readPersistedServerConnectionState();

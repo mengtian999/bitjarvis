@@ -34,6 +34,7 @@ import { diffCatalogNames, formatCatalogChangeLines } from "./tool-catalog.ts";
 import { createModuleLogger } from "../lib/debug-log.ts";
 import { BrowserManager } from "../lib/browser/browser-manager.ts";
 import { t, getLocale } from "../lib/i18n.ts";
+import { normalizePromptLang, pickPromptText, type PromptLang } from "../shared/prompt-locale.ts";
 import {
   DEFAULT_SESSION_PERMISSION_MODE,
   SESSION_PERMISSION_MODES,
@@ -776,24 +777,41 @@ function estimateRetainedValueBytes(value: any, seen: WeakSet<any>, budget: any,
 }
 
 function makeBackgroundTaskPrompt(locale: any) {
-  const isZh = String(locale || "").startsWith("zh");
-  return isZh
-    ? `## 后台任务
+  const lang = normalizePromptLang(String(locale || ""));
+  return pickPromptText(lang, {
+    zh: `## 后台任务
 
 派出 subagent 或其他后台任务后：
 
 1. 先继续做手头还没做完的工作，不要立刻停下来等
 2. 手头工作做完后，调 check_pending_tasks 查看后台任务状态
 3. 如果还有任务未完成，不要轮询等待；告知用户任务仍在后台运行，完成后会自动处理
-4. 只有需要你继续处理的后台任务，系统才会以 <jarvis-background-result> 消息送达结果；媒体生成成功由界面和 Bridge 自动处理，不要等待或主动追问。媒体生成失败可能会以 <jarvis-background-result> 送达：只说明失败原因，并询问用户是否要你新生成一张；原地重新生成只由用户在 UI 中操作`
-    : `## Background Tasks
+4. 只有需要你继续处理的后台任务，系统才会以 <jarvis-background-result> 消息送达结果；媒体生成成功由界面和 Bridge 自动处理，不要等待或主动追问。媒体生成失败可能会以 <jarvis-background-result> 送达：只说明失败原因，并询问用户是否要你新生成一张；原地重新生成只由用户在 UI 中操作`,
+    ja: `## バックグラウンドタスク
+
+subagent やその他のバックグラウンドタスクを投入した後：
+
+1. まず手元の未完了の作業を続行し、すぐに待機のために止まらないこと
+2. 手元の作業が完了したら、check_pending_tasks を呼び出してバックグラウンドタスクの状態を確認すること
+3. 未完了のタスクがあってもポーリングで待たないこと。タスクはまだバックグラウンドで実行中であり、完了時に自動処理されることをユーザーに伝える
+4. ユーザーの対応が必要なバックグラウンドタスクのみ、結果は <jarvis-background-result> メッセージで届く。メディア生成の成功は UI と Bridge が自動処理するため、待ったり自分から問い合わせたりしないこと。メディア生成の失敗は <jarvis-background-result> で届く場合がある：失敗理由だけを説明し、新しいものを生成し直すかユーザーに確認すること。その場での再生成はユーザーが UI で行う操作`,
+    ko: `## 백그라운드 작업
+
+subagent 또는 기타 백그라운드 작업을 실행한 후:
+
+1. 먼저 손에 남아 있는 작업을 계속 진행하고, 바로 멈추고 기다리지 않기
+2. 손의 작업이 끝나면 check_pending_tasks를 호출해 백그라운드 작업 상태를 확인할 것
+3. 아직 완료되지 않은 작업이 있어도 폴링으로 기다리지 말 것. 작업이 아직 백그라운드에서 실행 중이며 완료되면 자동 처리된다고 사용자에게 알리기
+4. 사용자의 후속 처리가 필요한 백그라운드 작업만 결과가 <jarvis-background-result> 메시지로 전달됨. 미디어 생성 성공은 UI와 Bridge가 자동 처리하므로 기다리거나 다시 묻지 말 것. 미디어 생성 실패는 <jarvis-background-result>로 전달될 수 있음: 실패 원인만 설명하고 새로 생성할지 사용자에게 물어볼 것. 자리에서 바로 다시 생성하는 것은 사용자가 UI에서 수행하는 작업`,
+    en: `## Background Tasks
 
 After dispatching subagent or other background tasks:
 
 1. Continue with any remaining work first — do not stop immediately to wait
 2. Once your other work is done, call check_pending_tasks to check status
 3. If tasks are still pending, do not poll or wait; tell the user the task is still running and will be handled in the background
-4. Only background tasks that need your follow-up are delivered via <jarvis-background-result> messages. Successful media generation is handled by the UI and Bridge automatically; do not wait for it or ask about it again. Failed media generation may be delivered via <jarvis-background-result>: explain only why it failed, then ask whether the user wants you to create a new image. In-place regeneration is a UI-only action for the user`;
+4. Only background tasks that need your follow-up are delivered via <jarvis-background-result> messages. Successful media generation is handled by the UI and Bridge automatically; do not wait for it or ask about it again. Failed media generation may be delivered via <jarvis-background-result>: explain only why it failed, then ask whether the user wants you to create a new image. In-place regeneration is a UI-only action for the user`,
+  });
 }
 
 function buildAppendSystemPromptSnapshot({
@@ -6076,19 +6094,19 @@ export class SessionCoordinator {
     if (!recipientAgentId) {
       throw new Error("renderSessionReminderBlock: session Agent ownership is unavailable");
     }
-    const isZh = getLocale().startsWith("zh");
+    const lang = normalizePromptLang(getLocale());
     const manifest = entry.toolCatalogManifest;
     return collectReminderBlock({
       sessionEntry: entry,
       ledger: this._envChangeLedger,
       recipientAgentId,
-      isZh,
+      lang,
       unavailableToolNames: this._computeReminderUnavailableToolNamesForEntry(entry, sessionPath),
       // The listing belongs to this session's entry, not to the engine: it
       // describes the tool set this session froze at creation.
       referenceText: typeof manifest?.text === "string" ? manifest.text : "",
       referenceBudgetTokens: this._referenceBudgetTokensForEntry(entry),
-      catalogBroadcast: this._computeCatalogBroadcastForEntry(entry, isZh),
+      catalogBroadcast: this._computeCatalogBroadcastForEntry(entry, lang),
     });
   }
 
@@ -6111,7 +6129,7 @@ export class SessionCoordinator {
    * change is not told again, and a further change still surfaces. Sessions
    * that never received a listing have nothing to compare and stay silent.
    */
-  _computeCatalogBroadcastForEntry(entry: any, isZh: boolean) {
+  _computeCatalogBroadcastForEntry(entry: any, lang: PromptLang) {
     const snapshot = entry?.toolCatalogManifest;
     if (!snapshot) return null;
     const liveNames = this._d.getLiveToolCatalogNames?.();
@@ -6127,7 +6145,7 @@ export class SessionCoordinator {
       && entry.reminderAcceptedCatalogNames.length > 0
       ? entry.reminderAcceptedCatalogNames
       : (Array.isArray(snapshot.names) ? snapshot.names : []);
-    const lines = formatCatalogChangeLines(diffCatalogNames(baseNames, liveNames), isZh);
+    const lines = formatCatalogChangeLines(diffCatalogNames(baseNames, liveNames), lang);
     if (lines.length === 0) return null;
     return { lines, fingerprint: liveFingerprint, names: [...liveNames] };
   }

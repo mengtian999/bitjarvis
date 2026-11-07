@@ -23,6 +23,8 @@
  * facts 段无法收尾），任意标题层级（含旧 H2 摘要）都接受。
  */
 
+import { normalizePromptLang, pickPromptText } from "../../shared/prompt-locale.ts";
+
 /** compileEditableFacts 提取 facts 段时接受的标题（任意 1-6 级，大小写不敏感）。约定 [0] 中文、[1] 英文 */
 export const FACT_SECTION_TITLES = ["重要事实", "Key Facts"];
 
@@ -56,16 +58,61 @@ export function getTimelineSectionTitle(locale = "zh-CN") {
 export const MAX_ROLLING_SUMMARY_FORMAT_REPAIRS = 1;
 
 function isZhLocale(locale) {
-  return String(locale || "").startsWith("zh");
+  const lang = normalizePromptLang(String(locale || ""));
+  return lang === "zh" || lang === "zh-TW";
 }
 
 /**
  * 输出格式要求 prompt 块。两条产出路径（legacy utility prompt 与
  * memory reflection suffix）以及 prompts/rolling-summary.ts 模板共用。
+ *
+ * 注意：`### Key Facts` / `### Timeline` 是与 compileEditableFacts 提取规则
+ * 的格式契约，任何语言下标题字面量都必须保持英文（zh 除外），只翻译说明文字。
  * @param {string} locale
  * @returns {string}
  */
 export function buildRollingSummaryFormatRequirements(locale = "zh-CN") {
+  const lang = normalizePromptLang(String(locale || ""));
+  if (lang === "ja") {
+    return `## 出力フォーマット
+最終回答は必ず 2 つの第三レベル見出しだけを含み、見出しテキストと順序は固定です：
+1. 最初の行は \`### Key Facts\` でなければならない
+2. 2 番目の見出しは \`### Timeline\` でなければならない
+
+両見出しの下の本文は必ず順序なしリストを使うこと。各リスト項目は \`- \` で始まること。
+あるセクションに内容がない場合も、リスト項目を 1 つ出力すること：\`- None\`。
+見出しの外には前置き、後書き、XML タグ、コードブロックを出力しないこと。`;
+  }
+  if (lang === "ko") {
+    return `## 출력 형식
+최종 답변은 반드시 두 개의 3단계 제목만 포함해야 하며, 제목 텍스트와 순서는 고정입니다:
+1. 첫 줄은 \`### Key Facts\`여야 함
+2. 두 번째 제목은 \`### Timeline\`이어야 함
+
+두 제목 아래의 본문은 모두 순서 없는 리스트를 사용할 것. 각 리스트 항목은 \`- \`로 시작할 것.
+어떤 섹션에 내용이 없어도 리스트 항목을 하나 출력할 것: \`- None\`.
+제목 외에 서문, 후기, XML 태그, 코드 블록을 출력하지 말 것.`;
+  }
+  if (lang === "fr") {
+    return `## Format de sortie
+La réponse finale doit contenir exactement deux titres de troisième niveau, avec un texte et un ordre fixes :
+1. La première ligne doit être \`### Key Facts\`
+2. Le deuxième titre doit être \`### Timeline\`
+
+Le corps sous les deux titres doit utiliser des listes non ordonnées. Chaque élément de liste doit commencer par \`- \`.
+Si une section n'a pas de contenu, sors quand même un élément de liste : \`- None\`.
+N'affiche aucun préambule, conclusion, balise XML ni bloc de code en dehors de ces titres.`;
+  }
+  if (lang === "de") {
+    return `## Ausgabeformat
+Die endgültige Antwort darf genau zwei Überschriften der dritten Ebene enthalten, mit festem Text und fester Reihenfolge:
+1. Die erste Zeile muss \`### Key Facts\` sein
+2. Die zweite Überschrift muss \`### Timeline\` sein
+
+Der Text unter beiden Überschriften muss unsortierte Listen verwenden. Jedes Listenelement muss mit \`- \` beginnen.
+Hat ein Abschnitt keinen Inhalt, gib dennoch ein Listenelement aus: \`- None\`.
+Gib außerhalb dieser Überschriften kein Vorwort, Nachwort, keine XML-Tags und keinen Codeblock aus.`;
+  }
   if (!isZhLocale(locale)) {
     return `## Output Format
 The final answer must contain exactly two third-level headings, with fixed text and order:
@@ -94,7 +141,28 @@ Do not output any preamble, conclusion, XML tags, or code fences outside those h
  * @returns {string}
  */
 export function buildRollingSummaryRepairPrompt(locale = "zh-CN") {
+  const lang = normalizePromptLang(String(locale || ""));
   const requirements = buildRollingSummaryFormatRequirements(locale);
+  if (lang === "ja") {
+    return `あなたは記憶システムのローリングサマリーのフォーマット修復器です。直前に生成されたサマリードラフトは要求された固定構造に違反しており、記憶システムが解析できません。与えられたドラフトの情報を要求された構造にそのまま配置し直してください。事実内容を追加・削除・書き換えず、説明もせず、修復後のサマリー全文のみを出力すること。
+
+${requirements}`;
+  }
+  if (lang === "ko") {
+    return `당신은 기억 시스템 롤링 요약의 포맷 복구기입니다. 직전에 생성된 요약 초안은 요구된 고정 구조를 위반하여 기억 시스템이 파싱할 수 없습니다. 주어진 초안의 정보를 요구된 구조에 그대로 재배치하세요. 사실 내용을 추가·삭제·수정하지 말고, 설명하지 말며, 복구된 요약 전문만 출력할 것.
+
+${requirements}`;
+  }
+  if (lang === "fr") {
+    return `Tu es le réparateur de format des résumés glissants du système de mémoire. Le brouillon de résumé généré juste avant viole la structure fixe exigée et ne peut pas être analysé par le système de mémoire. Replace les informations du brouillon fourni dans la structure exigée : n'ajoute, ne supprime et ne réécris aucun contenu factuel, n'explique pas, et sors uniquement le résumé réparé complet.
+
+${requirements}`;
+  }
+  if (lang === "de") {
+    return `Du bist der Format-Reparierer für die rollierenden Zusammenfassungen des Speichersystems. Der zuletzt erzeugte Zusammenfassungsentwurf verletzt die geforderte feste Struktur und kann vom Speichersystem nicht geparst werden. Ordne die Informationen des gegebenen Entwurfs in die geforderte Struktur um: füge keinen faktischen Inhalt hinzu, entferne oder schreibe ihn nicht um, erkläre nichts, und gib nur den vollständigen reparierten Zusammenfassungstext aus.
+
+${requirements}`;
+  }
   if (!isZhLocale(locale)) {
     return `You are the format repairer for the memory system's rolling summaries. The previous summary draft violates the required fixed structure and cannot be parsed by the memory system. Rearrange the information in the given draft into the required structure: do not add, remove, or rewrite any factual content, do not explain, and output only the full repaired summary.
 
@@ -112,9 +180,31 @@ ${requirements}`;
  * @returns {string}
  */
 export function buildRollingSummaryRepairInput({ locale = "zh-CN", issues = [], summaryText = "" } = {}) {
-  const isZh = isZhLocale(locale);
-  const issuesLabel = isZh ? "## 校验失败原因" : "## Validation Failures";
-  const draftLabel = isZh ? "## 待修复草稿" : "## Draft To Repair";
+  const lang = normalizePromptLang(String(locale || ""));
+  const issuesLabel = pickPromptText(lang, {
+    zh: "## 校验失败原因",
+    ja: "## 検証失敗の原因",
+    ko: "## 검증 실패 원인",
+    fr: "## Causes de l'échec de validation",
+    de: "## Ursachen der Prüfungsfehler",
+    en: "## Validation Failures",
+  });
+  const draftLabel = pickPromptText(lang, {
+    zh: "## 待修复草稿",
+    ja: "## 修復対象のドラフト",
+    ko: "## 복구할 초안",
+    fr: "## Brouillon à réparer",
+    de: "## Zu reparierender Entwurf",
+    en: "## Draft To Repair",
+  });
+  const unknownLine = pickPromptText(lang, {
+    zh: "- 未知",
+    ja: "- 不明",
+    ko: "- 알 수 없음",
+    fr: "- inconnu",
+    de: "- unbekannt",
+    en: "- unknown",
+  });
   const issueLines = (Array.isArray(issues) ? issues : [])
     .map((issue) => `- ${String(issue || "").trim()}`)
     .filter((line) => line !== "- ")
@@ -122,7 +212,7 @@ export function buildRollingSummaryRepairInput({ locale = "zh-CN", issues = [], 
 
   return `${issuesLabel}
 
-${issueLines || (isZh ? "- 未知" : "- unknown")}
+${issueLines || unknownLine}
 
 ${draftLabel}
 

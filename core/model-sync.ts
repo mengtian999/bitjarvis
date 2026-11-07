@@ -22,6 +22,7 @@ import { normalizeProviderHeaders, providerCredentialAllowsMissingApiKey } from 
 import { validateProviderModels } from "../shared/provider-model-validation.ts";
 import { buildRuntimeApiKeyRef } from "../shared/runtime-api-key-ref.ts";
 import { inferOllamaModelMetadata } from "../shared/ollama-model-metadata.ts";
+import { normalizeModelLanguages } from "../shared/prompt-locale.ts";
 import { normalizeProviderBaseUrlForApi } from "../lib/llm/provider-client.ts";
 import { normalizeThinkingLevelForModel } from "./session-thinking-level.ts";
 
@@ -211,6 +212,8 @@ function buildModelOverride(modelEntry, modelDefaults = {}, executionHeaders = {
     ? normalizeVisionCapabilities(modelEntry.visionCapabilities)
     : null;
   if (visionCapabilities) override.visionCapabilities = visionCapabilities;
+  const languages = normalizeModelLanguages(modelEntry.languages);
+  if (languages) override.languages = languages;
 
   let finalOverride = video === true ? withJarvisVideoInputCompat(override, true) : override;
   finalOverride = audio === true ? withJarvisAudioInputCompat(finalOverride, true) : finalOverride;
@@ -329,6 +332,13 @@ function buildModelEntry(
     : known?.visionCapabilities;
   const visionCapabilities = image ? normalizeVisionCapabilities(rawVisionCapabilities) : null;
   if (visionCapabilities) entry.visionCapabilities = visionCapabilities;
+
+  // 语言能力：用户设置 > known-models 词典；未知时不写字段（= 支持任意语言）
+  const rawLanguages = isObj && modelEntry.languages !== undefined
+    ? modelEntry.languages
+    : known?.languages;
+  const modelLanguages = normalizeModelLanguages(rawLanguages);
+  if (modelLanguages) entry.languages = modelLanguages;
 
   // Pi SDK compat 覆盖：
   // 1. 非 OpenAI provider 不发 developer role（dashscope 等不支持）— 与 reasoning 无关

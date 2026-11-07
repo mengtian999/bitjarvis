@@ -271,11 +271,25 @@ export function InterfaceTab() {
     }
   }, [showToast, sidebarUiPrefs]);
 
+  const [agentPromptLocale, setAgentPromptLocaleState] = useState<string>('follow');
+
+  useEffect(() => {
+    let cancelled = false;
+    jarvisFetch('/api/preferences/agent-prompt-locale')
+      .then(res => res.json())
+      .then((data: any) => {
+        if (!cancelled && data?.agentPromptLocale) setAgentPromptLocaleState(data.agentPromptLocale);
+      })
+      .catch(() => { /* 读取失败时保持默认 follow */ });
+    return () => { cancelled = true; };
+  }, []);
   const locale = settingsConfig?.locale || 'zh-CN';
-  const localeVal = ['zh-CN', 'zh-TW', 'ja', 'ko', 'en'].includes(locale) ? locale
+  const localeVal = ['zh-CN', 'zh-TW', 'ja', 'ko', 'en', 'fr', 'de'].includes(locale) ? locale
     : locale.startsWith('zh') ? 'zh-CN'
     : locale.startsWith('ja') ? 'ja'
     : locale.startsWith('ko') ? 'ko'
+    : locale.startsWith('fr') ? 'fr'
+    : locale.startsWith('de') ? 'de'
     : 'en';
 
   // 时区
@@ -550,6 +564,8 @@ export function InterfaceTab() {
                 { value: 'ja', label: t('settings.locale.ja') },
                 { value: 'ko', label: t('settings.locale.ko') },
                 { value: 'en', label: t('settings.locale.en') },
+                { value: 'fr', label: t('settings.locale.fr') },
+                { value: 'de', label: t('settings.locale.de') },
               ]}
               value={localeVal}
               onChange={async (val) => {
@@ -558,6 +574,39 @@ export function InterfaceTab() {
                 if (i18n) i18n.defaultName = useSettingsStore.getState().agentName;
                 useSettingsStore.getState().showToast(t('settings.autoSaved'), 'success');
                 useSettingsStore.setState({});
+              }}
+            />
+          }
+        />
+        <SettingsRow
+          label={t('settings.agentPromptLocale.label')}
+          hint={t('settings.agentPromptLocale.hint')}
+          control={
+            <SelectWidget
+              options={[
+                { value: 'follow', label: t('settings.agentPromptLocale.follow') },
+                { value: 'en', label: t('settings.agentPromptLocale.en') },
+                { value: 'zh', label: t('settings.agentPromptLocale.zh') },
+                { value: 'ja', label: t('settings.agentPromptLocale.ja') },
+                { value: 'ko', label: t('settings.agentPromptLocale.ko') },
+                { value: 'fr', label: t('settings.agentPromptLocale.fr') },
+                { value: 'de', label: t('settings.agentPromptLocale.de') },
+              ]}
+              value={agentPromptLocale}
+              onChange={async (val) => {
+                try {
+                  const res = await jarvisFetch('/api/preferences/agent-prompt-locale', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentPromptLocale: val }),
+                  });
+                  const data = await res.json();
+                  if (data.error) throw new Error(data.error);
+                  setAgentPromptLocaleState(data.agentPromptLocale || val);
+                  useSettingsStore.getState().showToast(t('settings.autoSaved'), 'success');
+                } catch (err: any) {
+                  useSettingsStore.getState().showToast(t('settings.saveFailed') + ': ' + err.message, 'error');
+                }
               }}
             />
           }

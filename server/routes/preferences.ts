@@ -8,6 +8,8 @@
  * PUT  /api/preferences/appearance  — 更新跨前端外观偏好
  * GET  /api/preferences/notifications  — 读取跨前端通知偏好
  * PUT  /api/preferences/notifications  — 更新跨前端通知偏好
+ * GET  /api/preferences/agent-prompt-locale  — 读取 Agent 提示语言覆盖（follow | 七语种）
+ * PUT  /api/preferences/agent-prompt-locale  — 更新 Agent 提示语言覆盖
  * GET  /api/preferences/session-permission-default  — 读取新 session 默认权限模式
  * PUT  /api/preferences/session-permission-default  — 更新新 session 默认权限模式
  * GET  /api/preferences/quick-chat  — 读取快速聊天入口偏好
@@ -287,6 +289,38 @@ export function createPreferencesRoute(engine: any, options: Record<string, any>
       return c.json({ ok: true, appearance });
     } catch (err) {
       return c.json({ error: err.message }, 400);
+    }
+  });
+
+  route.get("/preferences/agent-prompt-locale", async (c) => {
+    try {
+      return c.json({ agentPromptLocale: engine.getAgentPromptLocale?.() || "follow" });
+    } catch (err) {
+      return c.json({ error: err.message }, 500);
+    }
+  });
+
+  route.put("/preferences/agent-prompt-locale", async (c) => {
+    try {
+      const body = await safeJson(c);
+      if (!body || typeof body !== "object") {
+        return c.json({ error: "invalid JSON body" }, 400);
+      }
+      if (typeof engine.setAgentPromptLocale !== "function") {
+        return c.json({ error: "agent prompt locale preferences unavailable" }, 500);
+      }
+      const settingsDenied = denyWithoutScope(c, "settings.write");
+      if (settingsDenied) return settingsDenied;
+      // 归一化：follow 或七语种之一；非法值拒绝（不静默兜成 en）
+      const { normalizePromptLocaleOverride } = await import("../../shared/prompt-locale.ts");
+      const normalized = normalizePromptLocaleOverride(body.agentPromptLocale);
+      if (!normalized) {
+        return c.json({ error: 'agentPromptLocale must be "follow" or one of: en, zh, zh-TW, ja, ko, fr, de' }, 400);
+      }
+      const saved = engine.setAgentPromptLocale(normalized);
+      return c.json({ ok: true, agentPromptLocale: saved });
+    } catch (err) {
+      return c.json({ error: err.message }, 500);
     }
   });
 

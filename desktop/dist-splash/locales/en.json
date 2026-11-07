@@ -1302,7 +1302,9 @@
       "zhTW": "繁體中文",
       "ja": "日本語",
       "ko": "한국어",
-      "en": "English"
+      "en": "English",
+      "fr": "Français",
+      "de": "Deutsch"
     },
     "computerUse": {
       "title": "Computer Use",
@@ -1508,11 +1510,6 @@
       "keepAwake": "Keep running while locked",
       "betaUpdates": "Receive beta updates",
       "autoCheckUpdates": "Check for updates automatically",
-      "updateSource": "Update source",
-      "updateSourceHint": "Auto picks GitHub or Gitee by your system timezone (mainland China → Gitee). Choose manually to override.",
-      "updateSourceAuto": "Auto (by timezone)",
-      "updateSourceGithub": "GitHub (international)",
-      "updateSourceGitee": "Gitee (China mainland)",
       "inviteSectionTitle": "Test channel",
       "inviteCodeLabel": "Invite code",
       "inviteCodeHint": "An invite code unlocks the test channel. It does not unlock the app itself.",
@@ -1814,7 +1811,17 @@
       "defaultOption": "Default",
       "qualityLow": "Low",
       "qualityMedium": "Medium",
-      "qualityHigh": "High"
+      "qualityHigh": "High",
+      "sherpaModelsDownload": "Speech model downloads",
+      "sherpaModelsDownloadHint": "ASR/TTS models are no longer bundled with the installer; they are downloaded on demand when local voice is first used. Online voices work without them.",
+      "sherpaModelInstall": "Download",
+      "sherpaModelInstalled": "Installed",
+      "sherpaModelDownloading": "Downloading…",
+      "sherpaModelExtracting": "Extracting…",
+      "sherpaModelVerifying": "Verifying…",
+      "sherpaModelError": "Failed",
+      "sherpaModelRetry": "Retry",
+      "sherpaModelBusy": "Another download is in progress"
     },
     "voice": {
       "language": "Voice language",
@@ -1825,7 +1832,9 @@
         "zh-TW": "Traditional Chinese",
         "ja": "Japanese",
         "ko": "Korean",
-        "en": "English"
+        "en": "English",
+        "fr": "French",
+        "de": "German"
       },
       "currentLanguage": "Current language",
       "preview": "Preview",
@@ -2490,6 +2499,17 @@
       "dropOrClick": "Drop a character card or click to open",
       "readFailed": "Character card read failed",
       "importFailed": "Character card import failed"
+    },
+    "agentPromptLocale": {
+      "label": "Agent prompt language",
+      "hint": "Language for the Agent's system prompts and persona templates, independent of the UI language. Falls back to English automatically when the model doesn't support the chosen language.",
+      "follow": "Follow UI language",
+      "en": "English",
+      "zh": "中文",
+      "ja": "日本語",
+      "ko": "한국어",
+      "fr": "Français",
+      "de": "Deutsch"
     }
   },
   "onboarding": {
@@ -3242,7 +3262,8 @@
       "repairArtifactsBody": "This resets Bit Jarvis's app components to the originally installed version and restarts the app. Your data (agents, sessions, settings) is not affected.",
       "repairArtifactsConfirm": "Repair and Restart",
       "repairArtifactsCancel": "Cancel",
-      "trainUpdateApplyFailedBody": "Jarvis v{version}\n\nUpdate failed to apply:\n{error}\n\nPlease restart the app."
+      "trainUpdateApplyFailedBody": "Jarvis v{version}\n\nUpdate failed to apply:\n{error}\n\nPlease restart the app.",
+      "repairArtifactsUnavailable": "Cannot repair components right now: {reason}"
     },
     "notification": {
       "ready": "Notifications enabled",
@@ -3328,7 +3349,9 @@
       "theme": "Theme",
       "chatModel": "Chat Model",
       "fileBackup": "File Backup",
-      "fileBackupDesc": "Auto-backup files before AI modifications"
+      "fileBackupDesc": "Auto-backup files before AI modifications",
+      "agentPromptLocale": "Agent Prompt Language",
+      "agentPromptLocaleDesc": "Overrides the language of the Agent's system prompts and persona templates, independent of the UI language. \"follow\" uses the UI locale, with automatic fallback to English when the model doesn't support the chosen language."
     },
     "generateImage": {
       "description": "Generate images from text descriptions. Non-blocking: returns immediately after submission, displays automatically when complete.",

@@ -1259,6 +1259,17 @@ export async function startServer(root: CompositionRoot = {}): Promise<void> {
     // 通知就绪（server-info.json 已在上方写入，无需额外动作）
     log.log(`ready: port=${actualPort}`);
 
+    // A3（docs/SIZE_AND_STARTUP_OPT.md §5）：engine.init() 的非关键收尾
+    // （skills watcher / bridge reconcile / ephemeral 清理 / file-history
+    // watcher）在宣布就绪之后后台跑。JARVIS_EARLY_READY=0 退回旧行为：
+    // ready 前 await 全部收尾（灰度/排障开关）。
+    const backgroundInit = engine.runBackgroundInit((msg) => log.log(msg));
+    if (process.env.JARVIS_EARLY_READY === "0") {
+      await backgroundInit;
+    } else {
+      void backgroundInit.catch((err) => log.error(`background init failed: ${err?.message || err}`));
+    }
+
     // Bridge 平台依赖不属于 HTTP readiness 的前置条件。先让桌面端拿到
     // server-info，再在后台加载外部平台 adapter，避免 Windows 上依赖加载
     // 或杀毒扫描拖垮主启动握手。单文件 ESM bundle 还必须等当前模块完成

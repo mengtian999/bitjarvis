@@ -59,7 +59,7 @@ describe('ProviderStep', () => {
 
     expect(screen.queryByText('OpenRouter')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '贾维斯(通用)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Jarvis Cloud' }));
 
     expect(screen.getByRole('button', { name: 'Kimi Coding Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'OpenRouter' })).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('ProviderStep', () => {
     );
 
     // Jarvis should be pre-selected by default
-    expect(screen.getByRole('button', { name: '贾维斯(通用)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Jarvis Cloud' })).toBeInTheDocument();
     // No eye toggle button (hidden for Jarvis)
     expect(screen.queryByRole('button', { name: '' })).not.toBeInTheDocument();
 

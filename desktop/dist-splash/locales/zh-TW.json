@@ -1288,7 +1288,9 @@
       "zhTW": "繁體中文",
       "ja": "日本語",
       "ko": "한국어",
-      "en": "English"
+      "en": "English",
+      "fr": "法語",
+      "de": "德語"
     },
     "agent": {
       "title": "助手",
@@ -1442,11 +1444,6 @@
       "keepAwake": "鎖定時保持執行",
       "betaUpdates": "接收測試版更新",
       "autoCheckUpdates": "自動檢查更新",
-      "updateSource": "更新來源",
-      "updateSourceHint": "自動模式依系統時區判斷（大陸時區走 Gitee，下載更快）。也可手動指定。",
-      "updateSourceAuto": "自動（依時區）",
-      "updateSourceGithub": "GitHub（國際）",
-      "updateSourceGitee": "Gitee（中國大陸）",
       "inviteSectionTitle": "測試通道",
       "inviteCodeLabel": "邀請碼",
       "inviteCodeHint": "邀請碼只用來開啟測試通道，不是使用本應用的門檻。",
@@ -1748,7 +1745,17 @@
       "defaultOption": "預設",
       "qualityLow": "低",
       "qualityMedium": "中",
-      "qualityHigh": "高"
+      "qualityHigh": "高",
+      "sherpaModelsDownload": "語音模型下載",
+      "sherpaModelsDownloadHint": "語音辨識/合成模型不再隨安裝套件內建，首次使用本機語音時依需求下載；不下載也可以使用線上語音。",
+      "sherpaModelInstall": "下載",
+      "sherpaModelInstalled": "已安裝",
+      "sherpaModelDownloading": "下載中…",
+      "sherpaModelExtracting": "解壓中…",
+      "sherpaModelVerifying": "驗證中…",
+      "sherpaModelError": "失敗",
+      "sherpaModelRetry": "重試",
+      "sherpaModelBusy": "已有下載任務進行中"
     },
     "voice": {
       "language": "語音語言",
@@ -1759,7 +1766,9 @@
         "zh-TW": "繁體中文",
         "ja": "日本語",
         "ko": "한국어",
-        "en": "English"
+        "en": "English",
+        "fr": "法語",
+        "de": "德語"
       },
       "currentLanguage": "目前語言",
       "preview": "試聽",
@@ -2490,6 +2499,17 @@
       "dropOrClick": "拖入角色卡或点击打开",
       "readFailed": "角色卡读取失败",
       "importFailed": "角色卡导入失败"
+    },
+    "agentPromptLocale": {
+      "label": "Agent 提示語言",
+      "hint": "Agent 系統提示與人格範本使用的語言，與介面語言相互獨立。模型不支援所選語言時自動回退英文。",
+      "follow": "跟隨介面語言",
+      "en": "English",
+      "zh": "中文",
+      "ja": "日本語",
+      "ko": "한국어",
+      "fr": "Français",
+      "de": "Deutsch"
     }
   },
   "onboarding": {
@@ -3236,7 +3256,8 @@
       "repairArtifactsBody": "此操作會將 Bit Jarvis 的應用元件重設為安裝包內建的版本，並重新啟動應用程式。你的資料（助手、對話、設定）不受影響。",
       "repairArtifactsConfirm": "修復並重新啟動",
       "repairArtifactsCancel": "取消",
-      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n更新套用失敗：\n{error}\n\n請重新啟動應用程式。"
+      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n更新套用失敗：\n{error}\n\n請重新啟動應用程式。",
+      "repairArtifactsUnavailable": "目前無法修復元件：{reason}"
     },
     "notification": {
       "ready": "通知已就緒",
@@ -3437,7 +3458,9 @@
       "theme": "主题",
       "chatModel": "聊天模型",
       "fileBackup": "文件备份",
-      "fileBackupDesc": "AI 修改文件前自动备份"
+      "fileBackupDesc": "AI 修改文件前自动备份",
+      "agentPromptLocale": "Agent 提示語言",
+      "agentPromptLocaleDesc": "覆寫 Agent 系統提示與人格範本的語言，與介面語言相互獨立。\"follow\" 跟隨介面語言；模型不支援所選語言時自動回退英文。"
     },
     "generateImage": {
       "description": "根据文字描述生成图片。非阻塞：提交后立即返回，完成后自动显示。",

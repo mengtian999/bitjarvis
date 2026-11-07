@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { callTextWithLengthContract } from "../core/output-length-contract.ts";
+import { normalizePromptLang, pickPromptText } from "../shared/prompt-locale.ts";
 import { modelSupportsDirectImageInput } from "../shared/model-capabilities.ts";
 
 const AVATAR_EXTENSIONS = ["png", "jpg", "jpeg", "webp"] as const;
@@ -123,8 +124,8 @@ function modelRefFor(model: unknown): unknown {
   return provider ? { id, provider } : { id };
 }
 
-function isZhLocale(locale?: string): boolean {
-  return typeof locale === "string" && locale.toLowerCase().startsWith("zh");
+function promptLangOf(locale?: string) {
+  return normalizePromptLang(typeof locale === "string" ? locale : "");
 }
 
 function getConfigImageContext(config: ResolvedAgentAppearanceModelConfig | null | undefined) {
@@ -185,7 +186,14 @@ export function sanitizeAgentAppearanceSummary(text: unknown): string {
 export function formatAgentAppearancePrompt(summary: string, locale?: string): string {
   const clean = sanitizeAgentAppearanceSummary(summary);
   if (!clean) return "";
-  const heading = isZhLocale(locale) ? "你的样子" : "Your Appearance";
+  const heading = pickPromptText(promptLangOf(locale), {
+    zh: "你的样子",
+    ja: "あなたの姿",
+    fr: "Ton apparence",
+    de: "Dein Aussehen",
+    ko: "당신의 모습",
+    en: "Your Appearance",
+  });
   return `## ${heading}\n\n${clean}`;
 }
 

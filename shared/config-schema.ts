@@ -21,6 +21,9 @@
 /** @type {Record<string, FieldDef>} */
 export const CONFIG_SCHEMA = {
   locale:                       { scope: 'global', setter: 'setLocale',         getter: 'getLocale', defaultValue: '' },
+  // Agent prompt 语言：与 UI locale 解耦。值域见 shared/prompt-locale.ts：
+  // "follow"（默认）= 跟随 agent locale 并按模型语言能力回退；其余值为用户强制指定。
+  agent_prompt_locale:          { scope: 'global', setter: 'setAgentPromptLocale', getter: 'getAgentPromptLocale', defaultValue: 'follow' },
   // 用户名描述的是使用者本人，跨 agent 必须一致，所以唯一正源是全局
   // preferences：这条 global scope 把带 user.name 的写请求全部引到全局设置上，
   // 落不进任何一个 agent 的 config。读取侧同样只认全局值。

@@ -1,4 +1,5 @@
 import { getLocale } from "../lib/i18n.ts";
+import { normalizePromptLang, pickPromptText } from "../shared/prompt-locale.ts";
 import { modelSupportsDirectImageInput } from "../shared/model-capabilities.ts";
 import { prepareModelImageInputsForPrompt } from "./model-image-preprocess.ts";
 import { requireVisionAuxiliaryEnabled } from "./vision-auxiliary-policy.ts";
@@ -29,11 +30,16 @@ function isRecoverableVisionPrepareError(err) {
 }
 
 function visionFailureNotice(err) {
-  const isZh = getLocale().startsWith("zh");
+  const lang = normalizePromptLang(getLocale());
   const reason = err?.message ? ` (${err.message})` : "";
-  return isZh
-    ? `[图片分析失败：辅助视觉模型暂时不可用，本轮不会把图片内容传给文本模型。请明确说明你没有看到图片，并请用户稍后重试或检查视觉模型配置${reason}。]`
-    : `[Image analysis failed: the auxiliary vision model is temporarily unavailable, so this turn does not include image content for the text-only model. Clearly state that you could not inspect the image, and ask the user to retry later or check the vision model configuration${reason}.]`;
+  return pickPromptText(lang, {
+    zh: `[图片分析失败：辅助视觉模型暂时不可用，本轮不会把图片内容传给文本模型。请明确说明你没有看到图片，并请用户稍后重试或检查视觉模型配置${reason}。]`,
+    ja: `[画像分析失敗：補助ビジョンモデルが一時的に利用できません。このターンでは画像の内容をテキストモデルに渡しません。画像を確認できなかったことをはっきり述べ、ユーザーに後でもう一度試すかビジョンモデルの設定を確認するよう伝えてください${reason}。]`,
+    fr: `[Échec de l'analyse d'image : le modèle de vision auxiliaire est temporairement indisponible, ce tour n'inclut donc pas le contenu de l'image pour le modèle texte. Indique clairement que tu n'as pas pu inspecter l'image, et demande à l'utilisateur de réessayer plus tard ou de vérifier la configuration du modèle de vision${reason}.]`,
+    de: `[Bildanalyse fehlgeschlagen: das Hilfs-Visionmodell ist vorübergehend nicht verfügbar, diese Runde enthält daher keinen Bildinhalt für das Textmodell. Sage klar, dass du das Bild nicht prüfen konntest, und bitte den Benutzer, es später erneut zu versuchen oder die Visionmodell-Konfiguration zu prüfen${reason}.]`,
+    ko: `[이미지 분석 실패: 보조 비전 모델을 일시적으로 사용할 수 없어 이번 턴에서는 이미지 내용을 텍스트 모델에 전달하지 않습니다. 이미지를 확인하지 못했다는 점을 명확히 말하고, 사용자에게 나중에 다시 시도하거나 비전 모델 설정을 확인하도록 요청하세요${reason}.]`,
+    en: `[Image analysis failed: the auxiliary vision model is temporarily unavailable, so this turn does not include image content for the text-only model. Clearly state that you could not inspect the image, and ask the user to retry later or check the vision model configuration${reason}.]`,
+  });
 }
 
 function appendVisionFailureNotice(text, err) {

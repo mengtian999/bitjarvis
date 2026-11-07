@@ -97,6 +97,34 @@ function hasSeed(resourcesPath, platformArch) {
 }
 
 /**
+ * A5.2（docs/SIZE_AND_STARTUP_OPT.md §5）：随包 seed 归档（server/renderer
+ * tar.gz）是否都在场。安装器是主要投递通道；桌面端在"稳定启动"（本次 boot
+ * 未激活 seed、无崩溃回退）后会 best-effort 清理归档省磁盘（~232MB），此后
+ * "artifacts 被清空且无 OTA 可用"的场景只能靠重装恢复——本函数给 repair
+ * 流程和激活分支做前置判断，把那种场景的报错从 tar 层的模糊错误升级成
+ * 可行动的明确提示。
+ * @param {string} resourcesPath
+ * @param {string} platformArch
+ * @returns {{server: boolean, renderer: boolean, manifest: boolean}}
+ */
+function seedArchivesPresent(resourcesPath, platformArch) {
+  const result = { server: false, renderer: false, manifest: hasSeed(resourcesPath, platformArch) };
+  if (!result.manifest) return result;
+  const { seedDir } = seedPaths(resourcesPath, platformArch);
+  try {
+    const manifestBytes = fs.readFileSync(path.join(seedDir, seedManifestFileName(platformArch)));
+    // 这里只读 manifest 的内容（归档路径清单）做存在性检查，不做密码学校验——
+    // 签名真实性由真正的 boot/repair 路径的 verifySeedManifest 负责。
+    const manifest = JSON.parse(manifestBytes.toString("utf8"));
+    const serverEntry = manifest.artifacts && manifest.artifacts.server && Object.values(manifest.artifacts.server)[0];
+    const rendererEntry = manifest.artifacts && manifest.artifacts.renderer;
+    if (serverEntry && serverEntry.path) result.server = fs.existsSync(path.join(seedDir, serverEntry.path));
+    if (rendererEntry && rendererEntry.path) result.renderer = fs.existsSync(path.join(seedDir, rendererEntry.path));
+  } catch { /* 读不动就按缺失处理 */ }
+  return result;
+}
+
+/**
  * 验签 + 按 `requiredKinds` 取对应条目。条目缺失是硬错误（消费方义务，
  * schema 修正案：manifest 层面某个 kind 缺失是合法的，但消费方需要的 kind
  * 缺失必须拒绝启动）。默认只要求 server（签名 seed 管线的既有行为，向后兼容：
@@ -270,6 +298,14 @@ async function prepareArtifactServerBoot({
     let activatedSeed = false;
     if (action === "activate-seed") {
       const archivePath = path.join(seedDir, serverEntry.path);
+      if (!fs.existsSync(archivePath)) {
+        // A5.2：归档被"稳定启动后清理"移除（或安装损坏）时给出可行动的报错，
+        // 而不是 activateFromArchive 里 tar 层的模糊失败。
+        throw new Error(
+          `artifact-boot: seed server archive is missing (${archivePath}); `
+            + "offline re-extraction is no longer possible — reinstall the app (or update over the air) to restore it",
+        );
+      }
       log(`[artifact-boot] activating seed train ${manifest.train} (${serverEntry.version}) from ${archivePath}`);
       if (onProgress) onProgress();
       // 与热更新完全相同的激活路径：一条代码路径，没有特例。allowReplaceProtected:
@@ -316,6 +352,13 @@ async function prepareArtifactServerBoot({
  * 不自己重试或轮询。任何失败都抛出（fail loud）。
  * `platformArch` 只用于定位这台机器 Resources/seed/ 下平台化命名的 manifest
  * 文件（renderer 归档本身平台无关，manifest 内容校验不看这个参数）。
+ * `onDecision`（可选，A5.1 renderer 解压后台化）：在解压开始**之前**回调一次
+ * 决策快照——`action === "boot"` 时 versionDir 已是终局目录（本次不需要解压，
+ * 调用方可以立刻使用）；`activate-seed` 时 versionDir 为 null（目录要等解压 +
+ * 重新 resolveBoot 才确定，调用方应回退内置 asar 副本——首启场景 seed 与
+ * 安装包内置副本同源同版本，内容等价）。回调在指针 mutex 临界区内**同步**
+ * 触发；接收方只允许读值，不得在回调里再进指针 mutex（会死锁）。不传时
+ * 行为与旧签名逐字节一致。
  * @param {{
  *   homeDir: string,
  *   resourcesPath: string,
@@ -323,6 +366,10 @@ async function prepareArtifactServerBoot({
  *   keyset: Array<{keyId: string, publicKey: string}>,
  *   channel?: string,
  *   onProgress?: () => void,
+ *   onDecision?: (decision: {versionDir: string|null, train: number, version: string|null,
+ *                            slot: string|null, activatedSeed: false, crashFallback: boolean,
+ *                            quarantinedTrain: number|null, fromVersion: string|null,
+ *                            toVersion: string|null}) => void,
  *   log?: (msg: string) => void,
  * }} opts
  * @returns {Promise<{versionDir: string, train: number, version: string,
@@ -337,6 +384,7 @@ async function prepareArtifactRendererBoot({
   keyset,
   channel = SEED_CHANNEL,
   onProgress,
+  onDecision,
   log = console.log,
 }) {
   if (!homeDir) throw new Error("artifact-boot: homeDir is required");
@@ -400,9 +448,33 @@ async function prepareArtifactRendererBoot({
     let resolved = await activation.resolveBoot(pointerChannel, homeDir);
     const action = decideBootAction({ resolved, seedEntry: rendererEntry, crashFallback });
 
+    // 决策快照（见 JSDoc onDecision）：解压开始前回调，boot 动作给终局
+    // versionDir，activate-seed 给 null（等解压完的最终结果）。activate-seed
+    // 场景下 resolved 可能为 null（全新安装），字段相应兜底。
+    if (onDecision) {
+      onDecision({
+        versionDir: action === "boot" ? resolved.pointer.versionDir : null,
+        train: resolved && Number.isInteger(resolved.pointer.train) ? resolved.pointer.train : 0,
+        version: resolved && resolved.pointer.version != null ? resolved.pointer.version : null,
+        slot: resolved ? resolved.slot : null,
+        activatedSeed: false,
+        crashFallback,
+        quarantinedTrain,
+        fromVersion,
+        toVersion,
+      });
+    }
+
     let activatedSeed = false;
     if (action === "activate-seed") {
       const archivePath = path.join(seedDir, rendererEntry.path);
+      if (!fs.existsSync(archivePath)) {
+        // A5.2：同 prepareArtifactServerBoot——归档缺失给明确报错
+        throw new Error(
+          `artifact-boot: seed renderer archive is missing (${archivePath}); `
+            + "offline re-extraction is no longer possible — reinstall the app (or update over the air) to restore it",
+        );
+      }
       log(`[artifact-boot] activating renderer seed train ${manifest.train} (${rendererEntry.version}) from ${archivePath}`);
       if (onProgress) onProgress();
       // 与热更新完全相同的激活路径：一条代码路径，没有特例。allowReplaceProtected:
@@ -493,6 +565,74 @@ async function prepareArtifactBoot({
 }
 
 /**
+ * packaged 模式的组合入口（A5.1 renderer 解压后台化）：与 `prepareArtifactBoot`
+ * 的决策语义逐字节一致（先做一次"两个 kind 都在场"的整体 manifest 校验，再各走
+ * 各的 current→previous→seed 链），但不等待 renderer 半场完成——返回三个 promise，
+ * 让调用方在 server 半场就绪后立即 spawn server，renderer 的解压与 server 冷
+ * import 天然重叠：
+ * - `serverPromise`：server 半场终局（调用方必须最先 await 它）。
+ * - `rendererDecisionPromise`：renderer 决策快照（见 `prepareArtifactRendererBoot`
+ *   的 onDecision），毫秒级、不包含解压耗时；spawn 端读 `JARVIS_RENDERER_DIST`
+ *   用它而不是等解压。renderer 半场整体失败时它以同一错误拒绝（决策没走到就
+ *   崩了的情况），保证等待方不会悬挂。
+ * - `rendererPromise`：renderer 半场终局（含解压），调用方在创建第一个非 splash
+ *   窗口前 await 它。
+ * 两个半场内部各自持有同一把 homeDir 指针 mutex（调用顺序即持锁顺序：server
+ * 先），不存在交错；deferred 的只是"调用方何时 await"，不是决策本身。
+ * @param {与 prepareArtifactBoot 相同的 opts}
+ * @returns {{serverPromise: Promise<server 半场结果>,
+ *            rendererDecisionPromise: Promise<{versionDir: string|null, ...}>,
+ *            rendererPromise: Promise<renderer 半场结果>}}
+ */
+function prepareArtifactBootDeferred({
+  homeDir,
+  resourcesPath,
+  platformArch,
+  keyset,
+  channel = SEED_CHANNEL,
+  onProgress,
+  log = console.log,
+}) {
+  if (!hasSeed(resourcesPath, platformArch)) {
+    throw new Error(
+      `artifact-boot: packaged resources carry no seed (expected under ${path.join(resourcesPath, "seed")}); `
+        + "the install is broken — reinstall the app",
+    );
+  }
+  const { manifestPath, sigPath } = seedPaths(resourcesPath, platformArch);
+  verifySeedManifest({
+    manifestBytes: fs.readFileSync(manifestPath),
+    sigBytes: fs.readFileSync(sigPath),
+    keyset,
+    platformArch,
+    requiredKinds: ["server", "renderer"],
+  });
+
+  // onDecision 只会触发一次；若 renderer 半场在触发前就失败（promote/哨兵/
+  // manifest 阶段抛错），用同一错误兑现 decision promise，避免等待方悬挂。
+  let settleDecision;
+  const rendererDecisionPromise = new Promise((resolve, reject) => { settleDecision = { resolve, reject }; });
+  const serverPromise = prepareArtifactServerBoot({ homeDir, resourcesPath, platformArch, keyset, channel, onProgress, log });
+  const rendererPromise = prepareArtifactRendererBoot({
+    homeDir,
+    resourcesPath,
+    platformArch,
+    keyset,
+    channel,
+    onProgress,
+    onDecision: (decision) => settleDecision.resolve(decision),
+    log,
+  });
+  rendererPromise.catch((err) => settleDecision.reject(err));
+  // spawn 路径在中途放弃（server 半场失败 fail-loud）时 decision 无人 await：
+  // 挂一个 no-op catch 防 unhandled rejection；正常路径的真实消费者照常 await
+  // 这个 promise（.catch 返回的是新 promise，不影响原 promise 的 reject 传递）。
+  rendererDecisionPromise.catch(() => {});
+
+  return { serverPromise, rendererDecisionPromise, rendererPromise };
+}
+
+/**
  * spawn 前登记 boot 哨兵（同 train 连续未清除会累加计数）。
  * @param {string} homeDir
  * @param {string} channel
@@ -561,12 +701,14 @@ module.exports = {
   CRASH_LOOP_THRESHOLD,
   seedPaths,
   hasSeed,
+  seedArchivesPresent,
   verifySeedManifest,
   decideBootAction,
   rendererPointerChannel,
   prepareArtifactServerBoot,
   prepareArtifactRendererBoot,
   prepareArtifactBoot,
+  prepareArtifactBootDeferred,
   writeBootSentinel,
   scheduleHealthySentinelClear,
   isRendererMainFrameLoadCrash,

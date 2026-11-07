@@ -159,6 +159,10 @@ function verifyWindowsInstallSurfaceBeforeMain() {
   const result = launchIntegrity.checkWindowsInstallSurface({
     execPath: process.execPath,
     resourcesPath: process.resourcesPath,
+    // A5.2：seed 归档可因稳定启动清理而缺席——归档缺失时用 JARVIS_HOME 的
+    // artifact 激活证据（pointers/*.current.json）区分"清理后的合法状态"与
+    // "真安装损坏"（jarvisHome 在本函数之前已解析）。
+    jarvisHome,
   });
   if (result.ok) {
     appendLaunchLog("install-surface-check-ok", result);

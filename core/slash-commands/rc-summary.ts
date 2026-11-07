@@ -24,6 +24,7 @@ import {
 } from "../model-execution-config.ts";
 import { callTextWithLengthContract, type OutputLengthContract } from "../output-length-contract.ts";
 import { getLocale } from "../../lib/i18n.ts";
+import { normalizePromptLang, pickPromptText, type PromptLang } from "../../shared/prompt-locale.ts";
 import { isToolCallBlock } from "../llm-utils.ts";
 import { createModuleLogger } from "../../lib/debug-log.ts";
 
@@ -45,9 +46,10 @@ export async function summarizeSessionForRc(engine, agent, sessionPath) {
   const content = _extractRecentTurns(sessionPath);
   if (!content.userText && !content.assistantText) return null;
 
-  const isZh = getLocale().startsWith("zh");
-  const messages = _buildMessages(content, isZh);
-  const lengthContract = _summaryLengthContract(isZh);
+  const lang = normalizePromptLang(getLocale());
+  const isZh = lang === "zh" || lang === "zh-TW";
+  const messages = _buildMessages(content, lang);
+  const lengthContract = _summaryLengthContract(lang);
 
   // Tier 1: utility
   let utilConfig = null;
@@ -127,10 +129,15 @@ function usageContextForRc(engine, agent, sessionPath, operation) {
   };
 }
 
-function _summaryLengthContract(isZh): OutputLengthContract {
-  return isZh
-    ? { label: "/rc 摘要", target: 100, unit: "chars", min: 1, locale: "zh" }
-    : { label: "/rc summary", target: 60, unit: "words", min: 1, locale: "en" };
+function _summaryLengthContract(lang: PromptLang): OutputLengthContract {
+  if (lang === "zh" || lang === "zh-TW") {
+    return { label: "/rc 摘要", target: 100, unit: "chars", min: 1, locale: "zh" };
+  }
+  const labels: Partial<Record<PromptLang, string>> = {
+    fr: "résumé /rc",
+    de: "/rc-Zusammenfassung",
+  };
+  return { label: labels[lang] ?? "/rc summary", target: 60, unit: "words", min: 1, locale: "en" };
 }
 
 async function _safeCall({ api, model, apiKey, baseUrl, headers, messages, usageLedger, usageContext, lengthContract }, tierLabel) {
@@ -191,23 +198,53 @@ function _extractRecentTurns(sessionPath) {
   };
 }
 
-function _buildMessages({ userText, assistantText, tools }, isZh) {
-  const system = isZh
-    ? `你是对话摘要生成器。根据下面几轮对话，概括这个桌面会话正在处理什么、当前进展，以及能看出的下一步线索。
-规则：中文，直接输出 1-3 句，目标约 100 字，可在 60-200 字之间自然浮动；不加引号、不加前缀、不列编号；不要逐条复述工具日志，也不要只写工具名或泛泛一句。`
-    : `You summarize conversations. Given the turns below, describe what this desktop session is handling, its current progress, and any visible next-step clue.
+function _buildMessages({ userText, assistantText, tools }, lang: PromptLang) {
+  const isZh = lang === "zh" || lang === "zh-TW";
+  let system;
+  if (isZh) {
+    system = `你是对话摘要生成器。根据下面几轮对话，概括这个桌面会话正在处理什么、当前进展，以及能看出的下一步线索。
+规则：中文，直接输出 1-3 句，目标约 100 字，可在 60-200 字之间自然浮动；不加引号、不加前缀、不列编号；不要逐条复述工具日志，也不要只写工具名或泛泛一句。`;
+  } else if (lang === "fr") {
+    system = `Tu résumes des conversations. À partir des tours ci-dessous, décris ce que cette session de bureau traite, sa progression actuelle et tout indice visible sur la prochaine étape.
+Règles : sors 1 à 3 phrases directes en français, visant environ 60 mots ; 36 à 120 mots sont acceptables. Pas de guillemets, de préambule ni de numérotation ; n'énumère pas les journaux d'outils, et ne réduis pas le résumé aux noms d'outils ou à une formule générique.`;
+  } else if (lang === "de") {
+    system = `Du fasst Unterhaltungen zusammen. Beschreibe anhand der folgenden Runden, woran diese Desktop-Session arbeitet, ihren aktuellen Fortschritt und jeden sichtbaren Hinweis auf den nächsten Schritt.
+Regeln: gib 1-3 direkte Sätze auf Deutsch aus, etwa 60 Wörter; 36-120 Wörter sind akzeptabel. Keine Anführungszeichen, kein Vorspann, keine Nummerierung; zähle keine Werkzeugprotokolle auf und reduziere die Zusammenfassung nicht auf Werkzeugnamen oder eine generische Formel.`;
+  } else {
+    system = `You summarize conversations. Given the turns below, describe what this desktop session is handling, its current progress, and any visible next-step clue.
 Rules: output 1-3 direct English sentences, aiming for about 60 words; 36-120 words is acceptable. No quotes, preamble, or numbering; do not list tool logs, and do not reduce the summary to tool names or a generic phrase.`;
+  }
 
   const toolStr = tools.length > 0
-    ? (isZh ? `\n用到的工具：${tools.join("、")}` : `\nTools used: ${tools.join(", ")}`)
+    ? pickPromptText(lang, {
+        zh: `
+用到的工具：${tools.join("、")}`,
+        fr: `
+Outils utilisés : ${tools.join(", ")}`,
+        de: `
+Verwendete Werkzeuge: ${tools.join(", ")}`,
+        en: `
+Tools used: ${tools.join(", ")}`,
+      })
     : "";
 
-  const contextLabel = isZh ? "对话片段" : "Conversation";
+  const contextLabel = pickPromptText(lang, {
+    zh: "对话片段",
+    fr: "Extrait de conversation",
+    de: "Gesprächsauszug",
+    en: "Conversation",
+  });
+  const userLabel = pickPromptText(lang, { zh: "用户：", fr: "Utilisateur : ", de: "Benutzer: ", en: "User: " });
+  const assistantLabel = pickPromptText(lang, { zh: "助手：", fr: "Assistant : ", de: "Assistent: ", en: "Assistant: " });
   return [
     { role: "system", content: system },
     {
       role: "user",
-      content: `${contextLabel}：\n\n${isZh ? "用户：" : "User: "}${userText}\n\n${isZh ? "助手：" : "Assistant: "}${assistantText}${toolStr}`,
+      content: `${contextLabel}：
+
+${userLabel}${userText}
+
+${assistantLabel}${assistantText}${toolStr}`,
     },
   ];
 }

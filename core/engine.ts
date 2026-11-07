@@ -28,7 +28,8 @@ import { createRuntimeExecutionBoundary } from "./execution-boundary.ts";
 import { ResourceAccessService } from "./resource-access-service.ts";
 import { ResourceService } from "./resource-service.ts";
 import { appendSecurityAuditEvent } from "./security-audit-log.ts";
-import { findModel } from "../shared/model-ref.ts";
+import { findModel, parseModelRef } from "../shared/model-ref.ts";
+import { lookupModelLanguages } from "../shared/known-models.ts";
 import {
   resolveWorkspaceSkillCatalogPaths,
   resolveWorkspaceSkillPaths,
@@ -2006,6 +2007,21 @@ export class JarvisEngine {
   setLearnSkills(p) { this._prefs.setLearnSkills(p); }
   getLocale() { return this._prefs.getLocale(); }
   setLocale(l) { this._prefs.setLocale(l); }
+  getAgentPromptLocale() { return this._prefs.getAgentPromptLocale(); }
+  setAgentPromptLocale(l) { this._prefs.setAgentPromptLocale(l); }
+  /**
+   * 查询某个模型引用的语言能力（"provider/id" 或 {id, provider}）。
+   * 返回 null 表示未知 —— 调用方按「支持任意语言」处理。
+   */
+  getModelLanguages(modelRef) {
+    try {
+      const parsed = parseModelRef(modelRef);
+      if (!parsed?.id || !parsed?.provider) return null;
+      return lookupModelLanguages(parsed.provider, parsed.id);
+    } catch {
+      return null;
+    }
+  }
   getUserName() { return this._prefs.getUserName(); }
   setUserName(n) {
     this._prefs.setUserName(n);
@@ -2404,6 +2420,9 @@ export class JarvisEngine {
   //  生命周期
   // ════════════════════════════
 
+  /** A3：runBackgroundInit 是否已启动（防重复调用，见方法 JSDoc） */
+  private _backgroundInitStarted = false;
+
   async init(log: any = () => {}) {
     const startupTimer = Date.now();
 
@@ -2716,8 +2735,36 @@ export class JarvisEngine {
     // 4b. 网关模型组后台同步（不阻塞启动；网络不可达时保留既有配置，成功后全量刷新）
     void this._syncGatewayModels(log);
 
-    // 5. Sync skills + watch skillsDir
+    // 5. Sync skills（critical：系统提示词的技能集必须在首个会话/请求前就位；
+    //    watcher 热重载与清理类收尾移入 runBackgroundInit——A3，
+    //    docs/SIZE_AND_STARTUP_OPT.md §5）
     this._syncAllAgentSkills();
+
+    // 8. 沙盒日志（廉价，保留在 critical 保持日志顺序）
+    const sandboxEnabled = this._readPreferences().sandbox !== false;
+    log(`✿ 沙盒${sandboxEnabled ? "已启用" : "已关闭"}`);
+
+    const totalTime = ((Date.now() - startupTimer) / 1000).toFixed(1);
+    log(`✿ 初始化完成（${totalTime}s）`);
+  }
+
+  /**
+   * A3 后台初始化（docs/SIZE_AND_STARTUP_OPT.md §5）：init() 的非关键收尾，
+   * 在 server 写入 server-info.json 宣布就绪之后由 server/index.ts 调用
+   * （JARVIS_EARLY_READY=0 时退回旧行为：ready 前 await 本方法）。
+   * 包含：技能目录 watcher（chokidar 热重载）、bridge 孤儿清理、过期
+   * ephemeral 清理、文件历史 watcher。全部自包含容错，方法本身不 reject；
+   * 幂等（重复调用直接返回）。
+   * 顺序约束：refreshFileHistoryWorkspaces 依赖 initAllAgents 已注册 agent
+   * （syncWorkspaces([]) 会清掉全部既有 watcher，file-history-service.ts），
+   * 后台化后天然排在 critical 之后，约束不变。
+   */
+  async runBackgroundInit(log: any = () => {}) {
+    if (this._backgroundInitStarted) return;
+    this._backgroundInitStarted = true;
+    const bgTimer = Date.now();
+
+    // 5b. watch skillsDir（热重载；回调重打补丁 getter + 重同步技能集）
     this._skills.watch(this._resourceLoader, this._agentMgr.agents, () => {
       this._resourceLoader.getSystemPrompt = () => this.agent.systemPrompt;
       this._resourceLoader.getSkills = () => this._getSkillsForAgent(this.agent);
@@ -2728,18 +2775,14 @@ export class JarvisEngine {
     // 7. Bridge 孤儿清理
     try { this._bridge.reconcile(); } catch (err) { moduleLog.warn(`[init] bridge reconcile failed: ${err?.message}`); }
 
-    // 8. 沙盒日志
-    const sandboxEnabled = this._readPreferences().sandbox !== false;
-    log(`✿ 沙盒${sandboxEnabled ? "已启用" : "已关闭"}`);
-
     // 9. 清理过期的 .ephemeral session 文件（>7 天）
     this._cleanEphemeralSessions();
 
     // 10. 文件历史：按各 agent 的工作区根目录建立/同步快照 watcher
     this.refreshFileHistoryWorkspaces();
 
-    const totalTime = ((Date.now() - startupTimer) / 1000).toFixed(1);
-    log(`✿ 初始化完成（${totalTime}s）`);
+    const bgTime = ((Date.now() - bgTimer) / 1000).toFixed(1);
+    log(`✿ 后台初始化完成（${bgTime}s）`);
   }
 
   /** 清理所有 agent 的 .ephemeral/ 目录中超过 7 天的文件 */

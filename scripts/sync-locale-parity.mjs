@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOCALES_DIR = path.join(ROOT, 'desktop/src/locales');
-const TARGETS = ['zh', 'zh-TW', 'ja', 'ko'];
+const TARGETS = ['zh', 'zh-TW', 'ja', 'ko', 'fr', 'de'];
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));

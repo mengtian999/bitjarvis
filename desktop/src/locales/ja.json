@@ -1288,7 +1288,9 @@
       "zhTW": "繁體中文",
       "ja": "日本語",
       "ko": "한국어",
-      "en": "English"
+      "en": "English",
+      "fr": "フランス語",
+      "de": "ドイツ語"
     },
     "agent": {
       "title": "エージェント",
@@ -1743,7 +1745,17 @@
       "defaultOption": "デフォルト",
       "qualityLow": "低",
       "qualityMedium": "中",
-      "qualityHigh": "高"
+      "qualityHigh": "高",
+      "sherpaModelsDownload": "音声モデルのダウンロード",
+      "sherpaModelsDownloadHint": "音声認識/合成モデルはインストーラーに同梱されなくなりました。ローカル音声を初めて使うときに必要に応じてダウンロードします。ダウンロードしなくてもオンライン音声は利用できます。",
+      "sherpaModelInstall": "ダウンロード",
+      "sherpaModelInstalled": "インストール済み",
+      "sherpaModelDownloading": "ダウンロード中…",
+      "sherpaModelExtracting": "展開中…",
+      "sherpaModelVerifying": "検証中…",
+      "sherpaModelError": "失敗",
+      "sherpaModelRetry": "再試行",
+      "sherpaModelBusy": "別のダウンロードが進行中です"
     },
     "voice": {
       "language": "音声言語",
@@ -1754,7 +1766,9 @@
         "zh-TW": "繁体字中国語",
         "ja": "日本語",
         "ko": "한국어",
-        "en": "English"
+        "en": "English",
+        "fr": "フランス語",
+        "de": "ドイツ語"
       },
       "currentLanguage": "現在の言語",
       "preview": "試聴",
@@ -2485,6 +2499,17 @@
       "dropOrClick": "キャラクターカードをドロップするか、クリックして開く",
       "readFailed": "キャラクターカードの読み込みに失敗しました",
       "importFailed": "キャラクターカードのインポートに失敗しました"
+    },
+    "agentPromptLocale": {
+      "label": "Agent プロンプト言語",
+      "hint": "Agent のシステムプロンプトと人格テンプレートの言語。UI 言語と独立に設定でき、モデルが対応しない場合は自動的に英語へフォールバックします。",
+      "follow": "UI 言語に従う",
+      "en": "English",
+      "zh": "中文",
+      "ja": "日本語",
+      "ko": "한국어",
+      "fr": "Français",
+      "de": "Deutsch"
     }
   },
   "onboarding": {
@@ -3231,7 +3256,8 @@
       "repairArtifactsBody": "この操作は Bit Jarvis のアプリコンポーネントをインストール時のバージョンにリセットし、アプリを再起動します。データ（エージェント、セッション、設定）は影響を受けません。",
       "repairArtifactsConfirm": "修復して再起動",
       "repairArtifactsCancel": "キャンセル",
-      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n更新の適用に失敗しました：\n{error}\n\nアプリを再起動してください。"
+      "trainUpdateApplyFailedBody": "Bit Jarvis v{version}\n\n更新の適用に失敗しました：\n{error}\n\nアプリを再起動してください。",
+      "repairArtifactsUnavailable": "現在コンポーネントを修復できません: {reason}"
     },
     "notification": {
       "ready": "通知が有効になりました",
@@ -3432,7 +3458,9 @@
       "theme": "テーマ",
       "chatModel": "チャットモデル",
       "fileBackup": "ファイルバックアップ",
-      "fileBackupDesc": "AI による変更前にファイルを自動バックアップ"
+      "fileBackupDesc": "AI による変更前にファイルを自動バックアップ",
+      "agentPromptLocale": "Agent プロンプト言語",
+      "agentPromptLocaleDesc": "Agent のシステムプロンプトと人格テンプレートの言語を UI 言語と独立に指定します。「follow」は UI 言語に従い、モデルがその言語に対応していない場合は英語へ自動的にフォールバックします。"
     },
     "generateImage": {
       "description": "テキスト説明から画像を生成します。非ブロッキング: 送信後すぐに返り、完了すると自動的に表示されます。",

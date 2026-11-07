@@ -3,6 +3,125 @@
   "entries": [
     {
       "schemaVersion": 1,
+      "tag": "v0.0.2",
+      "version": "0.0.2",
+      "previousTag": "BitJarvis",
+      "generatedAt": "2026-10-31T23:59:24.000Z",
+      "noUserFacingChanges": false,
+      "summary": {
+        "zh": "聊天消息一键翻译上线，浏览器支持接入外部（CDP）浏览器，Linux 用户首次获得官方发布渠道（AppImage 与 deb）。",
+        "en": "One-click chat translation arrives, the browser can now attach an external (CDP) browser, and Linux users get official release channels (AppImage and deb) for the first time."
+      },
+      "counts": {
+        "feature": 2,
+        "fix": 0,
+        "improvement": 1,
+        "migration": 0
+      },
+      "source": {
+        "owner": "mengtian999",
+        "repo": "Bitjarvis",
+        "commitRange": "BitJarvis..v0.0.2",
+        "releaseUrl": "https://github.com/mengtian999/Bitjarvis/releases/tag/v0.0.2",
+        "releaseNotes": ""
+      },
+      "items": [
+        {
+          "id": "chat-translation",
+          "kind": "feature",
+          "importance": "high",
+          "title": {
+            "zh": "聊天消息一键翻译",
+            "en": "One-click chat message translation"
+          },
+          "summary": {
+            "zh": "聊天里的外语消息可以直接翻译了：翻译统一经由 Jarvis 网关完成，无需再自行配置 Google/DeepL 等翻译服务的密钥，聊天设置页只保留目标语言选择。",
+            "en": "Foreign-language messages in chats can now be translated in place. Translation runs through the Jarvis gateway, so there is no need to configure Google or DeepL API keys anymore — the chat settings page only keeps the target-language selection."
+          },
+          "details": [
+            {
+              "zh": "翻译请求以 im_translate 模型走 Jarvis 网关（代理通道），客户端不再直连翻译服务商。",
+              "en": "Translation requests go through the Jarvis gateway as the im_translate model via the proxy channel; the client no longer talks to translation providers directly."
+            },
+            {
+              "zh": "翻译不可用时聊天界面会提示桥接服务未就绪，而不是静默失败。",
+              "en": "When translation is unavailable, the chat UI shows a bridge-unavailable hint instead of failing silently."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "64e2081",
+              "title": "feat(im): chat translation service; tts adapters update"
+            },
+            {
+              "type": "commit",
+              "ref": "c0172e6",
+              "title": "refactor(im): route chat translation through Jarvis gateway (im_translate)"
+            }
+          ]
+        },
+        {
+          "id": "external-cdp-browser",
+          "kind": "feature",
+          "importance": "medium",
+          "title": {
+            "zh": "浏览器支持接入外部浏览器（CDP）",
+            "en": "Attach an external browser via CDP"
+          },
+          "summary": {
+            "zh": "除内置浏览器外，现在可以在设置里接入一个外部浏览器（通过 Chrome DevTools 协议发现与连接），由外部浏览器承担网页打开与自动化操作。",
+            "en": "Alongside the built-in browser, you can now attach an external browser from settings (discovered and connected over the Chrome DevTools Protocol) and let it handle page opening and browser automation."
+          },
+          "details": [
+            {
+              "zh": "外部浏览器后端覆盖 CDP 发现、客户端连接与页面脚本注入，设置页新增外部浏览器入口。",
+              "en": "The external backend covers CDP discovery, client connection and page script injection; the settings page gains an external-browser entry."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "b4c543b",
+              "title": "feat(browser+update): external CDP browser backend, update-source split"
+            }
+          ]
+        },
+        {
+          "id": "linux-release-channel",
+          "kind": "improvement",
+          "importance": "medium",
+          "title": {
+            "zh": "Linux 官方发布渠道",
+            "en": "Official Linux release channel"
+          },
+          "summary": {
+            "zh": "新增 Linux 发布流水线，从本版本起提供 AppImage 与 deb 安装包，并修复了签名密钥路径与打包依赖问题。",
+            "en": "A new Linux release pipeline ships AppImage and deb packages from this version on, with signing-key path and packaging-dependency fixes along the way."
+          },
+          "details": [
+            {
+              "zh": "Linux 构建同时产出 AppImage 与 deb，并补齐 flutter web 构建与渲染器步骤。",
+              "en": "Linux builds produce both AppImage and deb artifacts, with the flutter web build and renderer steps wired in."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "0a7feb1",
+              "title": "ci: add linux release workflow (AppImage + deb)"
+            },
+            {
+              "type": "commit",
+              "ref": "361656a",
+              "title": "ci: fix JARVIS_SIGN_KEY path + linux packaging deps"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "tag": "v0.0.1",
       "version": "0.0.1",
       "previousTag": "v0.0.0",
