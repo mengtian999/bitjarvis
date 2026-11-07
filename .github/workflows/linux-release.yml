@@ -98,13 +98,4 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/latest-linux.yml
-          body: |
-            ## Bit Jarvis
-
-            Linux 桌面版（AppImage + deb）。
-
-            ### What's new
-            - Added AI chat translation via the Jarvis gateway
-            - Added TTS adapter support for voice output
-            - Improved browser backend using an external CDP connection
           fail_on_unmatched_files: false
