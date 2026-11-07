@@ -81,6 +81,17 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --linux AppImage deb --publish never
 
+      - name: List dist artifacts
+        run: |
+          echo '=== dist/ ==='
+          ls -lh dist/ || true
+          echo '=== dist/**/*.AppImage ==='
+          find dist -maxdepth 3 -name '*.AppImage' -print || true
+          echo '=== dist/**/*.deb ==='
+          find dist -maxdepth 3 -name '*.deb' -print || true
+          echo '=== dist/**/latest-linux.yml ==='
+          find dist -maxdepth 3 -name 'latest-linux.yml' -print || true
+
       - name: Determine tag
         id: tag
         run: |
