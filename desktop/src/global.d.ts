@@ -46,9 +46,16 @@ declare global {
     i18n: {
       locale: string;
       defaultName: string;
+      /**
+       * 最近一次成功加载的语言包 key（null = 从未加载），用于首屏预加载判重。
+       * optional：单测里手写的 window.i18n stub 不一定带这两个字段。
+       */
+      loadedLocale?: string | null;
       _data: Record<string, unknown>;
       _agentOverrides: Record<string, unknown>;
       load(locale: string): Promise<void>;
+      /** locale 字符串 → 语言包文件名 key（"zh-CN" → "zh"） */
+      resolveLocaleKey?(locale: string): string;
       setAgentOverrides(overrides: Record<string, unknown> | null): void;
       t(path: string, vars?: Record<string, string | number>): string;
     };

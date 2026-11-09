@@ -25,6 +25,7 @@ import { initQuotedSelectionLifecycle } from './stores/selection-actions';
 import { hydrateInputDrafts, initInputDraftPersistence } from './stores/input-draft-persistence';
 import { configureAppEventActions, handleAppEvent, readConfigCwdHistory, readConfigHomeFolder, readConfigMemoryMasterEnabled } from './services/app-event-actions';
 import { configureWsMessageHandler } from './services/ws-message-handler';
+import { syncLocale } from './i18n-boot';
 import { applyChatLayout } from './chat/layout';
 import { applyEditorTypography } from './editor/typography';
 import { findPrimaryAgent } from './utils/agent-workspace';
@@ -157,6 +158,8 @@ export async function initApp(): Promise<void> {
     return;
   }
 
+  markRendererLaunch('server-info-ready', JSON.stringify({ port: serverPort }));
+
   try {
     await refreshDeviceWebSession(activeServerConnection);
     const mergedConnection = await loadIdentityForActiveConnection(activeServerConnection);
@@ -199,6 +202,7 @@ export async function initApp(): Promise<void> {
   persistAppearancePreferences().catch((err) => {
     console.warn('[init] appearance preference sync skipped:', err);
   });
+  markRendererLaunch('server-identity-ready');
 
   // 2. 并行获取 health + 全局设置 + agent 列表
   // bootstrap 报出来的 agent 身份，后面按 agent 提问的请求都用它，免得任何一步
@@ -227,9 +231,11 @@ export async function initApp(): Promise<void> {
     applyEditorTypography(globalConfig.editor);
     applyChatLayout(agentConfig.chat);
 
-    // 3. 加载 i18n
-    await i18n.load(globalConfig.locale || 'zh-CN');
-    useStore.setState({ locale: i18n.locale });
+    // 3. 对齐语言包
+    //    首屏（main.tsx → i18n-boot.ts）已经预加载过一次，语言没变时这里只同步
+    //    store，不再重复拉一次 ~180KB 的语言包；服务端 locale 变了才重新加载。
+    await syncLocale(globalConfig.locale || 'zh-CN');
+    markRendererLaunch('i18n-synced', i18n.locale);
 
     // 4. 应用 agent 身份
     await applyAgentIdentity({
@@ -250,6 +256,7 @@ export async function initApp(): Promise<void> {
 
     // 6. 加载头像（agent 头像按 bootstrap 给出的 agent 身份请求）
     loadAvatars(healthData.avatars, healthData.agentId);
+    markRendererLaunch('boot-config-ready');
   } catch (err) {
     console.error('[init] i18n/health/config failed:', err);
   }
@@ -266,6 +273,7 @@ export async function initApp(): Promise<void> {
   await loadPendingNewSessionPermissionDefault();
   await loadAgents();
   await loadSessions();
+  markRendererLaunch('boot-sessions-ready');
   void hydrateInputDrafts();
 
   // 10b. 加载项目目录（带重试）。放在 sessions 之后：此时 server 已确认可用，

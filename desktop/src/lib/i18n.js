@@ -23,6 +23,15 @@ const i18n = {
   /** 当前 locale（"zh" / "zh-TW" / "ja" / "ko" / "en"） */
   locale: "zh",
 
+  /**
+   * 最近一次 `load()` 落地的语言包 key（null = 从未加载）。
+   *
+   * 渲染层的首屏预加载与「服务端 locale 对齐」分别在不同时机要求加载语言包，
+   * 靠这个标记判重：已经加载过同一个 JSON 时只同步 store，不再重复拉一次
+   * ~180KB 的语言包（见 desktop/src/react/i18n-boot.ts）。
+   */
+  loadedLocale: null,
+
   /** 默认 agent 名（占位符 {name} 的 fallback） */
   defaultName: "Jarvis",
 
@@ -84,11 +93,14 @@ const i18n = {
     this.locale = key;
     try {
       this._data = await this._fetchJson(`./locales/${key}.json`);
+      this.loadedLocale = key;
     } catch (err) {
       console.error(`[i18n] Failed to load locale "${key}":`, err);
       if (key !== "en") {
         try {
           this._data = await this._fetchJson("./locales/en.json");
+          // 数据是英文包：标记成 en，避免同一次启动里对同一个目标反复重试。
+          this.loadedLocale = "en";
         } catch { this._data = {}; }
       } else {
         this._data = {};
@@ -106,6 +118,16 @@ const i18n = {
     if (locale.startsWith("fr")) return "fr";
     if (locale.startsWith("de")) return "de";
     return "en";
+  },
+
+  /**
+   * `_resolveKey` 的公开入口：外部（首屏预加载 / locale 对齐）需要在真正加载
+   * 之前判断"目标语言是不是已经加载过"，不能依赖私有命名。
+   * @param {string} locale
+   * @returns {string}
+   */
+  resolveLocaleKey(locale) {
+    return this._resolveKey(locale);
   },
 
   /**

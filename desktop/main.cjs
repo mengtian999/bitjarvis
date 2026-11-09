@@ -729,6 +729,9 @@ const SERVER_SHUTDOWN_GRACE_MS = 17000; // server gracefulShutdown 内部 15s fo
 const SERVER_FORCE_KILL_WAIT_MS = 5000;
 const STALE_SERVER_EXIT_GRACE_MS = 2000; // 残留 server 终止/自然退出的确认宽限
 const SERVER_SHUTDOWN_POLL_MS = 200;
+// 主窗口等 renderer app-ready 的兜底预算。冷启动（Defender 扫 server bundle）实测
+// 常到 60s+，30s 会把半初始化的窗口提前顶到前台；这里对齐 server 就绪预算。
+const MAIN_WINDOW_APP_READY_TIMEOUT_MS = 75_000;
 
 // ── 主进程 i18n ──
 // 从 agent config.yaml 读取 locale，加载对应语言包的 "main" 部分
@@ -3048,20 +3051,30 @@ function createMainWindow() {
 
   loadWindowURL(mainWindow, "index");
 
-  // 前端初始化超时保护：30 秒内没收到 app-ready 就强制显示（防止用户卡在空白）
+  // 前端初始化超时保护：兜底显示窗口，防止用户永远卡在 splash/空白。
+  // 75s 的取法：renderer 等 server-info 的上限是 120s（app-init.ts），主进程
+  // pollServerInfo 的首期预算是 90s（shared/server-readiness.cjs）。Windows 上
+  // Defender 逐文件扫描 server bundle，冷启动实测 60s+ 很常见——原来 30s 的超时
+  // 会在 server 还没就绪时就把"半初始化"的主窗口顶到最前面，用户看到的是满屏
+  // 未翻译 key + 空列表，比继续看 splash 更像卡死。超时仍强制显示，只是把时间
+  // 轴对齐真实冷启动预算。
   const initTimeout = setTimeout(() => {
     if (_startHiddenAtLogin) return;
-    console.warn("[desktop] ⚠ 主窗口初始化超时（30s），强制显示");
+    console.warn(`[desktop] ⚠ 主窗口初始化超时（${MAIN_WINDOW_APP_READY_TIMEOUT_MS / 1000}s），强制显示`);
     writeDesktopLaunchDiagnostic("app-ready-timeout", {
       label: "main",
-      timeoutMs: 30000,
+      timeoutMs: MAIN_WINDOW_APP_READY_TIMEOUT_MS,
       visible: mainWindow && !mainWindow.isDestroyed() ? mainWindow.isVisible() : false,
       url: mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.getURL() : "",
     });
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
     }
-  }, 30000);
+    // 强制显示时 splash 也一并收掉，否则它会一直残留在主窗口后面。
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
+  }, MAIN_WINDOW_APP_READY_TIMEOUT_MS);
   mainWindow.webContents.once("did-finish-load", () => {
     // did-finish-load 只是 HTML 加载完成，JS init 可能还在跑
     console.log("[desktop] 主窗口 HTML 加载完成，等待前端 init...");
