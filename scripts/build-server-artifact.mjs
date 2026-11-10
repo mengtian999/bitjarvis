@@ -65,12 +65,16 @@ const activation = require("../shared/artifact-core/activation.cjs");
  * nft trace 和清理（移除 25575 个文件），这会累积打开的文件句柄。在 Windows
  * 上，Node.js 默认文件描述符限制很低，导致 EMFILE。通过将 packTree 放在一个
  * 具有自身 fd 表的干净子进程中，我们完全避免了这个问题。
+ * 传入 validateThemesDir 时，子进程还会在装箱前先跑 Office PDF 字体资产
+ * 断言（原先在主进程跑，同样的 fd 耗尽会把它误报成“资产无效”）。
  */
-function spawnPackTree(srcDir, archivePath) {
+function spawnPackTree(srcDir, archivePath, { validateThemesDir } = {}) {
   const helper = path.join(__dirname, "_pack-tree-helper.cjs");
   const startedAt = Date.now();
   console.log(`[pack-tree] child packing ${srcDir} → ${archivePath}`);
-  execFileSync(process.execPath, [helper, srcDir, archivePath], {
+  const helperArgs = [helper, srcDir, archivePath];
+  if (validateThemesDir) helperArgs.push(validateThemesDir);
+  execFileSync(process.execPath, helperArgs, {
     stdio: "inherit",
     env: process.env,
   });
@@ -100,7 +104,9 @@ function spawnSha256File(filePath) {
 const manifestModule = require("../shared/artifact-core/manifest.cjs");
 const { loadPinnedKeyset } = require("../shared/artifact-core/keyset.cjs");
 const { PRELOAD_API_VERSION, SERVER_PROTOCOL_VERSION } = require("../shared/contract-versions.cjs");
-const { assertOfficePdfFontAssets } = require("../desktop/src/office-pdf-fonts.cjs");
+// Office PDF 字体资产断言已挪进 _pack-tree-helper.cjs（装箱子进程）执行：
+// 主进程 fd 表被 server 阶段耗尽时，这里的 readFileSync 会把 EMFILE 误报成
+// “资产无效”（2026-11-09 重打包实测）。
 
 /**
  * Per-platform seed manifest file name. Each CI platform-arch job produces
@@ -442,15 +448,9 @@ export async function packRendererArtifact({ rendererDistDir, artifactOutDir, ve
   // Office HTML→PDF helper resolves fonts from the activated renderer artifact.
   // Refuse to create a renderer box whose CSS or referenced font files are
   // incomplete: Chromium would otherwise silently print with fallback fonts.
-  log("[build-server] seed: validating renderer Office PDF font assets");
-  try {
-    assertOfficePdfFontAssets({ themesDir: path.join(rendererDistDir, "themes") });
-  } catch (err) {
-    throw new Error(
-      `[build-server] renderer Office PDF font assets are invalid: ${err?.message || err}`,
-      { cause: err },
-    );
-  }
+  // 校验随装箱一起在子进程执行（干净 fd 表）：主进程 fd 耗尽时把 EMFILE
+  // 误报成“资产无效”毫无意义，还打断了 2026-11-09 的重打包。
+  log("[build-server] seed: validating renderer Office PDF font assets (in pack child)");
 
   // ── 装箱前断言：renderer 树不含 Mach-O（纯 web 静态资源，装箱后无法再签名）──
   log("[build-server] seed: scanning renderer tree for Mach-O files");
@@ -467,8 +467,18 @@ export async function packRendererArtifact({ rendererDistDir, artifactOutDir, ve
   fs.mkdirSync(artifactOutDir, { recursive: true });
   const archiveName = `renderer-${version}.tar.gz`;
   const archivePath = path.join(artifactOutDir, archiveName);
-  // 在子进程中执行 packTree 以获得干净的 fd 表（避免 Windows EMFILE）
-  spawnPackTree(rendererDistDir, archivePath);
+  // 在子进程中执行 packTree 以获得干净的 fd 表（避免 Windows EMFILE）；
+  // Office PDF 字体断言随箱子一起在子进程里先行执行（fail-closed）。
+  try {
+    spawnPackTree(rendererDistDir, archivePath, {
+      validateThemesDir: path.join(rendererDistDir, "themes"),
+    });
+  } catch (err) {
+    throw new Error(
+      `[build-server] renderer Office PDF font assets are invalid or renderer packing failed: ${err?.message || err}`,
+      { cause: err },
+    );
+  }
 
   const sha256 = await sha256File(archivePath);
   const size = statSize(archivePath);
