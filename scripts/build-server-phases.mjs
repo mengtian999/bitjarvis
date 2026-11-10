@@ -18,10 +18,10 @@
 import fs from "fs";
 import path from "path";
 import { createHash } from "crypto";
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { builtinModules } from "module";
-import { pathToFileURL } from "url";
-import ts from "typescript";
+import { pathToFileURL, fileURLToPath } from "url";
+import os from "os";
 import {
   buildBetterSqliteRuntimeSmokeScript,
   buildJiebaRuntimeSmokeScript,
@@ -474,24 +474,33 @@ export async function resolveAndInstallExternalServerDeps({
 
 // ── nft prune ────────────────────────────────────────────────────────────
 
-async function readNftTraceSource(filePath) {
-  let source;
+/**
+ * 在独立子进程里执行 @vercel/nft trace（干净 fd 表）。
+ *
+ * nft 的 worker 线程与主进程共享 fd 表，trace 中途失败（EBUSY / EPERM 都
+ * 发生过）时未关闭的句柄会滞留在主进程，把后续任意一步 readFileSync 打成
+ * EMFILE（报错位置在 seed 各阶段之间漂移、难以定位）。子进程退出后 OS 回收
+ * 其全部句柄，父进程不再受污染——与 _pack-tree-helper.cjs 的装箱隔离同一
+ * 思路。TS 转译视图（原 readNftTraceSource）随之搬进 _nft-trace-helper.mjs。
+ * 失败时抛错，调用方按既有约定 warn + 跳过 prune。
+ */
+async function runNftTraceInChild({ outDir, nftRoots }) {
+  const helper = fileURLToPath(new URL("./_nft-trace-helper.mjs", import.meta.url));
+  const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), "jarvis-nft-"));
+  const rootsPath = path.join(scratchDir, "roots.json");
+  const resultPath = path.join(scratchDir, "trace-result.json");
   try {
-    source = await fs.promises.readFile(filePath, "utf-8");
-  } catch (error) {
-    if (error?.code === "ENOENT" || error?.code === "EISDIR") return null;
-    throw error;
+    fs.writeFileSync(rootsPath, JSON.stringify(nftRoots.map((root) => path.resolve(outDir, root))));
+    execFileSync(process.execPath, [helper, outDir, rootsPath, resultPath], {
+      stdio: ["ignore", "inherit", "inherit"],
+      env: process.env,
+    });
+    const parsed = JSON.parse(fs.readFileSync(resultPath, "utf-8"));
+    // nft 原本返回 Set（下游用 .size）；保持同一契约。
+    return new Set(parsed.fileList);
+  } finally {
+    try { fs.rmSync(scratchDir, { recursive: true, force: true }); } catch {}
   }
-
-  if (!/\.(?:cts|mts|tsx?|d\.ts)$/i.test(filePath)) return source;
-  return ts.transpileModule(source, {
-    fileName: filePath,
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-      isolatedModules: true,
-    },
-  }).outputText;
 }
 
 /**
@@ -526,24 +535,12 @@ export async function pruneServerNodeModulesViaNft({
     return;
   }
 
-  log("[build-server] running nft trace...");
+  log("[build-server] running nft trace (in a child process for a clean fd table)...");
 
-  const { nodeFileTrace } = await import("@vercel/nft");
   const nmDir = path.join(outDir, "node_modules");
   let fileList;
   try {
-    ({ fileList } = await nodeFileTrace(
-      nftRoots.map((root) => path.join(outDir, root)),
-      {
-        base: outDir,
-        conditions: ["node", "import"],
-        // Bundled plugins remain as TypeScript source and are loaded through
-        // the plugin runtime. nft resolves .ts paths but its parser only
-        // accepts JavaScript syntax, so expose a read-only transpiled view for
-        // tracing while keeping the packaged files themselves unchanged.
-        readFile: readNftTraceSource,
-      },
-    ));
+    fileList = await runNftTraceInChild({ outDir, nftRoots });
   } catch (e) {
     // Windows CI 上 nft 可能因用户目录不存在而报错，跳过裁剪
     console.warn(`[build-server] nft trace failed (${e.message}), skipping prune`);
