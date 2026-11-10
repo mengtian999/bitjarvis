@@ -18,7 +18,7 @@
  *   一份会漂移的手写清单，模板永远跟着 electron-builder 走。
  *
  * 用法：
- *   node scripts/appx-store-manifest.cjs            # 默认 1.0.0.0
+ *   node scripts/appx-store-manifest.cjs            # 从 package.json 派生（0.0.4 → 1.0.4.0）
  *   APPX_IDENTITY_VERSION=2.0.0.0 node scripts/appx-store-manifest.cjs
  *
  * 产物：build/appx/AppxManifest.store.xml
@@ -53,7 +53,18 @@ function resolveTemplatePath() {
 }
 
 function resolveIdentityVersion() {
-  const raw = (process.env.APPX_IDENTITY_VERSION || DEFAULT_IDENTITY_VERSION).trim();
+  // 默认从 package.json 的 version 派生：商店要求第一段非 0、第四段为 0，
+  // 产品 0.0.4 → 1.0.4.0（第二/三段随产品 minor/patch 单调增长，永不回落）。
+  // 历史背景：0.0.1 时代的首包钉在 1.0.0.0；同身份（mengtian.BitJarvis）的
+  // 新包版本必须大于已发布包，否则商店拒收“全名相同、内容不同”。
+  let raw = (process.env.APPX_IDENTITY_VERSION || "").trim();
+  if (!raw) {
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "package.json"), "utf8"));
+    const [, minor, patch] = String(pkg.version || "0.0.0")
+      .split(".")
+      .map((n) => Number.parseInt(n, 10) || 0);
+    raw = `1.${minor}.${patch}.0`;
+  }
   if (!VERSION_PATTERN.test(raw)) {
     throw new Error(
       `APPX_IDENTITY_VERSION 必须是 x.y.z.0 形式的四段版本号（第四段保留给商店，必须为 0），收到："${raw}"`,
