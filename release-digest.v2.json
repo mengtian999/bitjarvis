@@ -3,6 +3,116 @@
   "entries": [
     {
       "schemaVersion": 1,
+      "tag": "v0.0.4",
+      "version": "0.0.4",
+      "previousTag": "v0.0.3",
+      "generatedAt": "2026-11-10T07:48:30.000Z",
+      "noUserFacingChanges": false,
+      "summary": {
+        "zh": "首次安装与冷启动不再出现「满屏翻译键」的窗口：语言包在首帧渲染前预加载，主窗口等渲染器就绪后再显示；同版本重装后，离线自修复归档不再被误删，Windows 打包稳定性同步修复。",
+        "en": "First installs and cold boots no longer show a window full of raw i18n keys: the locale bundle preloads before the first paint and the main window waits for the renderer. Offline self-repair archives now survive same-version reinstalls, and Windows packaging reliability is fixed."
+      },
+      "counts": {
+        "feature": 0,
+        "fix": 3,
+        "improvement": 0,
+        "migration": 0
+      },
+      "source": {
+        "owner": "mengtian999",
+        "repo": "Bitjarvis",
+        "commitRange": "v0.0.3..v0.0.4",
+        "releaseUrl": "https://github.com/mengtian999/Bitjarvis/releases/tag/v0.0.4",
+        "releaseNotes": ""
+      },
+      "items": [
+        {
+          "id": "i18n-first-paint",
+          "kind": "fix",
+          "importance": "high",
+          "title": {
+            "zh": "首安装/冷启动不再显示满屏翻译键",
+            "en": "No more raw-key screen on first install or cold boot"
+          },
+          "summary": {
+            "zh": "语言包现在在界面首帧渲染前完成预加载（本地缓存 → 配置 → 系统语言），主窗口改为等渲染器完全初始化后再显示（兜底预算 30s → 75s）。此前首次安装或冷启动较慢时，主窗口会整屏显示 sidebar.title、status.connecting 这类原始键。",
+            "en": "The locale bundle now preloads before the first paint (local cache → agent config → system language), and the main window only shows once the renderer is fully initialized (fallback budget 30s → 75s). Previously, slow first installs or cold boots surfaced a full screen of raw keys like sidebar.title / status.connecting."
+          },
+          "details": [
+            {
+              "zh": "服务端语言偏好变化时按需对齐，同一语言不再重复拉取语言包。",
+              "en": "Server-side locale changes sync on demand; the same language is no longer re-fetched."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "72d4ac5",
+              "title": "fix(i18n): preload locale before first paint; hold main window until app-ready"
+            }
+          ]
+        },
+        {
+          "id": "seed-archive-cleanup-guard",
+          "kind": "fix",
+          "importance": "medium",
+          "title": {
+            "zh": "同版本重装后保留离线自修复归档",
+            "en": "Keep offline self-repair archives across same-version reinstalls"
+          },
+          "summary": {
+            "zh": "重装包与已激活内容版本号相同（字节不同）时，随包的离线恢复归档会在启动 90 秒后被误删，极端情况下导致离线重激活无路可走。清理器现在要求已激活产物与随包清单字节一致（sha256）才允许清理。",
+            "en": "When a reinstall shipped the same version with different bytes, the packaged offline-recovery archives were deleted 90 seconds after boot, which could leave no path for offline re-activation. The cleanup now requires the activated artifacts to byte-match the packaged manifest (sha256)."
+          },
+          "details": [
+            {
+              "zh": "清理判据从「本次启动未激活 seed」升级为「激活产物与随包清单 sha256 一致」，不确定一律不删，最坏情况多占约 232MB 磁盘。",
+              "en": "The cleanup gate now requires sha256 equality between activated artifacts and the packaged manifest; anything uncertain keeps the archives (~232MB worst case)."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "be8ed41",
+              "title": "fix(desktop): only clean packaged seed archives when activated content byte-matches the manifest"
+            }
+          ]
+        },
+        {
+          "id": "packager-emfile",
+          "kind": "fix",
+          "importance": "low",
+          "title": {
+            "zh": "Windows 打包器稳定性修复",
+            "en": "Windows packager reliability fixes"
+          },
+          "summary": {
+            "zh": "修复打包器在 Windows 上因文件句柄耗尽（EMFILE）随机失败的两处根因：Office PDF 字体资产断言与依赖裁剪扫描移入独立子进程执行。",
+            "en": "Fixed two root causes of random EMFILE failures in the Windows packager: the Office PDF font assertion and the node-file-trace prune scan now run in child processes with clean fd tables."
+          },
+          "details": [
+            {
+              "zh": "此前两次本地打包分别倒在字体断言与依赖裁剪阶段，报错位置随句柄泄漏点漂移；子进程隔离后 OS 直接回收全部句柄。",
+              "en": "Both prior local builds died at different stages (font assertion, then the prune scan) as the leak point drifted; child-process isolation lets the OS reclaim every handle on exit."
+            }
+          ],
+          "sources": [
+            {
+              "type": "commit",
+              "ref": "e6f920b",
+              "title": "fix(build): run Office PDF font assertion inside the pack child process"
+            },
+            {
+              "type": "commit",
+              "ref": "740a536",
+              "title": "fix(build): isolate the nft trace in a child process for a clean fd table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "tag": "v0.0.2",
       "version": "0.0.2",
       "previousTag": "BitJarvis",
