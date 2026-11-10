@@ -542,6 +542,36 @@ async function waitForRendererBootHandle(timeoutMs = 90_000) {
 // （GC 保留 current+previous）→ OTA；"artifacts 被清空"场景由 repair 守卫
 // 与激活分支的明确报错兜底（重装/OTA）。
 const SEED_ARCHIVE_CLEANUP_DELAY_MS = 90_000;
+/**
+ * A5.3：随包归档是否可以安全清理——只有当前指针指向的激活产物与随包
+ * seed manifest 字节一致（renderer/server sha256 全部相同）时才允许。
+ * 只看版本号的“稳定 boot”会把“同版本号、不同字节的重装”误判成稳定：
+ * 2026-11-10 重装 0.0.3 后 90s 清理器删掉随包归档，repair/自修复真正需要
+ * 离线重激活时已无归档可用 → fatal（crash.log: "seed server archive is
+ * missing"）。任何一步读不到（manifest 缺失/指针缺失/字段缺失）一律返回
+ * false——保守不删，最多多占 ~232MB 磁盘。
+ */
+function seedArchivesSafeToCleanup(seedDir) {
+  try {
+    const platformArch = `${process.platform}-${process.arch}`;
+    const manifest = JSON.parse(fs.readFileSync(
+      path.join(seedDir, artifactBoot.seedManifestFileName(platformArch)),
+      "utf-8",
+    ));
+    const wantRenderer = manifest?.artifacts?.renderer?.sha256;
+    const wantServer = manifest?.artifacts?.server?.[platformArch]?.sha256;
+    if (!wantRenderer || !wantServer) return false;
+    const channel = _artifactBootChannel;
+    if (!channel) return false;
+    const rendererPointer = pointerStore.readPointer(jarvisHome, `${channel}.renderer`, "current");
+    const serverPointer = pointerStore.readPointer(jarvisHome, channel, "current");
+    return rendererPointer?.sha256 === wantRenderer
+      && serverPointer?.sha256 === wantServer;
+  } catch {
+    return false;
+  }
+}
+
 function scheduleSeedArchiveCleanup() {
   if (!app.isPackaged || !process.resourcesPath) return;
   const timer = setTimeout(() => {
@@ -549,6 +579,10 @@ function scheduleSeedArchiveCleanup() {
       if (_bootUsedSeedActivation) return;
       const seedDir = path.join(process.resourcesPath, "seed");
       fs.accessSync(seedDir, fs.constants.W_OK);
+      if (!seedArchivesSafeToCleanup(seedDir)) {
+        console.log("[desktop] seed archive cleanup: skipped (activated artifacts do not byte-match the packaged manifest)");
+        return;
+      }
       const archives = fs.readdirSync(seedDir)
         .filter((name) => /^server-.*\.tar\.gz$/.test(name) || /^renderer-.*\.tar\.gz$/.test(name));
       if (archives.length === 0) return;
@@ -1083,6 +1117,7 @@ const artifactRepair = require("./src/shared/artifact-repair.cjs");
 // pinned keyset 随主进程 bundle 内联（vite.config.main.js 负责
 // JARVIS_SIGN_KEYSET 的构建期替换），运行时没有旁路。
 const { loadPinnedKeyset } = require("../shared/artifact-core/keyset.cjs");
+const pointerStore = require("../shared/artifact-core/pointer-store.cjs");
 const { resolveStaleServerInfoDisposition } = require("./src/shared/stale-server-info.cjs");
 const { probeServerInfo, isForeignServerBlocking, describeForeignServerBlock } = require("../shared/server-info-probe.cjs");
 // 数据 epoch 拒启对话框：识别 server 打到 stderr 的机读标记
