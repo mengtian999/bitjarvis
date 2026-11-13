@@ -260,6 +260,8 @@ export interface SessionStream {
 export interface Model {
   id: string;
   name: string;
+  /** 英文显示名（网关档位按 UI 语言切换时的英文名；其他 provider 可缺省）。 */
+  nameEn?: string;
   provider: string;
   isCurrent?: boolean;
   reasoning?: boolean;

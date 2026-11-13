@@ -15,6 +15,7 @@ import { CharacterCardPreviewOverlay, type CharacterCardPlan } from '../overlays
 import { SettingsSection } from '../components/SettingsSection';
 import { SettingsRow } from '../components/SettingsRow';
 import { readConfigBoolean } from '../resource-state';
+import { localizedModelName } from '../../utils/localized-model-name';
 import styles from '../Settings.module.css';
 import {
   type ExpCategory, parseExperience,
@@ -79,24 +80,25 @@ export function AgentTab() {
   })();
 
   // 从唯一信源 /api/models 获取模型列表（和聊天页一致）
-  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; nameEn?: string; provider: string }>>([]);
   useEffect(() => {
     jarvisFetch('/api/models').then(r => r.json()).then(data => {
       setAvailableModels(data.models || []);
     }).catch(() => {});
   }, [settingsConfig]); // settingsConfig 变化时刷新
 
+  const modelLocale = typeof settingsConfig?.locale === 'string' ? settingsConfig.locale : '';
   const modelOptions = useMemo(() => {
     const opts = availableModels.map(m => ({
       value: `${m.provider}/${m.id}`,
-      label: m.name || m.id,
+      label: localizedModelName(m, modelLocale),
       group: m.provider,
     }));
     if (currentModel && !opts.some(o => o.value === currentModel)) {
       opts.unshift({ value: currentModel, label: t('settings.agent.modelUnavailable', { model: currentModel }), group: '' });
     }
     return opts;
-  }, [availableModels, currentModel]);
+  }, [availableModels, currentModel, modelLocale]);
   const currentModelUnavailable = !!currentModel && !availableModels.some(m => `${m.provider}/${m.id}` === currentModel);
 
   const memoryEnabled = readConfigBoolean(settingsConfig, cfg => cfg.memory?.enabled, true);

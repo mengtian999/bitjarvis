@@ -1951,6 +1951,28 @@ export class ProviderRegistry {
   }
 
   /**
+   * 取某个模型在 Provider Catalog 中的中英文显示名。
+   *
+   * 网关同步会把 /v1/models 的 display_name（中文）与 display_name_en（英文）
+   * 一起写进 catalog（name / name_en）。展示层需要按当前 UI 语言取名字，
+   * 而不是在同步时就把名字写死成一种语言。
+   *
+   * 第三方 provider 没有 name_en → nameEn 回退 name；拿不到条目返回 null。
+   */
+  getLocalizedModelNames(providerId, modelId) {
+    if (!providerId || !modelId) return null;
+    const raw = this.getAllProvidersRaw();
+    const models = raw?.[providerId]?.models;
+    if (!Array.isArray(models)) return null;
+    const entry = models.find((m) => (typeof m === "string" ? m : m?.id) === modelId);
+    if (!entry || typeof entry !== "object") return null;
+    const name = typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : null;
+    const nameEn = typeof entry.name_en === "string" && entry.name_en.trim() ? entry.name_en.trim() : null;
+    if (!name && !nameEn) return null;
+    return { name, nameEn: nameEn || name };
+  }
+
+  /**
    * Get all models of a specific type across all providers.
    * @param {string} type
    * @returns {{ provider: string, id: string, name?: string, type: string }[]}

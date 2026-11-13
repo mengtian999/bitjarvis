@@ -94,6 +94,8 @@ export type GatewaySyncResult =
 type GatewayModelEntry = {
   id: string;
   display_name?: string;
+  /** 网关下发的英文显示名。旧网关没有该字段 → 回退 display_name。 */
+  display_name_en?: string;
   login_required?: boolean;
   kind?: string;
   is_default?: boolean;
@@ -111,6 +113,23 @@ const FALLBACK_MAX_OUTPUT = 16384;
 
 function positiveInt(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : null;
+}
+
+function nonEmptyString(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+/**
+ * 档位的中英文显示名。
+ *
+ * 网关 /v1/models 同时下发 display_name（中文）与 display_name_en（英文）。
+ * 两个名字都要存进 Provider Catalog：同步时只按一种语言写死的话，用户切换
+ * UI 语言后必须重新联网同步才能看到新名字（这也是“怎么切都显示中文”的根因）。
+ * 旧网关没有 display_name_en 时英文名回退中文名，避免出现空名。
+ */
+function tierDisplayNames(entry: GatewayModelEntry): { name: string; nameEn: string } {
+  const name = nonEmptyString(entry.display_name) || entry.id;
+  return { name, nameEn: nonEmptyString(entry.display_name_en) || name };
 }
 
 /**
@@ -159,9 +178,12 @@ export async function syncGatewayModels(deps: GatewaySyncDeps): Promise<GatewayS
     // 长会话会在上游真实上限（多为 128K）处被 400 拒绝。
     const contextWindow = positiveInt(m.context_window) ?? FALLBACK_CONTEXT_WINDOW;
     const modelMaxOutput = positiveInt(m.max_output_tokens) ?? FALLBACK_MAX_OUTPUT;
+    const { name, nameEn } = tierDisplayNames(m);
     return {
       id: m.id,
-      name: m.display_name && m.display_name.trim() ? m.display_name : m.id,
+      // name 保持中文（历史/旧 UI 的兼容基线）；name_en 供展示层按 UI 语言切换。
+      name,
+      name_en: nameEn,
       api: "openai-completions",
       context: contextWindow,
       contextWindow,
@@ -187,17 +209,17 @@ export async function syncGatewayModels(deps: GatewaySyncDeps): Promise<GatewayS
   // 图片档位 → media.image_generation.models（每次全量替换，上下架跟随服务端）。
   // protocolId 不在此显式写入：加载时由 inferMediaProtocolId 按 providerId 推断（唯一推断入口）。
   const imageEntries = pickModels(data, "image");
-  const imageModels = imageEntries.map((m) => ({
-    id: m.id,
-    name: m.display_name && m.display_name.trim() ? m.display_name : m.id,
-  }));
+  const imageModels = imageEntries.map((m) => {
+    const { name, nameEn } = tierDisplayNames(m);
+    return { id: m.id, name, displayNameEn: nameEn };
+  });
 
   // 视频档位 → media.video_generation.models（每次全量替换，上下架跟随服务端）。
   const videoEntries = pickModels(data, "video");
-  const videoModels = videoEntries.map((m) => ({
-    id: m.id,
-    name: m.display_name && m.display_name.trim() ? m.display_name : m.id,
-  }));
+  const videoModels = videoEntries.map((m) => {
+    const { name, nameEn } = tierDisplayNames(m);
+    return { id: m.id, name, displayNameEn: nameEn };
+  });
 
   deps.providerRegistry.saveProvider(providerId, {
     base_url: deps.client.chatBaseUrl,

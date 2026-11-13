@@ -6,6 +6,8 @@ export interface ModelRef {
 export interface ModelOption extends ModelRef {
   provider: string;
   name?: string;
+  /** 英文显示名（网关档位）；展示时按 UI 语言选择。 */
+  nameEn?: string;
 }
 
 export interface AutomationExecutor {

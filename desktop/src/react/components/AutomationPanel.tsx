@@ -78,10 +78,11 @@ export function AutomationPanel() {
       const modelsData = await modelsRes.json().catch(() => ({ models: [] }));
       const modelOptions = (modelsData.models || [])
         .filter((m: { id?: string; provider?: string }) => m.id && m.provider)
-        .map((m: { id: string; provider: string; name?: string }) => ({
+        .map((m: { id: string; provider: string; name?: string; nameEn?: string }) => ({
           id: m.id,
           provider: m.provider,
           name: m.name,
+          nameEn: m.nameEn,
         }));
       const nextJobs = cronData.jobs || [];
       setJobs(nextJobs);

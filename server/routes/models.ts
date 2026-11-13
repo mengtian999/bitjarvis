@@ -77,14 +77,22 @@ function classifyModelSwitchError(err) {
   return { status: 500, code: "MODEL_SWITCH_FAILED", message };
 }
 
-function serializeModelInfo(model, { current = null, overrides = null } = {}) {
+function serializeModelInfo(model, { current = null, overrides = null, localized = null } = {}) {
   if (!model) return null;
   const videoTransport = resolveModelVideoInputTransport(model);
   const audioTransport = resolveModelAudioInputTransport(model);
   const toolUse = normalizeToolUseContract(model.toolUse);
+  const name = resolveModelName(model.id, model.name, overrides, model.provider);
+  // 网关档位在 catalog 里同时存了 name / name_en；渲染层按 UI 语言选。
+  // 用户显式 overrides 优先级最高，其次 catalog 的双语名。
+  const overrideNameEn = overrides?.[model.id]?.displayNameEn;
+  const nameEn = (typeof overrideNameEn === "string" && overrideNameEn.trim() ? overrideNameEn : null)
+    || (typeof localized?.nameEn === "string" && localized.nameEn.trim() ? localized.nameEn : null)
+    || name;
   return {
     id: model.id,
-    name: resolveModelName(model.id, model.name, overrides, model.provider),
+    name,
+    nameEn,
     provider: model.provider,
     ...(current !== null ? { isCurrent: modelRefEquals(model, current) } : {}),
     input: Array.isArray(model.input) ? model.input : ["text"],
@@ -194,7 +202,12 @@ export function createModelsRoute(engine) {
       const overrides = engine.config?.models?.overrides;
       const cur = engine.currentModel;
       const activeModel = engine.activeSessionModel;
-      const models = engine.availableModels.map(m => serializeModelInfo(m, { current: cur, overrides }));
+      const localizedOf = (m) => engine.providerRegistry?.getLocalizedModelNames?.(m.provider, m.id) || null;
+      const models = engine.availableModels.map(m => serializeModelInfo(m, {
+        current: cur,
+        overrides,
+        localized: localizedOf(m),
+      }));
       return c.json({
         models,
         current: cur?.id || null,
@@ -309,7 +322,12 @@ export function createModelsRoute(engine) {
       const session = engine.getSessionByPath(sessionPath);
       const sessionModel = session?.model;
       const overrides = engine.config?.models?.overrides;
-      const modelInfo = serializeModelInfo(sessionModel, { overrides });
+      const modelInfo = serializeModelInfo(sessionModel, {
+        overrides,
+        localized: sessionModel
+          ? engine.providerRegistry?.getLocalizedModelNames?.(sessionModel.provider, sessionModel.id) || null
+          : null,
+      });
 
       return c.json({ ok: true, model: modelInfo, adaptations: result.adaptations, thinkingLevel: result.thinkingLevel });
     } catch (err) {

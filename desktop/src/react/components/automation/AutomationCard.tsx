@@ -8,6 +8,7 @@ import {
 } from '@/ui';
 import { useStore } from '../../stores';
 import { resolveAgentDisplayInfo } from '../../utils/agent-display';
+import { localizedModelName } from '../../utils/localized-model-name';
 import type { CronJob, ModelOption } from './automation-types';
 import {
   automationExecutorLabel,
@@ -61,6 +62,7 @@ export function AutomationCard({
   const fallbackAgentName = useStore(s => s.agentName) || 'Jarvis';
   const fallbackAgentYuan = useStore(s => s.agentYuan) || 'jarvis';
   const addToast = useStore(s => s.addToast);
+  const locale = useStore(s => s.locale);
   const [label, setLabel] = useState(jobTitle(job));
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>(() => scheduleDraftFromStored(job.type, job.schedule));
   const [scheduleDirty, setScheduleDirty] = useState(false);
@@ -177,7 +179,7 @@ export function AutomationCard({
                   { value: '', label: t('automation.defaultModel') } as SelectOption,
                   ...modelOptions.map((option): SelectOption => ({
                     value: `${option.provider}/${option.id}`,
-                    label: option.name || option.id,
+                    label: localizedModelName(option, locale),
                     group: option.provider,
                   })),
                 ]}

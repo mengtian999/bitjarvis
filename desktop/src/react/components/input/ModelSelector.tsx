@@ -3,6 +3,7 @@ import { useStore } from '../../stores';
 import { sessionScopedValue } from '../../stores/session-slice';
 import { jarvisFetch } from '../../hooks/use-jarvis-fetch';
 import { useI18n } from '../../hooks/use-i18n';
+import { localizedModelName } from '../../utils/localized-model-name';
 import type { Model } from '../../types';
 import type { SessionModel } from '../../stores/chat-types';
 import { SelectWidget, ProviderIcon, ProviderGroupHeader, selectWidgetStyles, type SelectOption } from '@/ui';
@@ -13,7 +14,7 @@ export function ModelSelector({ models, sessionModel, isStreaming = false }: {
   sessionModel?: SessionModel;
   isStreaming?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [loading, setLoading] = useState(false);
 
   const matchedSessionModel = sessionModel
@@ -38,7 +39,7 @@ export function ModelSelector({ models, sessionModel, isStreaming = false }: {
       }
       return t('model.unavailable') || '...';
     }
-    if (current?.name) return current.name;
+    if (current?.name) return localizedModelName(current, locale);
     if (models.length > 0) return t('model.notSelected') || t('model.unknown') || '...';
     return t('model.noneConfigured') || t('model.unknown') || '...';
   })();
@@ -155,11 +156,11 @@ export function ModelSelector({ models, sessionModel, isStreaming = false }: {
     return groupKeys.flatMap(provider =>
       grouped[provider].map(m => ({
         value: valueOf(m),
-        label: m.name,
+        label: localizedModelName(m, locale),
         group: hasMultipleProviders ? (provider || '—') : undefined,
       })),
     );
-  }, [grouped, groupKeys, hasMultipleProviders]);
+  }, [grouped, groupKeys, hasMultipleProviders, locale]);
 
   // Keep the unavailable historical identity visible in the trigger, but leave
   // the select value empty so choosing the same provider/id is a real action.

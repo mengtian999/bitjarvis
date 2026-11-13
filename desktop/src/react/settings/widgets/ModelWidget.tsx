@@ -5,11 +5,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ProviderIcon } from '@/ui';
 import { jarvisFetch } from '../api';
+import { useStore } from '../../stores';
+import { localizedModelName } from '../../utils/localized-model-name';
 import styles from '../Settings.module.css';
 
 interface ModelInfo {
   id: string;
   name: string;
+  nameEn?: string;
   provider: string;
   contextWindow?: number | null;
   input?: string[];
@@ -36,6 +39,7 @@ export function ModelWidget({
   placeholder, formatContext, filterModel,
 }: ModelWidgetProps) {
   const t = window.t || ((k: string) => k);
+  const locale = useStore(s => s.locale);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [customInput, setCustomInput] = useState('');
@@ -78,20 +82,20 @@ export function ModelWidget({
   const selectedModel = valueKey
     ? visibleModels.find(m => m.id === value?.id && m.provider === value?.provider)
     : null;
-  const displayValue = selectedModel?.name
+  const displayValue = (selectedModel ? localizedModelName(selectedModel, locale) : '')
     || (value?.id ? (value.provider ? `${value.provider}/${value.id}` : value.id) : '');
 
   // 按 provider 分组
   const grouped = useMemo(() => {
     const groups: Record<string, ModelInfo[]> = {};
     for (const m of visibleModels) {
-      if (query && !m.id.toLowerCase().includes(query) && !m.name.toLowerCase().includes(query)) continue;
+      if (query && !m.id.toLowerCase().includes(query) && !localizedModelName(m, locale).toLowerCase().includes(query) && !m.name.toLowerCase().includes(query)) continue;
       const g = m.provider || '';
       if (!groups[g]) groups[g] = [];
       groups[g].push(m);
     }
     return groups;
-  }, [visibleModels, query]);
+  }, [visibleModels, query, locale]);
 
   const handleCustomSubmit = () => {
     const val = customInput.trim();
@@ -142,7 +146,7 @@ export function ModelWidget({
                   type="button"
                   onClick={() => { onSelect({ id: m.id, provider: m.provider }); setOpen(false); }}
                 >
-                  <span className={styles['mdw-option-name']}>{m.name || m.id}</span>
+                  <span className={styles['mdw-option-name']}>{localizedModelName(m, locale)}</span>
                   {m.contextWindow && formatContext && (
                     <span className={styles['mdw-option-ctx']}>{formatContext(m.contextWindow)}</span>
                   )}

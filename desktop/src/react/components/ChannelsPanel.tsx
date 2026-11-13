@@ -6,6 +6,7 @@ import { sessionScopedValue } from '../stores/session-slice';
 import { fetchConfig } from '../hooks/use-config';
 import { jarvisFetch } from '../hooks/use-jarvis-fetch';
 import { useI18n } from '../hooks/use-i18n';
+import { localizedModelName } from '../utils/localized-model-name';
 import { renderMarkdown } from '../utils/markdown';
 import { findOpenToolIndex, toolCallFromStartEvent, toolCallIdFromEvent } from '../utils/tool-call-identity';
 import { MarkdownContent } from './chat/MarkdownContent';
@@ -882,7 +883,7 @@ function modelKey(model: { id: string; provider: string } | null | undefined): s
 }
 
 export function ChannelAgentSettingsPanel() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const currentChannel = useStore(s => s.currentChannel);
   const isDM = useStore(s => s.channelIsDM);
   const models = useStore(s => s.models);
@@ -1158,7 +1159,7 @@ export function ChannelAgentSettingsPanel() {
                             className={`${styles.agentModelOption}${modelKey(modelOverrideModel) === modelKey(model) ? ` ${styles.agentModelOptionActive}` : ''}`}
                             onClick={() => selectOverrideModel(model)}
                           >
-                            {model.name || model.id}
+                            {localizedModelName(model, locale)}
                           </button>
                         ))}
                       </div>

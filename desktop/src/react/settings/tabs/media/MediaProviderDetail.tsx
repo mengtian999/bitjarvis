@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useSettingsStore } from '../../store';
+import { useStore } from '../../../stores';
+import { localizedModelName } from '../../../utils/localized-model-name';
 import { jarvisFetch } from '../../api';
 import { invalidateConfigCache } from '../../../hooks/use-config';
 import { t } from '../../helpers';
@@ -56,6 +58,7 @@ type MediaModel = {
   id: string;
   name: string;
   displayName?: string;
+  displayNameEn?: string;
   protocolId?: string;
   ratios?: string[];
   resolutions?: string[];
@@ -82,6 +85,7 @@ function clearEmptyObject(value: any) {
 }
 
 export function MediaProviderDetail({ providerId, provider, capability = 'imageGeneration', config, onSaveConfig, onRefresh }: Props) {
+  const locale = useStore(s => s.locale);
   const showToast = useSettingsStore(s => s.showToast);
   const mediaRoute = capability === 'videoGeneration' ? 'video' : 'image';
   const defaultModel = capability === 'videoGeneration' ? config.defaultVideoModel : config.defaultImageModel;
@@ -382,7 +386,11 @@ export function MediaProviderDetail({ providerId, provider, capability = 'imageG
                     onChange={(v) => setDefaultsModelId(v)}
                     options={provider.models.map(model => ({
                       value: model.id,
-                      label: model.name || model.id,
+                      label: localizedModelName({
+                        name: model.displayName || model.name || model.id,
+                        nameEn: model.displayNameEn,
+                        id: model.id,
+                      }, locale),
                     }))}
                   />
                 </div>

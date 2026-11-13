@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '../store';
+import { useStore } from '../../stores';
+import { localizedModelName } from '../../utils/localized-model-name';
 import { jarvisFetch } from '../api';
 import { t } from '../helpers';
 import { updateSettingsSnapshot } from '../actions';
@@ -19,7 +21,7 @@ interface MediaProvider {
     status?: string;
     error?: { code?: string; message?: string } | null;
   } | null;
-  models: { id: string; name: string; protocolId?: string; adapterAvailable?: boolean }[];
+  models: { id: string; name: string; displayName?: string; displayNameEn?: string; protocolId?: string; adapterAvailable?: boolean }[];
   availableModels: { id: string; name: string }[];
 }
 
@@ -131,6 +133,16 @@ function speechModelLabel(model: SpeechModel | { id: string; name: string }): st
   return 'displayName' in model && model.displayName ? model.displayName : model.name || model.id;
 }
 
+/** 媒体档位名：displayName 为中文，displayNameEn 为英文（网关同步写入）。 */
+function mediaModelLabel(
+  model: { id: string; name?: string; displayName?: string; displayNameEn?: string },
+  locale?: string | null,
+): string {
+  const zh = model.displayName || model.name || model.id;
+  const en = typeof model.displayNameEn === 'string' && model.displayNameEn.trim() ? model.displayNameEn : zh;
+  return localizedModelName({ name: zh, nameEn: en, id: model.id }, locale);
+}
+
 function getRunnableSpeechModels(provider: SpeechProvider): Array<{ id: string; name: string }> {
   if (!provider.hasCredentials) return [];
   if (Array.isArray(provider.availableModels)) {
@@ -200,6 +212,7 @@ function SpeechProviderDetail({
 }
 
 export function MediaTab() {
+  const locale = useStore(s => s.locale);
   const snapshotSpeechConfig = useSettingsStore(s => s.settingsSnapshot.data?.preferences?.speechRecognition);
   const [providers, setProviders] = useState<Record<string, MediaProvider>>({});
   const [config, setConfig] = useState<MediaConfig | null>(null);
@@ -540,7 +553,7 @@ export function MediaTab() {
                 ...(imageConfigReady ? allImageModels.map(m => {
                   const providerHasCredentials = providers[m.provider]?.hasCredentials === true;
                   const adapterAvailable = m.adapterAvailable !== false;
-                  const label = `${m.provider} / ${m.name || m.id}`;
+                  const label = `${m.provider} / ${mediaModelLabel(m, locale)}`;
                   const unavailableReason = !providerHasCredentials
                     ? providers[m.provider]?.unavailableMessage
                       || providers[m.provider]?.unavailableReason
@@ -585,7 +598,7 @@ export function MediaTab() {
                 ...(videoConfigReady ? allVideoModels.map(m => {
                   const providerHasCredentials = videoProviders[m.provider]?.hasCredentials === true;
                   const adapterAvailable = m.adapterAvailable !== false;
-                  const label = `${m.provider} / ${m.name || m.id}`;
+                  const label = `${m.provider} / ${mediaModelLabel(m, locale)}`;
                   const unavailableReason = !providerHasCredentials
                     ? videoProviders[m.provider]?.unavailableMessage
                       || videoProviders[m.provider]?.unavailableReason
