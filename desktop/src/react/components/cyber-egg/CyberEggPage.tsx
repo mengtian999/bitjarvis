@@ -21,6 +21,7 @@ import {
   CYBER_EGG_DEFAULT_BASE_URL,
   CyberEggFeed,
   CyberEggItem,
+  CyberEggItemText,
   CyberEggSection,
   cyberEggPeriodLabelKey,
   normalizeCyberEggFeed,
@@ -71,6 +72,37 @@ function sectionTitleLabel(sec: CyberEggSection): string {
   return label === key ? sec.title : label;
 }
 
+/**
+ * 把界面语言映射到 feed 里 i18n 的 key。
+ * 桌面端的 locale 是 'zh'（简体），feed 侧简体直接读中文字段，所以返回 null 表示「不覆盖」。
+ */
+function contentI18nKey(locale: string): string | null {
+  const l = (locale || '').toLowerCase();
+  if (!l || l === 'zh' || l === 'zh-cn' || l === 'zh-hans') return null;
+  if (l.startsWith('zh-tw') || l.startsWith('zh-hk') || l.startsWith('zh-hant')) return 'zh-TW';
+  if (l.startsWith('en')) return 'en';
+  if (l.startsWith('ja')) return 'ja';
+  if (l.startsWith('ko')) return 'ko';
+  if (l.startsWith('fr')) return 'fr';
+  if (l.startsWith('de')) return 'de';
+  return null;
+}
+
+/** 一条记录在当前语言下要显示的文案：先取 i18n，缺字段回落中文原文。 */
+function localizedText(item: CyberEggItem, locale: string): CyberEggItemText {
+  const key = contentI18nKey(locale);
+  const tr = key ? item.i18n?.[key] : undefined;
+  return {
+    title: tr?.title || item.title,
+    grantText: tr?.grantText || item.grant.text,
+    how: tr?.how || item.how,
+    appliesTo: tr?.appliesTo || item.appliesTo,
+    validity: tr?.validity || item.validity,
+    category: tr?.category || item.category,
+    requirements: tr?.requirements?.length ? tr.requirements : item.requirements,
+  };
+}
+
 type ItemCardProps = {
   item: CyberEggFeed['items'][number];
   claimedIds: Set<string>;
@@ -81,6 +113,7 @@ type ItemCardProps = {
 
 function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
   const t = window.t ?? ((p: string) => String(p));
+  const text = localizedText(item, locale);
   const claimed = claimedIds.has(item.id);
   const periodKey = cyberEggPeriodLabelKey(item.grant.period);
   const periodLabel =
@@ -116,11 +149,11 @@ function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
       }`}
     >
       <div className="cyber-egg-card-head">
-        <h3 className="cyber-egg-title">{item.title}</h3>
+        <h3 className="cyber-egg-title">{text.title}</h3>
         <span className="cyber-egg-provider">{item.provider}</span>
       </div>
       <div className="cyber-egg-grant">
-        <b>{item.grant.text}</b>
+        <b>{text.grantText}</b>
         {periodLabel && <span className="cyber-egg-period">{periodLabel}</span>}
         {cny && <span className="cyber-egg-cny">{cny}</span>}
         {item.expired && <span className="cyber-egg-badge">{t('cyberegg.expired')}</span>}
@@ -141,27 +174,27 @@ function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
               {verifyLabel}
             </span>
           )}
-          {item.category && <span className="cyber-egg-cat">{item.category}</span>}
+          {text.category && <span className="cyber-egg-cat">{text.category}</span>}
           {sourceLabel && <span className="cyber-egg-cat">{sourceLabel}</span>}
         </div>
       )}
-      {item.requirements?.length && (
+      {text.requirements?.length && (
         <ul className="cyber-egg-tags">
-          {item.requirements?.map((req: string, i: number) => (
+          {text.requirements.map((req: string, i: number) => (
             <li key={i}>{req}</li>
           ))}
         </ul>
       )}
-      {item.how && <p className="cyber-egg-how">{item.how}</p>}
-      {item.appliesTo && (
+      {text.how && <p className="cyber-egg-how">{text.how}</p>}
+      {text.appliesTo && (
         <details className="cyber-egg-details">
           <summary>{t('cyberegg.appliesTo')}</summary>
-          <p>{item.appliesTo}</p>
+          <p>{text.appliesTo}</p>
         </details>
       )}
       <div className="cyber-egg-foot">
         <span className="cyber-egg-meta">
-          {item.validity && `${t('cyberegg.validity')} ${item.validity} · `}
+          {text.validity && `${t('cyberegg.validity')} ${text.validity} · `}
           {item.deadline && `${t('cyberegg.deadline')} ${formatTime(item.deadline, locale)} · `}
           {item.verifiedAt && `${t('cyberegg.verifiedAt')} ${formatTime(item.verifiedAt, locale)}`}
         </span>
@@ -189,7 +222,6 @@ export function CyberEggPage() {
   const [activeRegion, setActiveRegion] = useState<'all' | 'cn' | 'intl'>('all');
   const [query, setQuery] = useState('');
   const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set());
-  const [showApi, setShowApi] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const lastRefreshRef = useRef<number>(0);
 
@@ -289,15 +321,22 @@ export function CyberEggPage() {
     if (activeSection !== 'all' && item.section !== activeSection) return false;
     if (!query) return true;
     const q = query.toLowerCase();
+    const text = localizedText(item, locale);
     const haystack = [
       item.title,
+      text.title,
       item.provider,
       item.grant.text,
+      text.grantText,
       item.grant.note,
       item.how,
+      text.how,
       item.appliesTo,
+      text.appliesTo,
       item.category,
+      text.category,
       ...(item.requirements ?? []),
+      ...(text.requirements ?? []),
     ]
       .filter(Boolean)
       .join(' ')
@@ -305,10 +344,43 @@ export function CyberEggPage() {
     return haystack.includes(q);
   });
 
-  // 「可用作 API」面板：网页版 feed.json / status.json 就是公开只读端点。
-  const apiEndpoints = [
-    { key: 'feed', label: t('cyberegg.api.feed'), url: `${CYBER_EGG_DEFAULT_BASE_URL}/feed.json` },
-    { key: 'status', label: t('cyberegg.api.status'), url: `${CYBER_EGG_DEFAULT_BASE_URL}/status.json` },
+  // 「能当API用」卡片：网页版 feed.json / status.json 就是公开只读端点。
+  // 内容结构与福利卡一致（标题 + 额度位 + chips + 说明 + 代码 + 页脚按钮）。
+  const apiBase = CYBER_EGG_DEFAULT_BASE_URL;
+  const apiCards = [
+    {
+      key: 'feed',
+      title: t('cyberegg.api.feed'),
+      path: '/feed.json',
+      url: `${apiBase}/feed.json`,
+      badge: String(feed?.itemCount ?? 0),
+      badgeSub: t('cyberegg.api.cardItems'),
+      desc: t('cyberegg.api.desc'),
+      code: [`GET ${apiBase}/feed.json`],
+    },
+    {
+      key: 'status',
+      title: t('cyberegg.api.status'),
+      path: '/status.json',
+      url: `${apiBase}/status.json`,
+      badge: feed?.generatedAt ? formatTime(feed.generatedAt, locale) : t('cyberegg.api.live'),
+      badgeSub: t('cyberegg.api.live'),
+      desc: t('cyberegg.api.hint'),
+      code: [`GET ${apiBase}/status.json`],
+    },
+    {
+      key: 'examples',
+      title: t('cyberegg.api.examples'),
+      path: 'curl / fetch',
+      url: `${apiBase}/feed.json`,
+      badge: '2',
+      badgeSub: t('cyberegg.api.examples'),
+      desc: t('cyberegg.api.examplesHint'),
+      code: [
+        `curl -s ${apiBase}/feed.json | jq '.items[0]'`,
+        `fetch('${apiBase}/feed.json').then(r => r.json()).then(d => d.itemCount)`,
+      ],
+    },
   ];
 
   const copyEndpoint = useCallback((url: string) => {
@@ -331,6 +403,7 @@ export function CyberEggPage() {
     { key: 'intl', label: t('cyberegg.region.intl'), count: regionCounts.intl },
   ];
 
+  // 「能当API用」排在周期 tab 的最后一项，与全部/每天/每月/其他福利并列。
   const tabs = [
     { key: 'all', label: t('cyberegg.section.all'), count: filteredItems.length },
     ...sections.map((sec: CyberEggSection) => ({
@@ -338,6 +411,7 @@ export function CyberEggPage() {
       label: sectionTitleLabel(sec),
       count: filteredItems.filter((i: CyberEggItem) => i.section === sec.key).length,
     })),
+    { key: 'api', label: t('cyberegg.api.toggle'), count: apiCards.length },
   ];
 
   return (
@@ -351,15 +425,6 @@ export function CyberEggPage() {
           </div>
         </div>
         <div className="cyber-egg-actions">
-          <button
-            type="button"
-            className={`cyber-egg-api-toggle${showApi ? ' active' : ''}`}
-            aria-expanded={showApi}
-            onClick={() => setShowApi(v => !v)}
-            title={t('cyberegg.api.toggle')}
-          >
-            {t('cyberegg.api.toggle')}
-          </button>
           {origin && (
             <span className={`cyber-egg-origin ${origin}`}>
               {origin === 'live'
@@ -387,39 +452,6 @@ export function CyberEggPage() {
           </a>
         </div>
       </header>
-
-      {showApi && (
-        <section className="cyber-egg-api" aria-label={t('cyberegg.api.title')}>
-          <h2 className="cyber-egg-api-title">{t('cyberegg.api.title')}</h2>
-          <p className="cyber-egg-api-desc">{t('cyberegg.api.desc')}</p>
-          <ul className="cyber-egg-api-list">
-            {apiEndpoints.map(ep => (
-              <li key={ep.key}>
-                <span className="cyber-egg-api-label">{ep.label}</span>
-                <code className="cyber-egg-api-url">GET {ep.url}</code>
-                <span className="cyber-egg-api-actions">
-                  <button
-                    type="button"
-                    className="cyber-egg-api-copy"
-                    onClick={() => copyEndpoint(ep.url)}
-                  >
-                    {copiedUrl === ep.url ? t('cyberegg.api.copied') : t('cyberegg.api.copy')}
-                  </button>
-                  <a
-                    className="cyber-egg-api-open"
-                    href={ep.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                  >
-                    {t('cyberegg.api.open')}
-                  </a>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="cyber-egg-api-hint">{t('cyberegg.api.hint')}</p>
-        </section>
-      )}
 
       {warning && (
         <div className="cyber-egg-alert">
@@ -489,7 +521,53 @@ export function CyberEggPage() {
         </label>
       </div>
       <main className="cyber-egg-main">
-        {loading && !feed ? (
+        {activeSection === 'api' ? (
+          <section className="cyber-egg-group">
+            <h2 className="cyber-egg-group-title">
+              {t('cyberegg.api.title')} <small>({apiCards.length})</small>
+            </h2>
+            <div className="cyber-egg-api-cards">
+              {apiCards.map(card => (
+                <article key={card.key} className="cyber-egg-card cyber-egg-api-card">
+                  <div className="cyber-egg-card-head">
+                    <h3 className="cyber-egg-title">{card.title}</h3>
+                    <span className="cyber-egg-provider">{card.path}</span>
+                  </div>
+                  <div className="cyber-egg-grant">
+                    <b>{card.badge}</b>
+                    <span className="cyber-egg-period">{card.badgeSub}</span>
+                  </div>
+                  <div className="cyber-egg-chips-row">
+                    <span className="cyber-egg-cat">{t('cyberegg.api.chips')}</span>
+                  </div>
+                  <p className="cyber-egg-how">{card.desc}</p>
+                  {card.code.map((line: string) => (
+                    <div key={line} className="cyber-egg-api-code-row">
+                      <code className="cyber-egg-api-code">{line}</code>
+                      <button
+                        type="button"
+                        className="cyber-egg-api-copy"
+                        onClick={() => copyEndpoint(line)}
+                      >
+                        {copiedUrl === line ? t('cyberegg.api.copied') : t('cyberegg.api.copy')}
+                      </button>
+                    </div>
+                  ))}
+                  <div className="cyber-egg-foot">
+                    <span className="cyber-egg-meta">{card.url}</span>
+                    <button
+                      type="button"
+                      className="cyber-egg-claim"
+                      onClick={() => openClaimUrl(card.url)}
+                    >
+                      {t('cyberegg.api.open')}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : loading && !feed ? (
           <div className="cyber-egg-empty">{t('cyberegg.loading')}</div>
         ) : filteredItems.length === 0 ? (
           <div className="cyber-egg-empty">{t('cyberegg.empty')}</div>

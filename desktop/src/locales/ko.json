@@ -254,15 +254,20 @@
       "other": "기타 혜택"
     },
     "api": {
-      "toggle": "API로 사용하기",
-      "title": "API로 사용하기",
+      "toggle": "API로 쓰기",
+      "title": "API로 쓰기",
       "desc": "이 페이지 뒤에는 읽기 전용 JSON 엔드포인트 두 개가 있습니다. 로그인도 키도 필요 없고 CORS를 지원하므로 GET만 하면 됩니다.",
       "feed": "전체 항목 (feed.json)",
       "status": "수집 상태 (status.json)",
       "copy": "복사",
       "copied": "복사됨",
       "hint": "15분마다 갱신됩니다. 과도한 폴링은 피하고, 상업적 이용 시 각 소스의 약관을 확인하세요.",
-      "open": "열기"
+      "open": "열기",
+      "chips": "로그인 불필요 · Key 불필요 · CORS 지원",
+      "cardItems": "개",
+      "examples": "호출 예시",
+      "examplesHint": "curl은 터미널, fetch는 브라우저 콘솔용",
+      "live": "마지막 성공 수집"
     },
     "err": {
       "badData": "응답 데이터가 올바르지 않습니다",

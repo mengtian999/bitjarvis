@@ -262,7 +262,12 @@
       "copy": "Copy",
       "copied": "Copied",
       "hint": "Refreshed every 15 minutes; please don't poll aggressively. Check the upstream terms for commercial use.",
-      "open": "Open"
+      "open": "Open",
+      "chips": "No login · no key · CORS on",
+      "cardItems": "offers",
+      "examples": "Usage examples",
+      "examplesHint": "curl for a shell, fetch for the browser console",
+      "live": "last successful fetch"
     },
     "err": {
       "badData": "Unexpected response data",

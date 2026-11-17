@@ -262,7 +262,12 @@
       "copy": "Kopieren",
       "copied": "Kopiert",
       "hint": "Alle 15 Minuten aktualisiert – bitte nicht aggressiv pollen; für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
-      "open": "Öffnen"
+      "open": "Öffnen",
+      "chips": "Kein Login · kein Key · CORS an",
+      "cardItems": "Angebote",
+      "examples": "Aufrufbeispiele",
+      "examplesHint": "curl für die Shell, fetch für die Browser-Konsole",
+      "live": "letzter erfolgreicher Abruf"
     },
     "err": {
       "badData": "Unerwartete Antwortdaten",

@@ -21,6 +21,22 @@ export type CyberEggGrant = {
   cny?: number;
 };
 
+/**
+ * 一条记录在某种语言下的展示文案（cyberegg 侧用机器翻译生成并缓存）。
+ * 缺字段时渲染层一律回落到 CyberEggItem 上的中文字段，不会出现空白卡片。
+ */
+export type CyberEggItemText = {
+  title?: string;
+  grantText?: string;
+  grantNote?: string;
+  how?: string;
+  appliesTo?: string;
+  validity?: string;
+  requirements?: string[];
+  category?: string;
+  verifiedSource?: string;
+};
+
 export type CyberEggItem = {
   id: string;
   title: string;
@@ -43,9 +59,16 @@ export type CyberEggItem = {
   difficulty?: number;
   category?: string;
   claimUrl?: string;
+  /** 上游原本给的入口链接（被固定邀请链接覆盖前的样子），仅用于溯源。 */
+  sourceUrl?: string;
   expired?: boolean;
   /** 这条记录出现过的来源：aihot / tokenmost。 */
   sources?: string[];
+  /**
+   * 多语言文案：key 为 zh-TW / en / ja / ko / fr / de。
+   * 简体中文直接用上面的中文字段，没有 i18n 键。
+   */
+  i18n?: Record<string, CyberEggItemText>;
 };
 
 export type CyberEggSourceMeta = {

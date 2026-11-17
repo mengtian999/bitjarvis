@@ -262,7 +262,12 @@
       "copy": "Copier",
       "copied": "Copié",
       "hint": "Rafraîchi toutes les 15 minutes ; évitez d'interroger trop souvent et vérifiez les conditions des sources pour un usage commercial.",
-      "open": "Ouvrir"
+      "open": "Ouvrir",
+      "chips": "Sans connexion · sans clé · CORS ouvert",
+      "cardItems": "offres",
+      "examples": "Exemples d'appel",
+      "examplesHint": "curl pour le terminal, fetch pour la console du navigateur",
+      "live": "dernière collecte réussie"
     },
     "err": {
       "badData": "Réponse inattendue",

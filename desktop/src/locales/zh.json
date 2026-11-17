@@ -254,15 +254,20 @@
       "other": "其他福利"
     },
     "api": {
-      "toggle": "可用作 API",
-      "title": "可用作 API",
+      "toggle": "能当API用",
+      "title": "能当API用",
       "desc": "这一页背后就是两个只读 JSON 端点：免登录、免 Key、支持跨域，直接 GET 就能拿到同一份清单。",
       "feed": "全部条目（feed.json）",
       "status": "采集状态（status.json）",
       "copy": "复制",
       "copied": "已复制",
       "hint": "每 15 分钟刷新一次，请勿高频轮询；商业使用请先看来源站点的条款。",
-      "open": "打开"
+      "open": "打开",
+      "chips": "免登录 · 免 Key · 支持跨域",
+      "cardItems": "条福利",
+      "examples": "调用示例",
+      "examplesHint": "curl 给终端，fetch 给浏览器控制台",
+      "live": "最近一次成功抓取"
     },
     "err": {
       "badData": "返回数据异常",
