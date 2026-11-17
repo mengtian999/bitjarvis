@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "サイバーエッグ",
-    "subtitle": "無料で使える LLM 枠を、一条一条整理",
+    "subtitle": "無料で使える LLM 枠を、ひとつずつ整理",
     "refresh": "更新",
     "refreshing": "更新中…",
     "updatedAt": "{time} 更新",
@@ -212,8 +212,8 @@
     },
     "region": {
       "all": "すべての地域",
-      "cn": "国内",
-      "intl": "海外"
+      "cn": "cn",
+      "intl": "intl"
     },
     "regionGroup": "地域で絞り込む",
     "verify": {
@@ -242,7 +242,33 @@
       "yearly": "毎年",
       "once": "一度"
     },
-    "openOriginal": "元のページで表示"
+    "openOriginal": "元のページで表示",
+    "expired": "終了",
+    "validity": "有効期限",
+    "deadline": "締切",
+    "verifiedAt": "確認",
+    "sectionLabels": {
+      "daily": "毎日受け取れる",
+      "weekly": "毎週受け取れる",
+      "monthly": "毎月受け取れる",
+      "other": "その他の特典"
+    },
+    "api": {
+      "toggle": "API として使う",
+      "title": "API として使う",
+      "desc": "このページの裏側は読み取り専用の JSON エンドポイント 2 つです。ログインもキーも不要、CORS 対応なので GET するだけです。",
+      "feed": "すべての特典（feed.json）",
+      "status": "収集ステータス（status.json）",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "hint": "15 分ごとに更新されます。高頻度のポーリングは避け、商用利用の際は各ソースの規約をご確認ください。",
+      "open": "開く"
+    },
+    "err": {
+      "badData": "応答データが不正です",
+      "contract": "データ契約の検証に失敗しました",
+      "load": "読み込みに失敗しました"
+    }
   },
   "titlebar": {
     "currentChatTitle": "現在のチャットタイトル"

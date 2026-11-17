@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "賽博雞蛋",
-    "subtitle": "能免費領的大模型額度，一條一條摆好",
+    "subtitle": "能免費領的大模型額度，一條一條擺好",
     "refresh": "重新整理",
     "refreshing": "重新整理中…",
     "updatedAt": "資料更新於 {time}",
@@ -242,7 +242,33 @@
       "yearly": "每年",
       "once": "一次"
     },
-    "openOriginal": "在原網頁查看"
+    "openOriginal": "在原網頁查看",
+    "expired": "已結束",
+    "validity": "有效期限",
+    "deadline": "截止",
+    "verifiedAt": "核驗",
+    "sectionLabels": {
+      "daily": "每天都能領",
+      "weekly": "每週能領",
+      "monthly": "每月能領",
+      "other": "其他福利"
+    },
+    "api": {
+      "toggle": "當作 API 用",
+      "title": "當作 API 用",
+      "desc": "這一頁背後就是兩個唯讀 JSON 端點：免登入、免 Key、支援跨域，直接 GET 就能拿到同一份清單。",
+      "feed": "全部條目（feed.json）",
+      "status": "採集狀態（status.json）",
+      "copy": "複製",
+      "copied": "已複製",
+      "hint": "每 15 分鐘更新一次，請勿高頻輪詢；商業使用請先看來源站點的條款。",
+      "open": "開啟"
+    },
+    "err": {
+      "badData": "回傳資料異常",
+      "contract": "資料契約校驗失敗",
+      "load": "載入失敗"
+    }
   },
   "titlebar": {
     "currentChatTitle": "目前對話標題"

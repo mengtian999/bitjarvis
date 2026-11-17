@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "사이버 에그",
-    "subtitle": "무료 LLM 크레딧과 API",
+    "subtitle": "무료 LLM 크레딧과 API를 한 줄씩 정리",
     "refresh": "새로고침",
     "refreshing": "새로고침 중…",
     "updatedAt": "{time} 업데이트",
@@ -212,8 +212,8 @@
     },
     "region": {
       "all": "전체 지역",
-      "cn": "국내",
-      "intl": "해외"
+      "cn": "cn",
+      "intl": "intl"
     },
     "regionGroup": "지역 필터",
     "verify": {
@@ -242,7 +242,33 @@
       "yearly": "매년",
       "once": "한 번"
     },
-    "openOriginal": "원본 페이지에서 보기"
+    "openOriginal": "원본 페이지에서 보기",
+    "expired": "종료",
+    "validity": "유효기간",
+    "deadline": "마감",
+    "verifiedAt": "확인",
+    "sectionLabels": {
+      "daily": "매일 받기",
+      "weekly": "매주 받기",
+      "monthly": "매월 받기",
+      "other": "기타 혜택"
+    },
+    "api": {
+      "toggle": "API로 사용하기",
+      "title": "API로 사용하기",
+      "desc": "이 페이지 뒤에는 읽기 전용 JSON 엔드포인트 두 개가 있습니다. 로그인도 키도 필요 없고 CORS를 지원하므로 GET만 하면 됩니다.",
+      "feed": "전체 항목 (feed.json)",
+      "status": "수집 상태 (status.json)",
+      "copy": "복사",
+      "copied": "복사됨",
+      "hint": "15분마다 갱신됩니다. 과도한 폴링은 피하고, 상업적 이용 시 각 소스의 약관을 확인하세요.",
+      "open": "열기"
+    },
+    "err": {
+      "badData": "응답 데이터가 올바르지 않습니다",
+      "contract": "데이터 계약 검증 실패",
+      "load": "불러오기 실패"
+    }
   },
   "titlebar": {
     "currentChatTitle": "현재 대화 제목"

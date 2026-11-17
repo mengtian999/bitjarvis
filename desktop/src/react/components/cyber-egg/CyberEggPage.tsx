@@ -28,13 +28,58 @@ import {
 
 declare function t(key: string, vars?: Record<string, string | number>): string;
 
+/**
+ * 模块级翻译（给 useCallback / 事件处理器用）：
+ * 组件内的 t 会随渲染变化，放进空依赖的 useCallback 会触发 exhaustive-deps；
+ * 这里直接读 window.t，缺键时用调用方给的兜底文案。
+ */
+function tr(key: string, fallback: string): string {
+  const fn = typeof window !== 'undefined' ? window.t : undefined;
+  const value = typeof fn === 'function' ? fn(key) : key;
+  return value && value !== key ? value : fallback;
+}
+
+/** 把 RFC3339 时间按当前界面语言格式化；解析不出来就原样显示（不编造）。 */
+function formatTime(rfc: string, locale: string): string {
+  const d = new Date(rfc);
+  if (Number.isNaN(d.getTime())) return rfc;
+  try {
+    return d.toLocaleString(locale || undefined);
+  } catch {
+    return d.toLocaleString();
+  }
+}
+
+/** 复制文本：桌面端是 Electron，clipboard API 可用；失败就静默不动。 */
+function writeClipboard(text: string): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+    return Promise.resolve(false);
+  }
+  return navigator.clipboard.writeText(text).then(
+    () => true,
+    () => false,
+  );
+}
+
+/**
+ * 分组标题：优先用本地化文案，缺键时回落到 feed 里上游给的标题。
+ * （上游标题是中文，非中文界面下用本地文案更整齐。）
+ */
+function sectionTitleLabel(sec: CyberEggSection): string {
+  const key = `cyberegg.sectionLabels.${sec.key}`;
+  const label = t(key);
+  return label === key ? sec.title : label;
+}
+
 type ItemCardProps = {
   item: CyberEggFeed['items'][number];
   claimedIds: Set<string>;
   onClaim: (id: string) => void;
+  /** 当前界面语言（zh-CN / en / ja…），用于时间本地化。 */
+  locale: string;
 };
 
-function ItemCard({ item, claimedIds, onClaim }: ItemCardProps) {
+function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
   const t = window.t ?? ((p: string) => String(p));
   const claimed = claimedIds.has(item.id);
   const periodKey = cyberEggPeriodLabelKey(item.grant.period);
@@ -78,7 +123,7 @@ function ItemCard({ item, claimedIds, onClaim }: ItemCardProps) {
         <b>{item.grant.text}</b>
         {periodLabel && <span className="cyber-egg-period">{periodLabel}</span>}
         {cny && <span className="cyber-egg-cny">{cny}</span>}
-        {item.expired && <span className="cyber-egg-badge">已结束</span>}
+        {item.expired && <span className="cyber-egg-badge">{t('cyberegg.expired')}</span>}
       </div>
       {(regionLabel || verifyLabel || sourceLabel || item.category) && (
         <div className="cyber-egg-chips-row">
@@ -116,9 +161,9 @@ function ItemCard({ item, claimedIds, onClaim }: ItemCardProps) {
       )}
       <div className="cyber-egg-foot">
         <span className="cyber-egg-meta">
-          {item.validity && `有效期：${item.validity} · `}
-          {item.deadline && `截止 ${new Date(item.deadline).toLocaleString('zh-CN')} · `}
-          {item.verifiedAt && `核实 ${new Date(item.verifiedAt).toLocaleString('zh-CN')}`}
+          {item.validity && `${t('cyberegg.validity')} ${item.validity} · `}
+          {item.deadline && `${t('cyberegg.deadline')} ${formatTime(item.deadline, locale)} · `}
+          {item.verifiedAt && `${t('cyberegg.verifiedAt')} ${formatTime(item.verifiedAt, locale)}`}
         </span>
         {item.claimUrl && (
           <button
@@ -144,6 +189,8 @@ export function CyberEggPage() {
   const [activeRegion, setActiveRegion] = useState<'all' | 'cn' | 'intl'>('all');
   const [query, setQuery] = useState('');
   const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set());
+  const [showApi, setShowApi] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const lastRefreshRef = useRef<number>(0);
 
   const t = window.t ?? ((p: string) => String(p));
@@ -164,11 +211,11 @@ export function CyberEggPage() {
         warning?: string;
       };
       if (!data.ok || !data.feed) {
-        throw new Error(data.warning || '返回数据异常');
+        throw new Error(data.warning || tr('cyberegg.err.badData', '返回数据异常'));
       }
       const normalized = normalizeCyberEggFeed(data.feed);
       if (!normalized) {
-        throw new Error('数据契约校验失败');
+        throw new Error(tr('cyberegg.err.contract', '数据契约校验失败'));
       }
       setFeed(normalized);
       setOrigin(
@@ -178,7 +225,7 @@ export function CyberEggPage() {
       );
       setWarning(data.warning || null);
     } catch (err) {
-      setWarning(err instanceof Error ? err.message : '加载失败');
+      setWarning(err instanceof Error ? err.message : tr('cyberegg.err.load', '加载失败'));
     } finally {
       setLoading(false);
     }
@@ -258,6 +305,22 @@ export function CyberEggPage() {
     return haystack.includes(q);
   });
 
+  // 「可用作 API」面板：网页版 feed.json / status.json 就是公开只读端点。
+  const apiEndpoints = [
+    { key: 'feed', label: t('cyberegg.api.feed'), url: `${CYBER_EGG_DEFAULT_BASE_URL}/feed.json` },
+    { key: 'status', label: t('cyberegg.api.status'), url: `${CYBER_EGG_DEFAULT_BASE_URL}/status.json` },
+  ];
+
+  const copyEndpoint = useCallback((url: string) => {
+    void writeClipboard(url).then(ok => {
+      if (!ok) return;
+      setCopiedUrl(url);
+      window.setTimeout(() => {
+        setCopiedUrl(prev => (prev === url ? null : prev));
+      }, 1600);
+    });
+  }, []);
+
   const regionCounts = {
     cn: items.filter((i: CyberEggItem) => i.region === 'cn').length,
     intl: items.filter((i: CyberEggItem) => i.region === 'intl').length,
@@ -272,7 +335,7 @@ export function CyberEggPage() {
     { key: 'all', label: t('cyberegg.section.all'), count: filteredItems.length },
     ...sections.map((sec: CyberEggSection) => ({
       key: sec.key,
-      label: sec.title,
+      label: sectionTitleLabel(sec),
       count: filteredItems.filter((i: CyberEggItem) => i.section === sec.key).length,
     })),
   ];
@@ -288,6 +351,15 @@ export function CyberEggPage() {
           </div>
         </div>
         <div className="cyber-egg-actions">
+          <button
+            type="button"
+            className={`cyber-egg-api-toggle${showApi ? ' active' : ''}`}
+            aria-expanded={showApi}
+            onClick={() => setShowApi(v => !v)}
+            title={t('cyberegg.api.toggle')}
+          >
+            {t('cyberegg.api.toggle')}
+          </button>
           {origin && (
             <span className={`cyber-egg-origin ${origin}`}>
               {origin === 'live'
@@ -315,6 +387,39 @@ export function CyberEggPage() {
           </a>
         </div>
       </header>
+
+      {showApi && (
+        <section className="cyber-egg-api" aria-label={t('cyberegg.api.title')}>
+          <h2 className="cyber-egg-api-title">{t('cyberegg.api.title')}</h2>
+          <p className="cyber-egg-api-desc">{t('cyberegg.api.desc')}</p>
+          <ul className="cyber-egg-api-list">
+            {apiEndpoints.map(ep => (
+              <li key={ep.key}>
+                <span className="cyber-egg-api-label">{ep.label}</span>
+                <code className="cyber-egg-api-url">GET {ep.url}</code>
+                <span className="cyber-egg-api-actions">
+                  <button
+                    type="button"
+                    className="cyber-egg-api-copy"
+                    onClick={() => copyEndpoint(ep.url)}
+                  >
+                    {copiedUrl === ep.url ? t('cyberegg.api.copied') : t('cyberegg.api.copy')}
+                  </button>
+                  <a
+                    className="cyber-egg-api-open"
+                    href={ep.url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                  >
+                    {t('cyberegg.api.open')}
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="cyber-egg-api-hint">{t('cyberegg.api.hint')}</p>
+        </section>
+      )}
 
       {warning && (
         <div className="cyber-egg-alert">
@@ -398,13 +503,14 @@ export function CyberEggPage() {
               return (
                 <section key={sec.key} className="cyber-egg-group">
                   <h2 className="cyber-egg-group-title">
-                    {sec.title} <small>({visibleItems.length})</small>
+                    {sectionTitleLabel(sec)} <small>({visibleItems.length})</small>
                   </h2>
                   {visibleItems.map((item: CyberEggItem) => (
                     <ItemCard
                       key={item.id}
                       item={item}
                       claimedIds={claimedIds}
+                      locale={locale}
                       onClaim={(id: string) => {
                         handleClaim(id);
                         const it = items.find((x: CyberEggItem) => x.id === id);
@@ -429,11 +535,11 @@ export function CyberEggPage() {
             target="_blank"
             rel="noopener noreferrer nofollow"
           >
-            AIHOT · Token 羊毛
+            {feed?.source?.name ?? 'AIHOT · Token 羊毛'}
           </a>
           {feed?.source.updatedAt && (
             <span> · {t('cyberegg.updatedAt', {
-              time: new Date(feed.source.updatedAt).toLocaleString('zh-CN'),
+              time: formatTime(feed.source.updatedAt, locale),
             })}</span>
           )}
         </p>

@@ -212,8 +212,8 @@
     },
     "region": {
       "all": "Alle Regionen",
-      "cn": "China",
-      "intl": "International"
+      "cn": "cn",
+      "intl": "intl"
     },
     "regionGroup": "Nach Region filtern",
     "verify": {
@@ -242,7 +242,33 @@
       "yearly": "Jährlich",
       "once": "Einmalig"
     },
-    "openOriginal": "Originalseite anzeigen"
+    "openOriginal": "Originalseite anzeigen",
+    "expired": "Beendet",
+    "validity": "Gültig bis",
+    "deadline": "Frist",
+    "verifiedAt": "Verifiziert",
+    "sectionLabels": {
+      "daily": "Täglich abholbar",
+      "weekly": "Wöchentlich abholbar",
+      "monthly": "Monatlich abholbar",
+      "other": "Weitere Vergünstigungen"
+    },
+    "api": {
+      "toggle": "Als API nutzen",
+      "title": "Als API nutzen",
+      "desc": "Hinter dieser Seite stehen zwei schreibgeschützte JSON-Endpunkte: kein Login, kein Key, CORS aktiv – ein einfaches GET genügt.",
+      "feed": "Alle Angebote (feed.json)",
+      "status": "Sammler-Status (status.json)",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "hint": "Alle 15 Minuten aktualisiert – bitte nicht aggressiv pollen; für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
+      "open": "Öffnen"
+    },
+    "err": {
+      "badData": "Unerwartete Antwortdaten",
+      "contract": "Datenvertrag-Prüfung fehlgeschlagen",
+      "load": "Laden fehlgeschlagen"
+    }
   },
   "titlebar": {
     "currentChatTitle": "Titel des aktuellen Chats"

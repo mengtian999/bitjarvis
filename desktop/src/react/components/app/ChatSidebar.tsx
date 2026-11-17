@@ -132,11 +132,13 @@ export function ChatSidebar({
   ...contentProps
 }: ChatSidebarProps) {
   const currentTab = useStore(s => s.currentTab);
+  // 赛博鸡蛋是独立页面，但左侧菜单应保持不动：切过去时侧栏不能塌成空白。
+  const showChatSidebar = currentTab === 'chat' || currentTab === 'cyberegg';
 
   return (
     <aside className={`sidebar${open ? '' : ' collapsed'}`} id="sidebar">
       <div className="sidebar-inner">
-        <div className={`sidebar-chat-content${currentTab === 'chat' ? '' : ' hidden'}`}>
+        <div className={`sidebar-chat-content${showChatSidebar ? '' : ' hidden'}`}>
           <ChatSidebarContent {...contentProps} />
         </div>
 

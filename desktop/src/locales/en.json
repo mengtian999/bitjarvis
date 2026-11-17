@@ -212,8 +212,8 @@
     },
     "region": {
       "all": "All regions",
-      "cn": "China",
-      "intl": "Global"
+      "cn": "cn",
+      "intl": "intl"
     },
     "regionGroup": "Filter by region",
     "verify": {
@@ -242,7 +242,33 @@
       "yearly": "Yearly",
       "once": "Once"
     },
-    "openOriginal": "View original page"
+    "openOriginal": "View original page",
+    "expired": "Expired",
+    "validity": "Valid until",
+    "deadline": "Ends",
+    "verifiedAt": "Verified",
+    "sectionLabels": {
+      "daily": "Claimable daily",
+      "weekly": "Claimable weekly",
+      "monthly": "Claimable monthly",
+      "other": "Other freebies"
+    },
+    "api": {
+      "toggle": "Use as API",
+      "title": "Use as API",
+      "desc": "Behind this page are two read-only JSON endpoints: no login, no key, CORS enabled — just GET the same list.",
+      "feed": "All offers (feed.json)",
+      "status": "Collector status (status.json)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "hint": "Refreshed every 15 minutes; please don't poll aggressively. Check the upstream terms for commercial use.",
+      "open": "Open"
+    },
+    "err": {
+      "badData": "Unexpected response data",
+      "contract": "Feed contract validation failed",
+      "load": "Failed to load"
+    }
   },
   "titlebar": {
     "currentChatTitle": "Current chat title"

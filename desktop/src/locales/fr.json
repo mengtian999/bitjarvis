@@ -212,8 +212,8 @@
     },
     "region": {
       "all": "Toutes régions",
-      "cn": "Chine",
-      "intl": "International"
+      "cn": "cn",
+      "intl": "intl"
     },
     "regionGroup": "Filtrer par région",
     "verify": {
@@ -242,7 +242,33 @@
       "yearly": "Annuel",
       "once": "Une fois"
     },
-    "openOriginal": "Voir la page d'origine"
+    "openOriginal": "Voir la page d'origine",
+    "expired": "Terminé",
+    "validity": "Validité",
+    "deadline": "Fin",
+    "verifiedAt": "Vérifié",
+    "sectionLabels": {
+      "daily": "Réclamable chaque jour",
+      "weekly": "Chaque semaine",
+      "monthly": "Chaque mois",
+      "other": "Autres bonus"
+    },
+    "api": {
+      "toggle": "Utiliser comme API",
+      "title": "Utiliser comme API",
+      "desc": "Derrière cette page se trouvent deux points d'accès JSON en lecture seule : sans connexion, sans clé, CORS activé — un simple GET suffit.",
+      "feed": "Toutes les offres (feed.json)",
+      "status": "État du collecteur (status.json)",
+      "copy": "Copier",
+      "copied": "Copié",
+      "hint": "Rafraîchi toutes les 15 minutes ; évitez d'interroger trop souvent et vérifiez les conditions des sources pour un usage commercial.",
+      "open": "Ouvrir"
+    },
+    "err": {
+      "badData": "Réponse inattendue",
+      "contract": "Validation du contrat de données échouée",
+      "load": "Échec du chargement"
+    }
   },
   "titlebar": {
     "currentChatTitle": "Titre de la discussion en cours"
