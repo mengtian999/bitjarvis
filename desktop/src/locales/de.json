@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Kanäle",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "Weitere Tabs",
     "empty": "Noch keine Kanäle ✿",
     "dmLabel": "Nachrichten",
@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "Cyber-Ei",
-    "subtitle": "Kostenlose LLM-Credits, einen nach dem anderen",
+    "subtitle": "Kostenlose LLM-Credits: automatisch gesammelt, täglich manuell geprüft",
     "refresh": "Aktualisieren",
     "refreshing": "Wird aktualisiert…",
     "updatedAt": "Daten aktualisiert am {time}",
@@ -261,7 +261,7 @@
       "status": "Sammler-Status (status.json)",
       "copy": "Kopieren",
       "copied": "Kopiert",
-      "hint": "Alle 15 Minuten aktualisiert – bitte nicht aggressiv pollen; für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
+      "hint": "Automatisch gesammelt, täglich manuell geprüft – zwei Gleise parallel; bitte nicht aggressiv pollen, für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
       "open": "Öffnen",
       "chips": "Kein Login · kein Key · CORS an",
       "cardItems": "Angebote",

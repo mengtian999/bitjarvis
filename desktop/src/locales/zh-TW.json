@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "頻道",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "更多標籤",
     "empty": "還沒有頻道 ✿",
     "dmLabel": "私聊",
@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "賽博雞蛋",
-    "subtitle": "能免費領的大模型額度，一條一條擺好",
+    "subtitle": "能免費領的大模型額度，自動採集 + 人工每日核驗",
     "refresh": "重新整理",
     "refreshing": "重新整理中…",
     "updatedAt": "資料更新於 {time}",
@@ -261,7 +261,7 @@
       "status": "採集狀態（status.json）",
       "copy": "複製",
       "copied": "已複製",
-      "hint": "每 15 分鐘更新一次，請勿高頻輪詢；商業使用請先看來源站點的條款。",
+      "hint": "資料自動採集 + 人工每日核驗雙軌更新，請勿高頻輪詢；商業使用請先看來源站點的條款。",
       "open": "開啟",
       "chips": "免登入 · 免 Key · 支援跨域",
       "cardItems": "條福利",

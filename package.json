@@ -39,6 +39,7 @@
     "build:preload": "vite build --config vite.config.preload.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.test.json",
     "validate:languages": "node scripts/validate-model-languages.mjs",
+    "sync:cyber-egg": "node scripts/sync-cyber-egg-baseline.mjs",
     "cli": "node scripts/launch.js cli",
     "server": "node scripts/launch.js server",
     "build:main": "vite build --config vite.config.main.js",

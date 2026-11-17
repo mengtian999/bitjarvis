@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Canaux",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "Plus d'onglets",
     "empty": "Aucun canal pour l'instant ✿",
     "dmLabel": "Messages",
@@ -198,7 +198,7 @@
   },
   "cyberegg": {
     "title": "Œuf Cyber",
-    "subtitle": "Crédits LLM gratuits, un par un",
+    "subtitle": "Crédits LLM gratuits : collecte automatique, vérification humaine quotidienne",
     "refresh": "Actualiser",
     "refreshing": "Actualisation…",
     "updatedAt": "Données mises à jour à {time}",
@@ -261,7 +261,7 @@
       "status": "État du collecteur (status.json)",
       "copy": "Copier",
       "copied": "Copié",
-      "hint": "Rafraîchi toutes les 15 minutes ; évitez d'interroger trop souvent et vérifiez les conditions des sources pour un usage commercial.",
+      "hint": "Collecte automatique et vérification humaine quotidienne, deux voies en parallèle ; évitez d'interroger trop souvent et vérifiez les conditions des sources pour un usage commercial.",
       "open": "Ouvrir",
       "chips": "Sans connexion · sans clé · CORS ouvert",
       "cardItems": "offres",
