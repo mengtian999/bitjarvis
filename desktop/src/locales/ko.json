@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "채널",
-    "chatTab": "채팅",
+    "chatTab": "AI",
     "moreTabs": "더 많은 탭",
     "empty": "아직 채널이 없어요 ✿",
     "dmLabel": "메시지",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "메시지",
+    "cyberEgg": "사이버 에그",
     "title": "대화",
     "newChat": "새 대화",
     "collapse": "사이드바 접기",
@@ -194,6 +195,54 @@
       "loading": "프로젝트 불러오는 중…",
       "empty": "아직 프로젝트가 없습니다"
     }
+  },
+  "cyberegg": {
+    "title": "사이버 에그",
+    "subtitle": "무료 LLM 크레딧과 API",
+    "refresh": "새로고침",
+    "refreshing": "새로고침 중…",
+    "updatedAt": "{time} 업데이트",
+    "stale": "데이터가 최신일 수 없습니다 ({warning}), 마지막 성공 가져오기 결과를 표시합니다.",
+    "refreshAgain": "재시도",
+    "claim": "받기",
+    "claimed": "수령함",
+    "appliesTo": "적용 모델",
+    "section": {
+      "all": "전체"
+    },
+    "region": {
+      "all": "전체 지역",
+      "cn": "국내",
+      "intl": "해외"
+    },
+    "regionGroup": "지역 필터",
+    "verify": {
+      "verified": "확인됨",
+      "stale": "재확인 필요",
+      "unverified": "미확인"
+    },
+    "sourceBoth": "2개 소스 수록",
+    "sectionGroup": "그룹 필터",
+    "search": "검색",
+    "searchPlaceholder": "플랫폼, 크레딧, 요구 사항 검색…",
+    "itemsTotal": "개 항목",
+    "expiredCount": "만료됨",
+    "loading": "로드 중…",
+    "empty": "일치하는 항목이 없습니다. 다른 키워드를 시도해 보세요.",
+    "source": "데이터 출처：",
+    "origin": {
+      "live": "실시간",
+      "disk": "디스크",
+      "bundled": "기준선"
+    },
+    "period": {
+      "daily": "매일",
+      "weekly": "매주",
+      "monthly": "매월",
+      "yearly": "매년",
+      "once": "한 번"
+    },
+    "openOriginal": "원본 페이지에서 보기"
   },
   "titlebar": {
     "currentChatTitle": "현재 대화 제목"

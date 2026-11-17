@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Canaux",
-    "chatTab": "Discussion",
+    "chatTab": "AI",
     "moreTabs": "Plus d'onglets",
     "empty": "Aucun canal pour l'instant ✿",
     "dmLabel": "Messages",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "Messages",
+    "cyberEgg": "Œuf Cyber",
     "title": "Discussions",
     "newChat": "Nouvelle discussion",
     "collapse": "Replier la barre latérale",
@@ -194,6 +195,54 @@
       "loading": "Chargement des projets…",
       "empty": "Aucun projet pour l'instant"
     }
+  },
+  "cyberegg": {
+    "title": "Œuf Cyber",
+    "subtitle": "Crédits LLM gratuits, un par un",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "updatedAt": "Données mises à jour à {time}",
+    "stale": "Les données peuvent ne pas être à jour ({warning}), affichage de la dernière récupération réussie.",
+    "refreshAgain": "Réessayer",
+    "claim": "Réclamer",
+    "claimed": "Réclamé",
+    "appliesTo": "Modèles applicables",
+    "section": {
+      "all": "Tous"
+    },
+    "region": {
+      "all": "Toutes régions",
+      "cn": "Chine",
+      "intl": "International"
+    },
+    "regionGroup": "Filtrer par région",
+    "verify": {
+      "verified": "Vérifié",
+      "stale": "À revérifier",
+      "unverified": "Non vérifié"
+    },
+    "sourceBoth": "Deux sources",
+    "sectionGroup": "Filtre par groupe",
+    "search": "Rechercher",
+    "searchPlaceholder": "Rechercher plateformes, crédits, conditions…",
+    "itemsTotal": "éléments",
+    "expiredCount": "expirés",
+    "loading": "Chargement…",
+    "empty": "Aucun élément correspondant, essayez un autre mot-clé.",
+    "source": "Source des données : ",
+    "origin": {
+      "live": "Direct",
+      "disk": "Disque",
+      "bundled": "Base"
+    },
+    "period": {
+      "daily": "Quotidien",
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "once": "Une fois"
+    },
+    "openOriginal": "Voir la page d'origine"
   },
   "titlebar": {
     "currentChatTitle": "Titre de la discussion en cours"

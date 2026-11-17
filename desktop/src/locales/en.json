@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Channels",
-    "chatTab": "Chat",
+    "chatTab": "AI",
     "moreTabs": "More tabs",
     "empty": "No channels yet ✿",
     "dmLabel": "Messages",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "Messages",
+    "cyberEgg": "Cyber Egg",
     "title": "Chats",
     "newChat": "New Chat",
     "collapse": "Collapse sidebar",
@@ -194,6 +195,54 @@
       "loading": "Loading projects…",
       "empty": "No projects yet"
     }
+  },
+  "cyberegg": {
+    "title": "Cyber Egg",
+    "subtitle": "Free LLM credits and APIs",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "updatedAt": "Updated {time}",
+    "stale": "Data may not be up to date ({warning}), showing last successful fetch.",
+    "refreshAgain": "Retry",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "appliesTo": "Applies to",
+    "section": {
+      "all": "All"
+    },
+    "region": {
+      "all": "All regions",
+      "cn": "China",
+      "intl": "Global"
+    },
+    "regionGroup": "Filter by region",
+    "verify": {
+      "verified": "Verified",
+      "stale": "Needs review",
+      "unverified": "Unverified"
+    },
+    "sourceBoth": "Both sources",
+    "sectionGroup": "Group filter",
+    "search": "Search",
+    "searchPlaceholder": "Search platforms, credits, requirements…",
+    "itemsTotal": "items total",
+    "expiredCount": "expired",
+    "loading": "Loading…",
+    "empty": "No matching items, try a different keyword.",
+    "source": "Source:",
+    "origin": {
+      "live": "Live",
+      "disk": "Disk",
+      "bundled": "Baseline"
+    },
+    "period": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "once": "Once"
+    },
+    "openOriginal": "View original page"
   },
   "titlebar": {
     "currentChatTitle": "Current chat title"

@@ -101,13 +101,16 @@ export function ChatSidebarContent({
           </button>
           <button
             className="sidebar-activity-bar"
-            onClick={() => useStore.getState().setCurrentTab('im')}
-            title={t('sidebar.im')}
+            onClick={() => useStore.getState().setCurrentTab('cyberegg')}
+            title={t('sidebar.cyberEgg')}
           >
+            {/* 赛博鸡蛋：鸡蛋轮廓 + 一点电路感 */}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <path d="M12 3c3.9 0 6.5 4.2 6.5 8.6C18.5 16.6 15.6 21 12 21s-6.5-4.4-6.5-9.4C5.5 7.2 8.1 3 12 3z"></path>
+              <path d="M9.2 12.4h5.6"></path>
+              <path d="M12 9.2v6.4"></path>
             </svg>
-            <span>{t('sidebar.im')}</span>
+            <span>{t('sidebar.cyberEgg')}</span>
           </button>
 
         </>

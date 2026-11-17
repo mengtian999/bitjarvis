@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Kanäle",
-    "chatTab": "Chat",
+    "chatTab": "AI",
     "moreTabs": "Weitere Tabs",
     "empty": "Noch keine Kanäle ✿",
     "dmLabel": "Nachrichten",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "Nachrichten",
+    "cyberEgg": "Cyber-Ei",
     "title": "Chats",
     "newChat": "Neuer Chat",
     "collapse": "Seitenleiste einklappen",
@@ -194,6 +195,54 @@
       "loading": "Projekte werden geladen…",
       "empty": "Noch keine Projekte"
     }
+  },
+  "cyberegg": {
+    "title": "Cyber-Ei",
+    "subtitle": "Kostenlose LLM-Credits, einen nach dem anderen",
+    "refresh": "Aktualisieren",
+    "refreshing": "Wird aktualisiert…",
+    "updatedAt": "Daten aktualisiert am {time}",
+    "stale": "Daten sind möglicherweise nicht aktuell ({warning}), letzte erfolgreiche Abfrage wird angezeigt.",
+    "refreshAgain": "Erneut versuchen",
+    "claim": "In Anspruch nehmen",
+    "claimed": "In Anspruch genommen",
+    "appliesTo": "Gilt für",
+    "section": {
+      "all": "Alle"
+    },
+    "region": {
+      "all": "Alle Regionen",
+      "cn": "China",
+      "intl": "International"
+    },
+    "regionGroup": "Nach Region filtern",
+    "verify": {
+      "verified": "Verifiziert",
+      "stale": "Zu prüfen",
+      "unverified": "Unbestätigt"
+    },
+    "sourceBoth": "Zwei Quellen",
+    "sectionGroup": "Gruppenfilter",
+    "search": "Suchen",
+    "searchPlaceholder": "Plattformen, Credits, Bedingungen suchen…",
+    "itemsTotal": "Elemente",
+    "expiredCount": "abgelaufen",
+    "loading": "Wird geladen…",
+    "empty": "Keine passenden Einträge, versuchen Sie ein anderes Schlüsselwort.",
+    "source": "Datenquelle: ",
+    "origin": {
+      "live": "Live",
+      "disk": "Festplatte",
+      "bundled": "Baseline"
+    },
+    "period": {
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "once": "Einmalig"
+    },
+    "openOriginal": "Originalseite anzeigen"
   },
   "titlebar": {
     "currentChatTitle": "Titel des aktuellen Chats"

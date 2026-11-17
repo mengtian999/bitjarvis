@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "チャンネル",
-    "chatTab": "チャット",
+    "chatTab": "AI",
     "moreTabs": "その他のタブ",
     "empty": "チャンネルはまだありません ✿",
     "dmLabel": "メッセージ",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "メッセージ",
+    "cyberEgg": "サイバーエッグ",
     "title": "チャット",
     "newChat": "新しいチャット",
     "collapse": "サイドバーを折りたたむ",
@@ -194,6 +195,54 @@
       "loading": "プロジェクトを読み込み中…",
       "empty": "プロジェクトはまだありません"
     }
+  },
+  "cyberegg": {
+    "title": "サイバーエッグ",
+    "subtitle": "無料で使える LLM 枠を、一条一条整理",
+    "refresh": "更新",
+    "refreshing": "更新中…",
+    "updatedAt": "{time} 更新",
+    "stale": "データが最新でない可能性があります（{warning}）。最後に正常に取得した結果を表示しています。",
+    "refreshAgain": "再試行",
+    "claim": "受け取る",
+    "claimed": "受取済み",
+    "appliesTo": "適用モデル",
+    "section": {
+      "all": "すべて"
+    },
+    "region": {
+      "all": "すべての地域",
+      "cn": "国内",
+      "intl": "海外"
+    },
+    "regionGroup": "地域で絞り込む",
+    "verify": {
+      "verified": "確認済み",
+      "stale": "要再確認",
+      "unverified": "未確認"
+    },
+    "sourceBoth": "2 ソース収録",
+    "sectionGroup": "グループフィルタ",
+    "search": "検索",
+    "searchPlaceholder": "プラットフォーム、枠、要件で検索…",
+    "itemsTotal": "件の枠",
+    "expiredCount": "終了",
+    "loading": "読み込み中…",
+    "empty": "一致する項目がありません。別のキーワードをお試しください。",
+    "source": "データソース：",
+    "origin": {
+      "live": "ライブ",
+      "disk": "ディスク",
+      "bundled": "基線"
+    },
+    "period": {
+      "daily": "毎日",
+      "weekly": "毎週",
+      "monthly": "毎月",
+      "yearly": "毎年",
+      "once": "一度"
+    },
+    "openOriginal": "元のページで表示"
   },
   "titlebar": {
     "currentChatTitle": "現在のチャットタイトル"

@@ -4,6 +4,7 @@ import { useStore } from '../../stores';
 import { ActivityPanel } from '../ActivityPanel';
 import { AutomationPanel } from '../AutomationPanel';
 import { BridgePanel } from '../BridgePanel';
+import { CyberEggPage } from '../cyber-egg/CyberEggPage';
 import { SkillsPanel } from '../SkillsPanel';
 import { PreviewPanel } from '../PreviewPanel';
 import { PluginPageView } from '../plugin/PluginPageView';
@@ -145,6 +146,7 @@ export function AppPages() {
       <MainContent>
         {currentTab === 'chat' && <ChatPage />}
         {currentTab === 'channels' && <ChannelPage />}
+        {currentTab === 'cyberegg' && <CyberEggPage />}
         {isPluginTab && <PluginPage pluginId={currentTab.slice(7)} />}
         <ActivityPanel />
         <AutomationPanel />
