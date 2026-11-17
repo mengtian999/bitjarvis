@@ -88,6 +88,11 @@ function contentI18nKey(locale: string): string | null {
   return null;
 }
 
+/** 远端按语言分端点（/feed.json?lang=en），这里把界面语言映射成端点参数。 */
+function contentLangParam(locale: string): string {
+  return contentI18nKey(locale) || 'zh-CN';
+}
+
 /** 一条记录在当前语言下要显示的文案：先取 i18n，缺字段回落中文原文。 */
 function localizedText(item: CyberEggItem, locale: string): CyberEggItemText {
   const key = contentI18nKey(locale);
@@ -158,7 +163,7 @@ function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
         {cny && <span className="cyber-egg-cny">{cny}</span>}
         {item.expired && <span className="cyber-egg-badge">{t('cyberegg.expired')}</span>}
       </div>
-      {(regionLabel || verifyLabel || sourceLabel || item.category) && (
+      {(regionLabel || verifyLabel || sourceLabel || item.category || item.apiUsable) && (
         <div className="cyber-egg-chips-row">
           {regionLabel && (
             <span className={`cyber-egg-region ${item.region === 'cn' ? 'cn' : 'intl'}`}>
@@ -176,6 +181,9 @@ function ItemCard({ item, claimedIds, onClaim, locale }: ItemCardProps) {
           )}
           {text.category && <span className="cyber-egg-cat">{text.category}</span>}
           {sourceLabel && <span className="cyber-egg-cat">{sourceLabel}</span>}
+          {item.apiUsable && (
+            <span className="cyber-egg-cat api">{t('cyberegg.api.toggle')}</span>
+          )}
         </div>
       )}
       {text.requirements?.length && (
@@ -222,17 +230,19 @@ export function CyberEggPage() {
   const [activeRegion, setActiveRegion] = useState<'all' | 'cn' | 'intl'>('all');
   const [query, setQuery] = useState('');
   const [claimedIds, setClaimedIds] = useState<Set<string>>(new Set());
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const lastRefreshRef = useRef<number>(0);
 
   const t = window.t ?? ((p: string) => String(p));
 
   const loadFeed = useCallback(async (force = false) => {
     try {
-      const res = await jarvisFetch(
-        `/api/cyber-egg/feed${force ? '?force=1' : ''}`,
-        { throwOnHttpError: false, timeout: 15_000 }
-      );
+      // 远端按语言分端点：只拉当前界面语言那一份，别的语言不下发也不缓存
+      const params = new URLSearchParams({ lang: contentLangParam(locale) });
+      if (force) params.set('force', '1');
+      const res = await jarvisFetch(`/api/cyber-egg/feed?${params.toString()}`, {
+        throwOnHttpError: false,
+        timeout: 15_000,
+      });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -318,7 +328,12 @@ export function CyberEggPage() {
   const items = feed ? feed.items : [];
   const filteredItems = items.filter((item: CyberEggItem) => {
     if (activeRegion !== 'all' && item.region !== activeRegion) return false;
-    if (activeSection !== 'all' && item.section !== activeSection) return false;
+    if (activeSection === 'api') {
+      // 「能当API用」不是分组，而是「把当前所有能当 API 用的挑出来」
+      if (!item.apiUsable) return false;
+    } else if (activeSection !== 'all' && item.section !== activeSection) {
+      return false;
+    }
     if (!query) return true;
     const q = query.toLowerCase();
     const text = localizedText(item, locale);
@@ -344,56 +359,7 @@ export function CyberEggPage() {
     return haystack.includes(q);
   });
 
-  // 「能当API用」卡片：网页版 feed.json / status.json 就是公开只读端点。
-  // 内容结构与福利卡一致（标题 + 额度位 + chips + 说明 + 代码 + 页脚按钮）。
-  const apiBase = CYBER_EGG_DEFAULT_BASE_URL;
-  const apiCards = [
-    {
-      key: 'feed',
-      title: t('cyberegg.api.feed'),
-      path: '/feed.json',
-      url: `${apiBase}/feed.json`,
-      badge: String(feed?.itemCount ?? 0),
-      badgeSub: t('cyberegg.api.cardItems'),
-      desc: t('cyberegg.api.desc'),
-      code: [`GET ${apiBase}/feed.json`],
-    },
-    {
-      key: 'status',
-      title: t('cyberegg.api.status'),
-      path: '/status.json',
-      url: `${apiBase}/status.json`,
-      badge: feed?.generatedAt ? formatTime(feed.generatedAt, locale) : t('cyberegg.api.live'),
-      badgeSub: t('cyberegg.api.live'),
-      desc: t('cyberegg.api.hint'),
-      code: [`GET ${apiBase}/status.json`],
-    },
-    {
-      key: 'examples',
-      title: t('cyberegg.api.examples'),
-      path: 'curl / fetch',
-      url: `${apiBase}/feed.json`,
-      badge: '2',
-      badgeSub: t('cyberegg.api.examples'),
-      desc: t('cyberegg.api.examplesHint'),
-      code: [
-        `curl -s ${apiBase}/feed.json | jq '.items[0]'`,
-        `fetch('${apiBase}/feed.json').then(r => r.json()).then(d => d.itemCount)`,
-      ],
-    },
-  ];
-
-  const copyEndpoint = useCallback((url: string) => {
-    void writeClipboard(url).then(ok => {
-      if (!ok) return;
-      setCopiedUrl(url);
-      window.setTimeout(() => {
-        setCopiedUrl(prev => (prev === url ? null : prev));
-      }, 1600);
-    });
-  }, []);
-
-  const regionCounts = {
+  const regionCounts = {  const regionCounts = {
     cn: items.filter((i: CyberEggItem) => i.region === 'cn').length,
     intl: items.filter((i: CyberEggItem) => i.region === 'intl').length,
   };
@@ -411,7 +377,11 @@ export function CyberEggPage() {
       label: sectionTitleLabel(sec),
       count: filteredItems.filter((i: CyberEggItem) => i.section === sec.key).length,
     })),
-    { key: 'api', label: t('cyberegg.api.toggle'), count: apiCards.length },
+    {
+      key: 'api',
+      label: t('cyberegg.api.toggle'),
+      count: items.filter((i: CyberEggItem) => i.apiUsable).length,
+    },
   ];
 
   return (
@@ -521,53 +491,7 @@ export function CyberEggPage() {
         </label>
       </div>
       <main className="cyber-egg-main">
-        {activeSection === 'api' ? (
-          <section className="cyber-egg-group">
-            <h2 className="cyber-egg-group-title">
-              {t('cyberegg.api.title')} <small>({apiCards.length})</small>
-            </h2>
-            <div className="cyber-egg-api-cards">
-              {apiCards.map(card => (
-                <article key={card.key} className="cyber-egg-card cyber-egg-api-card">
-                  <div className="cyber-egg-card-head">
-                    <h3 className="cyber-egg-title">{card.title}</h3>
-                    <span className="cyber-egg-provider">{card.path}</span>
-                  </div>
-                  <div className="cyber-egg-grant">
-                    <b>{card.badge}</b>
-                    <span className="cyber-egg-period">{card.badgeSub}</span>
-                  </div>
-                  <div className="cyber-egg-chips-row">
-                    <span className="cyber-egg-cat">{t('cyberegg.api.chips')}</span>
-                  </div>
-                  <p className="cyber-egg-how">{card.desc}</p>
-                  {card.code.map((line: string) => (
-                    <div key={line} className="cyber-egg-api-code-row">
-                      <code className="cyber-egg-api-code">{line}</code>
-                      <button
-                        type="button"
-                        className="cyber-egg-api-copy"
-                        onClick={() => copyEndpoint(line)}
-                      >
-                        {copiedUrl === line ? t('cyberegg.api.copied') : t('cyberegg.api.copy')}
-                      </button>
-                    </div>
-                  ))}
-                  <div className="cyber-egg-foot">
-                    <span className="cyber-egg-meta">{card.url}</span>
-                    <button
-                      type="button"
-                      className="cyber-egg-claim"
-                      onClick={() => openClaimUrl(card.url)}
-                    >
-                      {t('cyberegg.api.open')}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : loading && !feed ? (
+        {loading && !feed ? (        ) : loading && !feed ? (
           <div className="cyber-egg-empty">{t('cyberegg.loading')}</div>
         ) : filteredItems.length === 0 ? (
           <div className="cyber-egg-empty">{t('cyberegg.empty')}</div>
@@ -575,7 +499,8 @@ export function CyberEggPage() {
           <>
             {sections.map((sec: CyberEggSection) => {
               const visibleItems = filteredItems.filter(
-                (i: CyberEggItem) => activeSection === 'all' || i.section === sec.key,
+                (i: CyberEggItem) =>
+                  activeSection === 'all' || activeSection === 'api' || i.section === sec.key,
               );
               if (visibleItems.length === 0) return null;
               return (

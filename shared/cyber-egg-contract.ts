@@ -58,6 +58,12 @@ export type CyberEggItem = {
   verifyStatus?: string;
   difficulty?: number;
   category?: string;
+  /**
+   * 这份额度能不能直接当通用 API 用（不是只能在厂商自家产品里花）。
+   * 由 cyberegg 端按各来源的权威字段判定（tokenmost 的 api_via、AIHOT 的门槛 chip），
+   * 客户端的「能当API用」筛选只认这个字段，不自己猜文案。
+   */
+  apiUsable?: boolean;
   claimUrl?: string;
   /** 上游原本给的入口链接（被固定邀请链接覆盖前的样子），仅用于溯源。 */
   sourceUrl?: string;

@@ -34,6 +34,10 @@ export interface UiSlice {
   skillCatalogVersion: number;
   /** 频道创建弹窗是否可见 */
   channelCreateOverlayVisible: boolean;
+  /** Agent 对话一键转发到 IM 的文本（null = 无待转发内容）；由 ImView 消费后清空 */
+  imForwardText: string | null;
+  /** 转发到其他 Agent 会话的草稿文本（null = 关闭选择器）；选中目标会话后清空 */
+  sessionForwardText: string | null;
   setSidebarOpen: (open: boolean) => void;
   setSidebarAutoCollapsed: (collapsed: boolean) => void;
   setJianOpen: (open: boolean) => void;
@@ -45,6 +49,8 @@ export interface UiSlice {
   setRightWorkspaceTab: (tab: RightWorkspaceTab) => void;
   setJianDrawerOpen: (open: boolean) => void;
   setChannelCreateOverlayVisible: (visible: boolean) => void;
+  setImForwardText: (text: string | null) => void;
+  setSessionForwardText: (text: string | null) => void;
   setMediaViewer: (state: MediaViewerState | null) => void;
   setSettingsModal: (state: SettingsModalState) => void;
   setMediaViewerCurrent: (id: string) => void;
@@ -74,6 +80,8 @@ export const createUiSlice = (
   settingsModal: { open: false, activeTab: 'agent' },
   skillCatalogVersion: 0,
   channelCreateOverlayVisible: false,
+  imForwardText: null,
+  sessionForwardText: null,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setSidebarAutoCollapsed: (collapsed) => set({ sidebarAutoCollapsed: collapsed }),
   setJianOpen: (open) => set({ jianOpen: open }),
@@ -85,6 +93,8 @@ export const createUiSlice = (
   setRightWorkspaceTab: (tab) => set({ rightWorkspaceTab: tab }),
   setJianDrawerOpen: (open) => set({ jianDrawerOpen: open }),
   setChannelCreateOverlayVisible: (visible) => set({ channelCreateOverlayVisible: visible }),
+  setImForwardText: (text) => set({ imForwardText: text }),
+  setSessionForwardText: (text) => set({ sessionForwardText: text }),
   setMediaViewer: (state) => set({ mediaViewer: state }),
   setSettingsModal: (state) => set({ settingsModal: state }),
   setMediaViewerCurrent: (id) => set((s) => ({

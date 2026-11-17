@@ -14,6 +14,7 @@ import { MainContent } from '../../MainContent';
 import { ChatPage } from './ChatPage';
 import { WorkspaceCompanionRail } from './WorkspaceCompanionRail';
 import { ImView } from '../ImView';
+import { SessionForwardDialog } from '../SessionForwardDialog';
 
 const tr = (key: string, vars?: Record<string, string | number>) => window.t?.(key, vars) ?? key;
 
@@ -166,6 +167,7 @@ export function AppPages() {
 
       {currentTab === 'chat' && <PreviewPanel />}
       {currentTab !== 'im' && <WorkspaceCompanionRail />}
+      <SessionForwardDialog />
     </>
   );
 }

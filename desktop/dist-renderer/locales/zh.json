@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "频道",
-    "chatTab": "聊天",
+    "chatTab": "AI",
     "moreTabs": "更多标签",
     "empty": "还没有频道 ✿",
     "dmLabel": "私聊",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "消息",
+    "cyberEgg": "赛博鸡蛋",
     "title": "对话",
     "newChat": "新对话",
     "collapse": "收起侧边栏",
@@ -193,6 +194,80 @@
       "showMore": "展开显示",
       "loading": "正在载入项目…",
       "empty": "还没有项目"
+    }
+  },
+  "cyberegg": {
+    "title": "赛博鸡蛋",
+    "subtitle": "能免费领的大模型额度，一条一条摆好",
+    "refresh": "刷新",
+    "refreshing": "刷新中…",
+    "updatedAt": "数据更新于 {time}",
+    "stale": "数据可能不是最新的（{warning}），显示的是上次成功抓取的结果。",
+    "refreshAgain": "重试",
+    "claim": "去领",
+    "claimed": "已领",
+    "appliesTo": "适用模型",
+    "section": {
+      "all": "全部"
+    },
+    "region": {
+      "all": "全部地区",
+      "cn": "国内",
+      "intl": "国外"
+    },
+    "regionGroup": "按地区筛选",
+    "verify": {
+      "verified": "已核验",
+      "stale": "待复核",
+      "unverified": "未核验"
+    },
+    "sourceBoth": "双源收录",
+    "sectionGroup": "分组筛选",
+    "search": "搜索",
+    "searchPlaceholder": "搜索平台、额度、门槛…",
+    "itemsTotal": "条可领",
+    "expiredCount": "已结束",
+    "loading": "加载中…",
+    "empty": "没有匹配的条目，换个关键词试试。",
+    "source": "数据来源：",
+    "origin": {
+      "live": "实时",
+      "disk": "缓存",
+      "bundled": "基线"
+    },
+    "period": {
+      "daily": "每天",
+      "weekly": "每周",
+      "monthly": "每月",
+      "yearly": "每年",
+      "once": "一次"
+    },
+    "openOriginal": "在原网页查看",
+    "expired": "已结束",
+    "validity": "有效期",
+    "deadline": "截止",
+    "verifiedAt": "核验",
+    "sectionLabels": {
+      "daily": "每天都能领",
+      "weekly": "每周能领",
+      "monthly": "每月能领",
+      "other": "其他福利"
+    },
+    "api": {
+      "toggle": "可用作 API",
+      "title": "可用作 API",
+      "desc": "这一页背后就是两个只读 JSON 端点：免登录、免 Key、支持跨域，直接 GET 就能拿到同一份清单。",
+      "feed": "全部条目（feed.json）",
+      "status": "采集状态（status.json）",
+      "copy": "复制",
+      "copied": "已复制",
+      "hint": "每 15 分钟刷新一次，请勿高频轮询；商业使用请先看来源站点的条款。",
+      "open": "打开"
+    },
+    "err": {
+      "badData": "返回数据异常",
+      "contract": "数据契约校验失败",
+      "load": "加载失败"
     }
   },
   "titlebar": {
@@ -264,6 +339,9 @@
     "copy": "复制",
     "copied": "已复制",
     "copyText": "复制文本",
+    "forwardToIm": "转发到IM",
+    "forwardToSession": "转发到其他对话",
+    "forwardToSessionEmpty": "没有其他会话可选",
     "close": "关闭",
     "loading": "加载中...",
     "regenerate": "重新生成",

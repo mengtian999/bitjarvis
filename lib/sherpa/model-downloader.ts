@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { userSherpaModelsBase } from "../../core/realtime-voice/sherpa-paths.ts";
-import sherpaModelsManifest from "../../shared/sherpa-models.json";
+import sherpaModelsManifest from "../../shared/sherpa-models.json" with { type: "json" };
 
 const GITHUB_RELEASES_PREFIX = "https://github.com/k2-fsa/sherpa-onnx/releases/download";
 

@@ -97,6 +97,23 @@ class AgentBridge {
     }
   }
 
+  /// [T-im-forward] 把转发文本交给宿主，唤起 Agent 侧的「转发到角色」
+  /// 落点选择器（选角色 → 新建会话/历史会话 → 注入目标会话）。
+  ///
+  /// 返回 true 表示宿主已接手；false 表示独立运行模式（无宿主监听），
+  /// 调用方应降级到原有的 Matrix 私聊转发流程。
+  static Future<bool> forwardToAgent(String text) async {
+    try {
+      await channel.invokeMethod<void>('forwardToAgent', {'text': text});
+      return true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      debugPrint('[AgentBridge] forwardToAgent failed: ${e.code} ${e.message}');
+      return false;
+    }
+  }
+
   /// 请求原生宿主经由 Jarvis 网关翻译 [text] 到 [targetLanguage]（BCP-47 代码）。
   ///
   /// 宿主持有网关设备身份，调用 `POST /v1/chat/completions`（model=`im_translate`，

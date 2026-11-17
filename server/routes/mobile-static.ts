@@ -97,11 +97,11 @@ export function createMobileStaticRoute(options: MobileStaticRouteOptions) {
 }
 
 function registerWebClientRoute(route: Hono, basePath: string, distDir: string, entryFile: string) {
-  route.get(basePath, (c) => serveWebClientFile(c, distDir, "", entryFile));
-  route.get(`${basePath}/`, (c) => serveWebClientFile(c, distDir, "", entryFile));
+  route.get(basePath, (c) => serveWebClientFile(c, distDir, "", entryFile, basePath));
+  route.get(`${basePath}/`, (c) => serveWebClientFile(c, distDir, "", entryFile, basePath));
   route.get(`${basePath}/*`, (c) => {
     const pattern = new RegExp(`^${basePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/?`);
-    return serveWebClientFile(c, distDir, c.req.path.replace(pattern, ""), entryFile);
+    return serveWebClientFile(c, distDir, c.req.path.replace(pattern, ""), entryFile, basePath);
   });
 }
 
@@ -130,7 +130,7 @@ function registerStaticPage(
   route.get(`${basePath}/*`, fallthrough404 ? (c) => c.body(null, 404) : respond);
 }
 
-function serveWebClientFile(c, distDir, requestPath, entryFile) {
+function serveWebClientFile(c, distDir, requestPath, entryFile, basePath) {
   const relative = !requestPath || requestPath === "index.html"
     ? entryFile
     : safeRelativePath(requestPath);
@@ -141,9 +141,29 @@ function serveWebClientFile(c, distDir, requestPath, entryFile) {
   const stat = fs.statSync(safePath);
   if (!stat.isFile()) return c.body(null, 404);
   c.header("Content-Type", guessMime(safePath));
-  c.header("Cache-Control", relative === entryFile
-    ? "no-cache"
-    : "public, max-age=31536000, immutable");
+  // [T-im-forward] Flutter web 的 content-hash 资产（assets/）可以
+  // immutable 长缓存；main.dart.js / flutter.js 等顶层文件 URL 固定，
+  // 一旦被 immutable 缓存就会把旧构建永久钉死（重建也不生效），
+  // 因此非 assets 文件一律 no-cache。
+  const isHashedAsset = relative.startsWith("assets/");
+  c.header("Cache-Control", isHashedAsset
+    ? "public, max-age=31536000, immutable"
+    : "no-cache");
+  if (relative === entryFile) {
+    // 给 main.dart.js 的引用追加构建版本参数：URL 随构建变化，
+    // 绕开已被 immutable 污染的旧缓存条目。
+    const mainJs = path.join(distDir, "main.dart.js");
+    if (fs.existsSync(mainJs)) {
+      const version = String(fs.statSync(mainJs).mtimeMs);
+      const html = fs.readFileSync(safePath, "utf8")
+        .replace(/main\.dart\.js(?!\?)/g, `main.dart.js?v=${version}`)
+        // Flutter web 模板带 <base href="/">（假设部署在根路径），
+        // 内嵌到 /im/ 子路径时相对资源会解析到根路径而 403 → 空白页，
+        // 因此把 base 改写为 /im/。
+        .replace(/(<base\s+href=")\/(")/i, `$1${basePath}/$2`);
+      return c.body(html);
+    }
+  }
   return c.body(fs.readFileSync(safePath));
 }
 

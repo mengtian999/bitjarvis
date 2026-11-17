@@ -27,6 +27,13 @@ class ContentShareItem extends ShareItem {
   ContentShareItem(this.value);
 }
 
+/// 草稿转发项：选中的目标房间后不直接发送，而是把 [value]
+/// 预填进聊天输入框，由用户编辑后手动发送（IM ↔ Agent 一键转发用）。
+class DraftShareItem extends ShareItem {
+  final String value;
+  DraftShareItem(this.value);
+}
+
 class FileShareItem extends ShareItem {
   final XFile value;
   FileShareItem(this.value);
@@ -35,7 +42,14 @@ class FileShareItem extends ShareItem {
 class ShareScaffoldDialog extends StatefulWidget {
   final List<ShareItem> items;
 
-  const ShareScaffoldDialog({required this.items, super.key});
+  /// true 时只列出私聊房间（转发给 Agent 时在其私聊中选择目标）。
+  final bool directChatsOnly;
+
+  const ShareScaffoldDialog({
+    required this.items,
+    this.directChatsOnly = false,
+    super.key,
+  });
 
   @override
   State<ShareScaffoldDialog> createState() => _ShareScaffoldDialogState();
@@ -89,7 +103,9 @@ class _ShareScaffoldDialogState extends State<ShareScaffoldDialog> {
           (room) =>
               room.canSendDefaultMessages &&
               !room.isSpace &&
-              room.membership == Membership.join,
+              room.membership == Membership.join &&
+              (!widget.directChatsOnly ||
+                  (room.directChatMatrixID?.isNotEmpty ?? false)),
         )
         .toList();
     final filter = _filterController.text.trim().toLowerCase();

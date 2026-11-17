@@ -224,6 +224,51 @@ export const ImView = memo(function ImView() {
     };
   }, []);
 
+  // Agent 对话一键转发到 IM：store 里的草稿文本 postMessage 给内嵌 IM
+  // （im/lib/main.dart 的 kIsWeb message 监听器）。不在这里清空——等
+  // IM 侧 ack（im/forward-ack）再清；若 Flutter 监听器尚未注册（im/ready
+  // 未到），首次 postMessage 会丢失，im/ready 到达时按待转发文本重发。
+  const imForwardText = useStore(s => s.imForwardText);
+  const setImForwardText = useStore(s => s.setImForwardText);
+  const postForward = useCallback((text: string) => {
+    iframeRef.current?.contentWindow?.postMessage({ type: 'im/forward', text }, '*');
+  }, []);
+  useEffect(() => {
+    if (!imForwardText) return;
+    postForward(imForwardText);
+  }, [imForwardText, postForward]);
+  useEffect(() => {
+    const fwdHost = window.location.hostname || '127.0.0.1';
+    const fwdPort = serverPort || (window.location.port && window.location.port !== '5173' ? window.location.port : '44848');
+    const fwdOrigin = `http://${fwdHost}:${fwdPort}`;
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== fwdOrigin) return;
+      let data: unknown = e.data;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+      const type = (data as { type?: string } | null)?.type;
+      if (type === 'im/ready' && imForwardText) {
+        postForward(imForwardText);
+      } else if (type === 'im/forward-ack') {
+        setImForwardText(null);
+      } else if (type === 'im/forward-to-agent') {
+        // 内嵌 IM 的「转发给Agent」：交给桌面端 Agent 自己的会话选择器。
+        const text = (data as { text?: string }).text;
+        if (text) {
+          useStore.getState().setSessionForwardText(text);
+          useStore.getState().setCurrentTab('chat');
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [imForwardText, postForward, setImForwardText, serverPort]);
+
   const host = window.location.hostname || '127.0.0.1';
   const port = serverPort || (window.location.port && window.location.port !== '5173' ? window.location.port : '44848');
 

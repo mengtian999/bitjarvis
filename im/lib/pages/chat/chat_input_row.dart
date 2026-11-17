@@ -97,6 +97,19 @@ class ChatInputRow extends StatelessWidget {
                         ),
                       ),
                     ),
+                  SizedBox(
+                    height: height,
+                    child: TextButton(
+                      style: selectedTextButtonStyle,
+                      onPressed: controller.forwardToAgentAction,
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(Icons.keyboard_arrow_left_outlined),
+                          Text(L10n.of(context).jarvis),
+                        ],
+                      ),
+                    ),
+                  ),
                   controller.selectedEvents.length == 1
                       ? controller.selectedEvents.first
                                 .getDisplayEvent(controller.timeline!)

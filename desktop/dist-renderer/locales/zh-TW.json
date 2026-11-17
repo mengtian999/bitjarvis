@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "頻道",
-    "chatTab": "聊天",
+    "chatTab": "AI",
     "moreTabs": "更多標籤",
     "empty": "還沒有頻道 ✿",
     "dmLabel": "私聊",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "訊息",
+    "cyberEgg": "賽博雞蛋",
     "title": "對話",
     "newChat": "新對話",
     "collapse": "收起側邊欄",
@@ -193,6 +194,80 @@
       "showMore": "展開顯示",
       "loading": "正在載入項目…",
       "empty": "還沒有項目"
+    }
+  },
+  "cyberegg": {
+    "title": "賽博雞蛋",
+    "subtitle": "能免費領的大模型額度，一條一條擺好",
+    "refresh": "重新整理",
+    "refreshing": "重新整理中…",
+    "updatedAt": "資料更新於 {time}",
+    "stale": "資料可能不是最新的（{warning}），顯示的是上次成功抓取的結果。",
+    "refreshAgain": "重試",
+    "claim": "去領",
+    "claimed": "已領",
+    "appliesTo": "適用模型",
+    "section": {
+      "all": "全部"
+    },
+    "region": {
+      "all": "全部地區",
+      "cn": "國內",
+      "intl": "國外"
+    },
+    "regionGroup": "按地區篩選",
+    "verify": {
+      "verified": "已核驗",
+      "stale": "待複核",
+      "unverified": "未核驗"
+    },
+    "sourceBoth": "雙源收錄",
+    "sectionGroup": "分類篩選",
+    "search": "搜尋",
+    "searchPlaceholder": "搜尋平台、額度、門檻…",
+    "itemsTotal": "條可領",
+    "expiredCount": "已結束",
+    "loading": "載入中…",
+    "empty": "沒有符合的條目，換個關鍵字試試。",
+    "source": "資料來源：",
+    "origin": {
+      "live": "即時",
+      "disk": "快取",
+      "bundled": "基線"
+    },
+    "period": {
+      "daily": "每天",
+      "weekly": "每週",
+      "monthly": "每月",
+      "yearly": "每年",
+      "once": "一次"
+    },
+    "openOriginal": "在原網頁查看",
+    "expired": "已結束",
+    "validity": "有效期限",
+    "deadline": "截止",
+    "verifiedAt": "核驗",
+    "sectionLabels": {
+      "daily": "每天都能領",
+      "weekly": "每週能領",
+      "monthly": "每月能領",
+      "other": "其他福利"
+    },
+    "api": {
+      "toggle": "當作 API 用",
+      "title": "當作 API 用",
+      "desc": "這一頁背後就是兩個唯讀 JSON 端點：免登入、免 Key、支援跨域，直接 GET 就能拿到同一份清單。",
+      "feed": "全部條目（feed.json）",
+      "status": "採集狀態（status.json）",
+      "copy": "複製",
+      "copied": "已複製",
+      "hint": "每 15 分鐘更新一次，請勿高頻輪詢；商業使用請先看來源站點的條款。",
+      "open": "開啟"
+    },
+    "err": {
+      "badData": "回傳資料異常",
+      "contract": "資料契約校驗失敗",
+      "load": "載入失敗"
     }
   },
   "titlebar": {
@@ -264,6 +339,9 @@
     "copy": "複製",
     "copied": "已複製",
     "copyText": "複製文字",
+    "forwardToIm": "轉發到IM",
+    "forwardToSession": "轉發到其他對話",
+    "forwardToSessionEmpty": "沒有其他會話可選",
     "close": "關閉",
     "loading": "載入中...",
     "regenerate": "重新生成",

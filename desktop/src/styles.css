@@ -4862,4 +4862,6 @@ html[data-platform="linux"] .onboarding {
 .cyber-egg-region.cn, .cyber-egg-verify.ok { color: #2f7d5d; background: rgba(47,125,93,.12); }
 .cyber-egg-region.intl { color: #3b6fd4; background: rgba(59,111,212,.12); }
 .cyber-egg-cat { border: 1px solid var(--border); background: transparent; }
+/* 能当API用的标记：和普通分类标签同尺寸，用主色点一下，方便在一屏里扫出来 */
+.cyber-egg-cat.api { border-color: var(--accent); color: var(--accent); }
 

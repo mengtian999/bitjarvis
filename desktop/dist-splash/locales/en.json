@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Channels",
-    "chatTab": "Chat",
+    "chatTab": "AI",
     "moreTabs": "More tabs",
     "empty": "No channels yet ✿",
     "dmLabel": "Messages",
@@ -145,6 +145,7 @@
   },
   "sidebar": {
     "im": "Messages",
+    "cyberEgg": "Cyber Egg",
     "title": "Chats",
     "newChat": "New Chat",
     "collapse": "Collapse sidebar",
@@ -193,6 +194,80 @@
       "showMore": "Show more",
       "loading": "Loading projects…",
       "empty": "No projects yet"
+    }
+  },
+  "cyberegg": {
+    "title": "Cyber Egg",
+    "subtitle": "Free LLM credits and APIs",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "updatedAt": "Updated {time}",
+    "stale": "Data may not be up to date ({warning}), showing last successful fetch.",
+    "refreshAgain": "Retry",
+    "claim": "Claim",
+    "claimed": "Claimed",
+    "appliesTo": "Applies to",
+    "section": {
+      "all": "All"
+    },
+    "region": {
+      "all": "All regions",
+      "cn": "cn",
+      "intl": "intl"
+    },
+    "regionGroup": "Filter by region",
+    "verify": {
+      "verified": "Verified",
+      "stale": "Needs review",
+      "unverified": "Unverified"
+    },
+    "sourceBoth": "Both sources",
+    "sectionGroup": "Group filter",
+    "search": "Search",
+    "searchPlaceholder": "Search platforms, credits, requirements…",
+    "itemsTotal": "items total",
+    "expiredCount": "expired",
+    "loading": "Loading…",
+    "empty": "No matching items, try a different keyword.",
+    "source": "Source:",
+    "origin": {
+      "live": "Live",
+      "disk": "Disk",
+      "bundled": "Baseline"
+    },
+    "period": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "once": "Once"
+    },
+    "openOriginal": "View original page",
+    "expired": "Expired",
+    "validity": "Valid until",
+    "deadline": "Ends",
+    "verifiedAt": "Verified",
+    "sectionLabels": {
+      "daily": "Claimable daily",
+      "weekly": "Claimable weekly",
+      "monthly": "Claimable monthly",
+      "other": "Other freebies"
+    },
+    "api": {
+      "toggle": "Use as API",
+      "title": "Use as API",
+      "desc": "Behind this page are two read-only JSON endpoints: no login, no key, CORS enabled — just GET the same list.",
+      "feed": "All offers (feed.json)",
+      "status": "Collector status (status.json)",
+      "copy": "Copy",
+      "copied": "Copied",
+      "hint": "Refreshed every 15 minutes; please don't poll aggressively. Check the upstream terms for commercial use.",
+      "open": "Open"
+    },
+    "err": {
+      "badData": "Unexpected response data",
+      "contract": "Feed contract validation failed",
+      "load": "Failed to load"
     }
   },
   "titlebar": {
@@ -264,6 +339,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyText": "Copy text",
+    "forwardToIm": "Forward to IM",
+    "forwardToSession": "Forward to another chat",
+    "forwardToSessionEmpty": "No other sessions to forward to",
     "close": "Close",
     "loading": "Loading...",
     "regenerate": "Regenerate",

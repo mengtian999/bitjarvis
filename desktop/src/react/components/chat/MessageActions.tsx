@@ -2,6 +2,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import type { MouseEvent } from 'react';
 import { useStore } from '../../stores';
+import type { ChatMessage } from '../../stores/chat-types';
 import { useI18n } from '../../hooks/use-i18n';
 import { selectSelectedIdsBySession } from '../../stores/session-selectors';
 import { sessionScopedValue } from '../../stores/session-slice';
@@ -62,6 +63,48 @@ export function useMessageFooterActions({
     setSelection(sessionPath, allSelected ? [] : selectableIds);
   }, [allSelected, selectableIds, setSelection, sessionPath]);
 
+  // ── 转发：把选中消息序列化为引用草稿，两个投递方向共用（IM / 其他会话）──
+  const setImForwardText = useStore(s => s.setImForwardText);
+  const setSessionForwardText = useStore(s => s.setSessionForwardText);
+  const setCurrentTab = useStore(s => s.setCurrentTab);
+
+  const buildForwardDraft = useCallback((): string | null => {
+    const items = (sessionItems || []) as ReadonlyArray<{ type: string; data?: ChatMessage; id?: string }>;
+    const selected = new Set(targetSelectionIds);
+    const lines: string[] = [];
+    for (const item of items) {
+      if (item.type !== 'message' || !item.data) continue;
+      if (!selected.has(item.data.id)) continue;
+      const msg = item.data;
+      let text = msg.text?.trim() || '';
+      if (!text && Array.isArray(msg.blocks)) {
+        text = msg.blocks
+          .filter(b => b.type === 'text')
+          .map(b => ((b as { source?: string }).source || (b as { html?: string }).html || '').replace(/<[^>]+>/g, ''))
+          .join('\n')
+          .trim();
+      }
+      if (text) lines.push(text);
+    }
+    if (lines.length === 0) return null;
+    return `— 转发自贾维斯 —\n${lines.join('\n\n')}`;
+  }, [sessionItems, targetSelectionIds]);
+
+  const handleForwardToIm = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const draft = buildForwardDraft();
+    if (!draft) return;
+    setImForwardText(draft);
+    setCurrentTab('im');
+  }, [buildForwardDraft, setImForwardText, setCurrentTab]);
+
+  const handleForwardToSession = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const draft = buildForwardDraft();
+    if (!draft) return;
+    setSessionForwardText(draft);
+  }, [buildForwardDraft, setSessionForwardText]);
+
   const speakAction: MessageFooterAction[] = onSpeak ? [{
     id: 'speak',
     title: speaking ? t('common.stopSpeaking') : t('common.speak'),
@@ -80,6 +123,20 @@ export function useMessageFooterActions({
       onClick: () => onCopy(),
       disabled: isStreaming,
       active: copied,
+    },
+    {
+      id: 'forward-to-im',
+      title: t('common.forwardToIm'),
+      icon: <ForwardImIcon />,
+      onClick: handleForwardToIm,
+      disabled: isStreaming,
+    },
+    {
+      id: 'forward-to-session',
+      title: t('common.forwardToSession'),
+      icon: <ForwardSessionIcon />,
+      onClick: handleForwardToSession,
+      disabled: isStreaming,
     },
     {
       id: 'screenshot',
@@ -106,7 +163,7 @@ export function useMessageFooterActions({
       active: isSelected,
       pressed: isSelected,
     },
-  ], [allSelected, copied, handleSelectAll, handleToggle, isSelected, isStreaming, onCopy, onScreenshot, speakAction, speaking, t]);
+  ], [allSelected, copied, handleForwardToIm, handleForwardToSession, handleSelectAll, handleToggle, isSelected, isStreaming, onCopy, onScreenshot, speakAction, speaking, t]);
 }
 
 export const MessageActions = memo(function MessageActions(props: Props) {
@@ -190,6 +247,24 @@ function StopIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
+function ForwardImIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 18l6-6-6-6" />
+      <path d="M21 12H9a6 6 0 0 0-6 6v2" />
+    </svg>
+  );
+}
+
+function ForwardSessionIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v12H8l-4 4V4z" />
+      <path d="M15 10l2-2-2-2" />
     </svg>
   );
 }

@@ -27,7 +27,33 @@ import bundledFallbackJson from "../../shared/cyber-egg-fallback.json" with { ty
 /** 内存缓存 TTL：比远端 5 分钟缓存略短，让「刷新」真的能刷新。 */
 const CACHE_TTL_MS = 4 * 60_000;
 const REQUEST_TIMEOUT_MS = 8_000;
-const DISK_CACHE_FILE = "cyber-egg-feed.json";
+const DISK_CACHE_PREFIX = "cyber-egg-feed";
+
+/**
+ * 远端已经是「按语言分端点」了（/feed.json?lang=en 只带一种语言的文案），
+ * 所以本地缓存也必须按语言分开存：切语言时不能拿到上一门语言的快照。
+ */
+function normalizeLang(raw: string): string {
+  const v = (raw || "").trim().toLowerCase();
+  switch (v) {
+    case "zh":
+    case "zh-cn":
+    case "zh-hans":
+      return "zh-CN";
+    case "zh-tw":
+    case "zh-hk":
+    case "zh-hant":
+      return "zh-TW";
+    case "en":
+    case "ja":
+    case "ko":
+    case "fr":
+    case "de":
+      return v;
+    default:
+      return "zh-CN";
+  }
+}
 
 type FeedPayload = {
   feed: CyberEggFeed;
@@ -46,24 +72,25 @@ export function createCyberEggRoute(engine: any) {
   const route = new Hono();
   const log = createModuleLogger("api-cyber-egg");
 
-  let memory: FeedPayload | null = null;
-  let inflight: Promise<FeedPayload | null> | null = null;
+  const memory = new Map<string, FeedPayload>();
+  const inflight = new Map<string, Promise<FeedPayload | null>>();
   let lastError = "";
 
-  const diskPath = () => path.join(String(engine.jarvisHome || ""), "cache", DISK_CACHE_FILE);
+  const diskPath = (lang: string) =>
+    path.join(String(engine.jarvisHome || ""), "cache", `${DISK_CACHE_PREFIX}-${lang}.json`);
 
-  async function readDisk(): Promise<CyberEggFeed | null> {
+  async function readDisk(lang: string): Promise<CyberEggFeed | null> {
     try {
-      const raw = await fs.readFile(diskPath(), "utf8");
+      const raw = await fs.readFile(diskPath(lang), "utf8");
       return normalizeCyberEggFeed(JSON.parse(raw));
     } catch {
       return null;
     }
   }
 
-  async function writeDisk(feed: CyberEggFeed): Promise<void> {
+  async function writeDisk(lang: string, feed: CyberEggFeed): Promise<void> {
     try {
-      const target = diskPath();
+      const target = diskPath(lang);
       await fs.mkdir(path.dirname(target), { recursive: true });
       const tmp = `${target}.tmp`;
       await fs.writeFile(tmp, JSON.stringify(feed), "utf8");
@@ -74,8 +101,10 @@ export function createCyberEggRoute(engine: any) {
     }
   }
 
-  async function fetchRemote(force: boolean): Promise<FeedPayload | null> {
-    const url = `${resolveBaseUrl()}/feed.json${force ? "?refresh=1" : ""}`;
+  async function fetchRemote(force: boolean, lang: string): Promise<FeedPayload | null> {
+    const query = new URLSearchParams({ lang });
+    if (force) query.set("refresh", "1");
+    const url = `${resolveBaseUrl()}/feed.json?${query.toString()}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
@@ -103,24 +132,27 @@ export function createCyberEggRoute(engine: any) {
     }
   }
 
-  async function resolveFeed(force: boolean): Promise<FeedPayload> {
-    if (!force && memory && Date.now() - memory.fetchedAt < CACHE_TTL_MS) {
-      return memory;
+  async function resolveFeed(force: boolean, lang: string): Promise<FeedPayload> {
+    const cached = memory.get(lang);
+    if (!force && cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+      return cached;
     }
 
-    if (!inflight) {
-      inflight = fetchRemote(force).finally(() => {
-        inflight = null;
+    let pending = inflight.get(lang);
+    if (!pending) {
+      pending = fetchRemote(force, lang).finally(() => {
+        inflight.delete(lang);
       });
+      inflight.set(lang, pending);
     }
-    const remote = await inflight;
+    const remote = await pending;
     if (remote) {
-      memory = remote;
-      void writeDisk(remote.feed);
+      memory.set(lang, remote);
+      void writeDisk(lang, remote.feed);
       return remote;
     }
 
-    const disk = await readDisk();
+    const disk = await readDisk(lang);
     if (disk) {
       const payload: FeedPayload = {
         feed: disk,
@@ -128,7 +160,7 @@ export function createCyberEggRoute(engine: any) {
         fetchedAt: Date.now(),
         warning: lastError ? `远端暂时不可用（${lastError}），显示本机上次缓存` : "远端暂时不可用，显示本机上次缓存",
       };
-      memory = payload;
+      memory.set(lang, payload);
       return payload;
     }
 
@@ -140,7 +172,7 @@ export function createCyberEggRoute(engine: any) {
         fetchedAt: Date.now(),
         warning: "远端暂时不可用，显示随包内置的基线数据",
       };
-      memory = payload;
+      memory.set(lang, payload);
       return payload;
     }
 
@@ -161,7 +193,7 @@ export function createCyberEggRoute(engine: any) {
   route.get("/cyber-egg/feed", async (c) => {
     try {
       const force = c.req.query("force") === "1";
-      return respond(c, await resolveFeed(force));
+      return respond(c, await resolveFeed(force, normalizeLang(c.req.query("lang") || "")));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error(`GET /cyber-egg/feed 失败: ${msg}`);
@@ -171,7 +203,7 @@ export function createCyberEggRoute(engine: any) {
 
   route.post("/cyber-egg/refresh", async (c) => {
     try {
-      return respond(c, await resolveFeed(true));
+      return respond(c, await resolveFeed(true, normalizeLang(c.req.query("lang") || "")));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error(`POST /cyber-egg/refresh 失败: ${msg}`);

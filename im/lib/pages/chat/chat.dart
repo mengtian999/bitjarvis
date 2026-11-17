@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -50,6 +51,7 @@ import 'package:scroll_to_index/scroll_to_index.dart';
 import 'package:universal_html/universal_html.dart' as web;
 
 import '../../utils/account_bundles.dart';
+import '../../utils/agent_bridge.dart';
 import '../../utils/localized_exception_extension.dart';
 import 'send_file_dialog.dart';
 import 'send_location_dialog.dart';
@@ -384,6 +386,11 @@ class ChatController extends State<ChatPageWithRoom>
     if (!mounted || !proceed) return;
     for (final item in shareItems) {
       if (item is FileShareItem) continue;
+      if (item is DraftShareItem) {
+        // 草稿转发：预填输入框由用户编辑后手动发送，不自动发出。
+        sendController.text = item.value;
+        continue;
+      }
       if (item is TextShareItem) room.sendTextEvent(item.value);
       if (item is ContentShareItem) room.sendEvent(item.value.copy());
     }
@@ -1218,6 +1225,60 @@ class ChatController extends State<ChatPageWithRoom>
         items: forwardEvents
             .map((event) => ContentShareItem(event.content.copy()))
             .toList(),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => selectedEvents.clear());
+  }
+
+  /// 转发给 Agent：把选中的消息序列化为带来源的引用草稿，
+  /// 由用户在 Agent 私聊（direct chat）中选择目标并编辑后发送。
+  Future<void> forwardToAgentAction() async {
+    if (selectedEvents.isEmpty) return;
+    final timeline = this.timeline;
+    if (timeline == null) return;
+
+    final roomName =
+        room.getLocalizedDisplayname(MatrixLocals(L10n.of(context)));
+    final draft = StringBuffer('${L10n.of(context).forward} "$roomName":\n');
+    for (final event in selectedEvents) {
+      final display = event.getDisplayEvent(timeline);
+      final time = display.originServerTs.toLocal();
+      final hh = time.hour.toString().padLeft(2, '0');
+      final mm = time.minute.toString().padLeft(2, '0');
+      final body = display.calcLocalizedBodyFallback(
+        MatrixLocals(L10n.of(context)),
+        withSenderNamePrefix: true,
+      );
+      draft.writeln('[$hh:$mm] $body');
+    }
+
+    // [T-im-forward] 投递路径按运行环境分流：
+    //  - 桌面端内嵌（kIsWeb）：postMessage 给宿主 ImView，由桌面端 Agent
+    //    弚起自己的「转发到其他对话」会话选择器；
+    //  - 移动端嵌入宿主：agent_bridge �唤起原生的转发到角色页面；
+    //  - 独立运行（无宿主）：降级为 Matrix 私聊选择器（旧行为）。
+    if (kIsWeb) {
+      // 载荷用 JSON 字符串（Dart Map 经结构化克隆可能抛 DataCloneError）。
+      web.window.parent?.postMessage(
+        jsonEncode({'type': 'im/forward-to-agent', 'text': draft.toString()}),
+        '*',
+      );
+      if (!mounted) return;
+      setState(() => selectedEvents.clear());
+      return;
+    }
+    final handledByHost = await AgentBridge.forwardToAgent(draft.toString());
+    if (handledByHost) {
+      if (!mounted) return;
+      setState(() => selectedEvents.clear());
+      return;
+    }
+    await showScaffoldDialog(
+      context: context,
+      builder: (context) => ShareScaffoldDialog(
+        items: [DraftShareItem(draft.toString())],
+        directChatsOnly: true,
       ),
     );
     if (!mounted) return;

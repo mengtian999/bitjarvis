@@ -90,3 +90,6 @@ cl.exe.bak-*
 .t.c
 .t.cpp
 .gpp.out
+
+.zcode/
+im/.flutter_tool_state

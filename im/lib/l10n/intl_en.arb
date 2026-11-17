@@ -2771,6 +2771,7 @@
     "doubleTapToReactDescription": "Double-tap a message to react instead of selecting text",
     "doubleTapReaction": "Double-tap reaction",
     "changeAccountProvider": "Change account provider",
+    "jarvis": "Jarvis",
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
     },

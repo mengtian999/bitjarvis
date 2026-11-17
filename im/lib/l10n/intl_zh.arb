@@ -2715,6 +2715,7 @@
         }
     },
     "changeAccountProvider": "更改账户提供方",
+    "jarvis": "贾维斯",
     "@changeAccountProvider": {
         "description": "Label for the button to change the account provider (homeserver)."
     },
