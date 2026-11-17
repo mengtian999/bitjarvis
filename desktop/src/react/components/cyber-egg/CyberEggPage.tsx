@@ -51,17 +51,6 @@ function formatTime(rfc: string, locale: string): string {
   }
 }
 
-/** 复制文本：桌面端是 Electron，clipboard API 可用；失败就静默不动。 */
-function writeClipboard(text: string): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-    return Promise.resolve(false);
-  }
-  return navigator.clipboard.writeText(text).then(
-    () => true,
-    () => false,
-  );
-}
-
 /**
  * 分组标题：优先用本地化文案，缺键时回落到 feed 里上游给的标题。
  * （上游标题是中文，非中文界面下用本地文案更整齐。）
@@ -271,15 +260,12 @@ export function CyberEggPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+    // loadFeed 依赖当前语言（远端按语言分端点），换语言必须重新拉
+  }, [locale]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
-
-  useEffect(() => {
-    void loadFeed();
-  }, [locale, loadFeed]);
 
   const claimedJson = localStorage.getItem('cyberegg-claimed');
   useEffect(() => {
@@ -359,7 +345,7 @@ export function CyberEggPage() {
     return haystack.includes(q);
   });
 
-  const regionCounts = {  const regionCounts = {
+  const regionCounts = {
     cn: items.filter((i: CyberEggItem) => i.region === 'cn').length,
     intl: items.filter((i: CyberEggItem) => i.region === 'intl').length,
   };
@@ -491,7 +477,7 @@ export function CyberEggPage() {
         </label>
       </div>
       <main className="cyber-egg-main">
-        {loading && !feed ? (        ) : loading && !feed ? (
+        {loading && !feed ? (
           <div className="cyber-egg-empty">{t('cyberegg.loading')}</div>
         ) : filteredItems.length === 0 ? (
           <div className="cyber-egg-empty">{t('cyberegg.empty')}</div>
