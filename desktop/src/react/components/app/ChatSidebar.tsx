@@ -1,5 +1,7 @@
 import type { ActivePanel } from '../../types';
 import { useStore } from '../../stores';
+import { openExternalLink } from '../../utils/link-open';
+import { cyberEggWebUrl } from '../../../../../shared/cyber-egg-contract';
 import { ChannelListSidebar } from '../channels/ChannelList';
 import { RegionalErrorBoundary } from '../RegionalErrorBoundary';
 import { SessionList } from '../SessionList';
@@ -99,10 +101,13 @@ export function ChatSidebarContent({
             </svg>
             <span>{t('skills.panel.title')}</span>
           </button>
+          {/* 赛博鸡蛋只在网页版维护：点菜单直接用系统浏览器打开，
+              不再切到应用内页面（内置页面会占住 currentTab，回来点会话没反应）。 */}
           <button
             className="sidebar-activity-bar"
-            onClick={() => useStore.getState().setCurrentTab('cyberegg')}
-            title={t('sidebar.cyberEgg')}
+            onClick={() => openExternalLink(cyberEggWebUrl(useStore.getState().locale))}
+            title={t('sidebar.cyberEggHint')}
+            aria-label={t('sidebar.cyberEggHint')}
           >
             {/* 赛博鸡蛋：鸡蛋轮廓 + 一点电路感 */}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -132,8 +137,8 @@ export function ChatSidebar({
   ...contentProps
 }: ChatSidebarProps) {
   const currentTab = useStore(s => s.currentTab);
-  // 赛博鸡蛋是独立页面，但左侧菜单应保持不动：切过去时侧栏不能塌成空白。
-  const showChatSidebar = currentTab === 'chat' || currentTab === 'cyberegg';
+  // 赛博鸡蛋已经改成外链（用系统浏览器打开），侧栏只跟聊天页绑在一起。
+  const showChatSidebar = currentTab === 'chat';
 
   return (
     <aside className={`sidebar${open ? '' : ' collapsed'}`} id="sidebar">

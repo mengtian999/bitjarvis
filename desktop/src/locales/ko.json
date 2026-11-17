@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "메시지",
     "cyberEgg": "사이버 에그",
+    "cyberEggHint": "브라우저에서 사이버 에그 열기",
     "title": "대화",
     "newChat": "새 대화",
     "collapse": "사이드바 접기",
@@ -207,6 +208,7 @@
     "claim": "받기",
     "claimed": "수령함",
     "appliesTo": "적용 모델",
+    "details": "자세히 보기",
     "section": {
       "all": "전체"
     },

@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "メッセージ",
     "cyberEgg": "サイバーエッグ",
+    "cyberEggHint": "ブラウザでサイバーエッグを開く",
     "title": "チャット",
     "newChat": "新しいチャット",
     "collapse": "サイドバーを折りたたむ",
@@ -207,6 +208,7 @@
     "claim": "受け取る",
     "claimed": "受取済み",
     "appliesTo": "適用モデル",
+    "details": "詳細を見る",
     "section": {
       "all": "すべて"
     },

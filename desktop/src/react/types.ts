@@ -424,7 +424,7 @@ export interface TodoItem {
 
 // ── 浮动面板类型 ──
 export type ActivePanel = 'activity' | 'automation' | 'bridge' | 'skills' | null;
-export type TabType = 'chat' | 'im' | 'channels' | 'cyberegg' | `plugin:${string}`;
+export type TabType = 'chat' | 'im' | 'channels' | `plugin:${string}`;
 export type RightWorkspaceTab = 'session-files' | 'workspace' | `plugin-widget:${string}`;
 
 export interface FileVersion {

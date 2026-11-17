@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "Nachrichten",
     "cyberEgg": "Cyber-Ei",
+    "cyberEggHint": "Cyber-Ei im Browser öffnen",
     "title": "Chats",
     "newChat": "Neuer Chat",
     "collapse": "Seitenleiste einklappen",
@@ -207,6 +208,7 @@
     "claim": "In Anspruch nehmen",
     "claimed": "In Anspruch genommen",
     "appliesTo": "Gilt für",
+    "details": "Details",
     "section": {
       "all": "Alle"
     },

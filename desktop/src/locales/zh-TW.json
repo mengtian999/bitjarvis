@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "訊息",
     "cyberEgg": "賽博雞蛋",
+    "cyberEggHint": "在瀏覽器中開啟網頁版賽博雞蛋",
     "title": "對話",
     "newChat": "新對話",
     "collapse": "收起側邊欄",
@@ -207,6 +208,7 @@
     "claim": "去領",
     "claimed": "已領",
     "appliesTo": "適用模型",
+    "details": "看詳情",
     "section": {
       "all": "全部"
     },

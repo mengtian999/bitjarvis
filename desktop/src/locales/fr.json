@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "Messages",
     "cyberEgg": "Œuf Cyber",
+    "cyberEggHint": "Ouvrir l'Œuf Cyber dans le navigateur",
     "title": "Discussions",
     "newChat": "Nouvelle discussion",
     "collapse": "Replier la barre latérale",
@@ -207,6 +208,7 @@
     "claim": "Réclamer",
     "claimed": "Réclamé",
     "appliesTo": "Modèles applicables",
+    "details": "Détails",
     "section": {
       "all": "Tous"
     },

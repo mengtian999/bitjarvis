@@ -43,6 +43,8 @@ describe('ChatSidebarContent', () => {
       'skills.panel.title': 'Skills',
       'browser.background': '浏览器',
       'browser.backgroundHint': '浏览器',
+      'sidebar.cyberEgg': '赛博鸡蛋',
+      'sidebar.cyberEggHint': '在浏览器中打开网页版赛博鸡蛋',
       'settings.title': '设置',
     }[key] || key)) as typeof window.t;
     useStore.setState({
@@ -50,6 +52,7 @@ describe('ChatSidebarContent', () => {
       bridgeDotConnected: false,
       currentAgentId: 'agent-a',
       currentTab: 'chat',
+      locale: 'zh',
     } as never);
   });
 
@@ -75,5 +78,30 @@ describe('ChatSidebarContent', () => {
     fireEvent.click(skillsButton);
 
     expect(onTogglePanel).toHaveBeenCalledWith('skills');
+  });
+
+  it('opens the cyber egg web page in the system browser instead of switching tabs', () => {
+    const openExternal = vi.fn();
+    const previousPlatform = window.platform;
+    window.platform = { ...(previousPlatform ?? {}), openExternal } as never;
+
+    try {
+      render(
+        <ChatSidebarContent
+          showSettingsButton={false}
+          onNewSession={vi.fn()}
+          onCollapse={vi.fn()}
+          onTogglePanel={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: '在浏览器中打开网页版赛博鸡蛋' }));
+    } finally {
+      window.platform = previousPlatform;
+    }
+
+    expect(openExternal).toHaveBeenCalledWith('https://cyberegg.bitjarvis.chat/?lang=zh');
+    // 关键：点它不能再把 currentTab 切成 'cyberegg'，否则侧栏点会话没反应。
+    expect(useStore.getState().currentTab).toBe('chat');
   });
 });

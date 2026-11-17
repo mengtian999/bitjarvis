@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "Messages",
     "cyberEgg": "Cyber Egg",
+    "cyberEggHint": "Open Cyber Egg in your browser",
     "title": "Chats",
     "newChat": "New Chat",
     "collapse": "Collapse sidebar",
@@ -207,6 +208,7 @@
     "claim": "Claim",
     "claimed": "Claimed",
     "appliesTo": "Applies to",
+    "details": "Details",
     "section": {
       "all": "All"
     },

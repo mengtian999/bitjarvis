@@ -191,3 +191,48 @@ export function cyberEggPeriodLabelKey(period: string | undefined): string | nul
       return null;
   }
 }
+
+/**
+ * 网页版支持的语言代码，和 cyberegg 服务的 `?lang=` 取值一一对应
+ * （见服务端 web_i18n.go 里的 langs）。
+ */
+export const CYBER_EGG_WEB_LANGS = ["zh", "zh-TW", "en", "ja", "ko", "fr", "de"] as const;
+
+export type CyberEggWebLang = (typeof CYBER_EGG_WEB_LANGS)[number];
+
+/**
+ * 把桌面端的 locale 收敛成网页版认的语言代码。
+ * 桌面端只发 7 种语言，这里仍然按前缀匹配，认不出来的回落到简体中文。
+ */
+export function cyberEggWebLang(locale?: string | null): CyberEggWebLang {
+  const raw = (locale || "").trim().toLowerCase().replace(/_/g, "-");
+  if (!raw) return "zh";
+  if (raw.startsWith("zh")) {
+    return /(?:tw|hk|mo|hant)/.test(raw) ? "zh-TW" : "zh";
+  }
+  switch (raw.slice(0, 2)) {
+    case "en":
+      return "en";
+    case "ja":
+      return "ja";
+    case "ko":
+      return "ko";
+    case "fr":
+      return "fr";
+    case "de":
+      return "de";
+    default:
+      return "zh";
+  }
+}
+
+/**
+ * 网页版赛博鸡蛋地址：桌面端菜单点击后直接用系统浏览器打开这里，
+ * 不再在应用内渲染一份页面（内置页面会占住 currentTab，侧栏点会话没反应）。
+ *
+ * 带上 lang 让网页版和桌面端当前语言保持一致；网页版自己也会按
+ * Accept-Language 兜底，所以参数丢了也不会说错语言。
+ */
+export function cyberEggWebUrl(locale?: string | null): string {
+  return `${CYBER_EGG_DEFAULT_BASE_URL}/?lang=${encodeURIComponent(cyberEggWebLang(locale))}`;
+}
