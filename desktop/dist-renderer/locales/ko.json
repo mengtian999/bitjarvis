@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "채널",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "더 많은 탭",
     "empty": "아직 채널이 없어요 ✿",
     "dmLabel": "메시지",
@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "메시지",
     "cyberEgg": "사이버 에그",
+    "cyberEggHint": "브라우저에서 사이버 에그 열기",
     "title": "대화",
     "newChat": "새 대화",
     "collapse": "사이드바 접기",
@@ -198,7 +199,7 @@
   },
   "cyberegg": {
     "title": "사이버 에그",
-    "subtitle": "무료 LLM 크레딧과 API를 한 줄씩 정리",
+    "subtitle": "무료 LLM 크레딧과 API, 자동 수집 + 매일 사람이 검증",
     "refresh": "새로고침",
     "refreshing": "새로고침 중…",
     "updatedAt": "{time} 업데이트",
@@ -207,6 +208,7 @@
     "claim": "받기",
     "claimed": "수령함",
     "appliesTo": "적용 모델",
+    "details": "자세히 보기",
     "section": {
       "all": "전체"
     },
@@ -254,15 +256,20 @@
       "other": "기타 혜택"
     },
     "api": {
-      "toggle": "API로 사용하기",
-      "title": "API로 사용하기",
+      "toggle": "API로 쓰기",
+      "title": "API로 쓰기",
       "desc": "이 페이지 뒤에는 읽기 전용 JSON 엔드포인트 두 개가 있습니다. 로그인도 키도 필요 없고 CORS를 지원하므로 GET만 하면 됩니다.",
       "feed": "전체 항목 (feed.json)",
       "status": "수집 상태 (status.json)",
       "copy": "복사",
       "copied": "복사됨",
-      "hint": "15분마다 갱신됩니다. 과도한 폴링은 피하고, 상업적 이용 시 각 소스의 약관을 확인하세요.",
-      "open": "열기"
+      "hint": "데이터는 자동 수집과 매일 사람이 검증하는 이중 트랙으로 갱신됩니다. 과도한 폴링은 피하고, 상업적 이용 시 각 소스의 약관을 확인하세요.",
+      "open": "열기",
+      "chips": "로그인 불필요 · Key 불필요 · CORS 지원",
+      "cardItems": "개",
+      "examples": "호출 예시",
+      "examplesHint": "curl은 터미널, fetch는 브라우저 콘솔용",
+      "live": "마지막 성공 수집"
     },
     "err": {
       "badData": "응답 데이터가 올바르지 않습니다",

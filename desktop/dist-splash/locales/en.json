@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Channels",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "More tabs",
     "empty": "No channels yet ✿",
     "dmLabel": "Messages",
@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "Messages",
     "cyberEgg": "Cyber Egg",
+    "cyberEggHint": "Open Cyber Egg in your browser",
     "title": "Chats",
     "newChat": "New Chat",
     "collapse": "Collapse sidebar",
@@ -198,7 +199,7 @@
   },
   "cyberegg": {
     "title": "Cyber Egg",
-    "subtitle": "Free LLM credits and APIs",
+    "subtitle": "Free LLM credits and APIs — collected automatically, verified by a human daily",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "updatedAt": "Updated {time}",
@@ -207,6 +208,7 @@
     "claim": "Claim",
     "claimed": "Claimed",
     "appliesTo": "Applies to",
+    "details": "Details",
     "section": {
       "all": "All"
     },
@@ -261,8 +263,13 @@
       "status": "Collector status (status.json)",
       "copy": "Copy",
       "copied": "Copied",
-      "hint": "Refreshed every 15 minutes; please don't poll aggressively. Check the upstream terms for commercial use.",
-      "open": "Open"
+      "hint": "Auto-collected and human-verified daily on two tracks — please don't poll aggressively. Check the upstream terms for commercial use.",
+      "open": "Open",
+      "chips": "No login · no key · CORS on",
+      "cardItems": "offers",
+      "examples": "Usage examples",
+      "examplesHint": "curl for a shell, fetch for the browser console",
+      "live": "last successful fetch"
     },
     "err": {
       "badData": "Unexpected response data",

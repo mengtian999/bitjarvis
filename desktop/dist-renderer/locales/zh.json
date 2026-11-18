@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "频道",
-    "chatTab": "AI",
+    "chatTab": "Bit Jarvis",
     "moreTabs": "更多标签",
     "empty": "还没有频道 ✿",
     "dmLabel": "私聊",
@@ -146,6 +146,7 @@
   "sidebar": {
     "im": "消息",
     "cyberEgg": "赛博鸡蛋",
+    "cyberEggHint": "在浏览器中打开网页版赛博鸡蛋",
     "title": "对话",
     "newChat": "新对话",
     "collapse": "收起侧边栏",
@@ -198,7 +199,7 @@
   },
   "cyberegg": {
     "title": "赛博鸡蛋",
-    "subtitle": "能免费领的大模型额度，一条一条摆好",
+    "subtitle": "能免费领的大模型额度，自动采集 + 人工每日核验",
     "refresh": "刷新",
     "refreshing": "刷新中…",
     "updatedAt": "数据更新于 {time}",
@@ -207,6 +208,7 @@
     "claim": "去领",
     "claimed": "已领",
     "appliesTo": "适用模型",
+    "details": "看详情",
     "section": {
       "all": "全部"
     },
@@ -254,15 +256,20 @@
       "other": "其他福利"
     },
     "api": {
-      "toggle": "可用作 API",
-      "title": "可用作 API",
+      "toggle": "能当API用",
+      "title": "能当API用",
       "desc": "这一页背后就是两个只读 JSON 端点：免登录、免 Key、支持跨域，直接 GET 就能拿到同一份清单。",
       "feed": "全部条目（feed.json）",
       "status": "采集状态（status.json）",
       "copy": "复制",
       "copied": "已复制",
-      "hint": "每 15 分钟刷新一次，请勿高频轮询；商业使用请先看来源站点的条款。",
-      "open": "打开"
+      "hint": "数据自动采集 + 人工每日核验双轨更新，请勿高频轮询；商业使用请先看来源站点的条款。",
+      "open": "打开",
+      "chips": "免登录 · 免 Key · 支持跨域",
+      "cardItems": "条福利",
+      "examples": "调用示例",
+      "examplesHint": "curl 给终端，fetch 给浏览器控制台",
+      "live": "最近一次成功抓取"
     },
     "err": {
       "badData": "返回数据异常",
