@@ -93,3 +93,6 @@ cl.exe.bak-*
 
 .zcode/
 im/.flutter_tool_state
+
+desktop/dist-renderer/
+desktop/dist-splash/
