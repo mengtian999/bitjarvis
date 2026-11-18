@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "Kanäle",
-    "chatTab": "Bit Jarvis",
+    "chatTab": "AI",
     "moreTabs": "Weitere Tabs",
     "empty": "Noch keine Kanäle ✿",
     "dmLabel": "Nachrichten",
@@ -146,7 +146,6 @@
   "sidebar": {
     "im": "Nachrichten",
     "cyberEgg": "Cyber-Ei",
-    "cyberEggHint": "Cyber-Ei im Browser öffnen",
     "title": "Chats",
     "newChat": "Neuer Chat",
     "collapse": "Seitenleiste einklappen",
@@ -199,7 +198,7 @@
   },
   "cyberegg": {
     "title": "Cyber-Ei",
-    "subtitle": "Kostenlose LLM-Credits: automatisch gesammelt, täglich manuell geprüft",
+    "subtitle": "Kostenlose LLM-Credits, einen nach dem anderen",
     "refresh": "Aktualisieren",
     "refreshing": "Wird aktualisiert…",
     "updatedAt": "Daten aktualisiert am {time}",
@@ -208,7 +207,6 @@
     "claim": "In Anspruch nehmen",
     "claimed": "In Anspruch genommen",
     "appliesTo": "Gilt für",
-    "details": "Details",
     "section": {
       "all": "Alle"
     },
@@ -263,13 +261,8 @@
       "status": "Sammler-Status (status.json)",
       "copy": "Kopieren",
       "copied": "Kopiert",
-      "hint": "Automatisch gesammelt, täglich manuell geprüft – zwei Gleise parallel; bitte nicht aggressiv pollen, für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
-      "open": "Öffnen",
-      "chips": "Kein Login · kein Key · CORS an",
-      "cardItems": "Angebote",
-      "examples": "Aufrufbeispiele",
-      "examplesHint": "curl für die Shell, fetch für die Browser-Konsole",
-      "live": "letzter erfolgreicher Abruf"
+      "hint": "Alle 15 Minuten aktualisiert – bitte nicht aggressiv pollen; für kommerzielle Nutzung die Bedingungen der Quellen prüfen.",
+      "open": "Öffnen"
     },
     "err": {
       "badData": "Unerwartete Antwortdaten",

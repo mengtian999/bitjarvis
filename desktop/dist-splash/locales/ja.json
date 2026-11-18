@@ -45,7 +45,7 @@
   },
   "channel": {
     "tab": "チャンネル",
-    "chatTab": "Bit Jarvis",
+    "chatTab": "AI",
     "moreTabs": "その他のタブ",
     "empty": "チャンネルはまだありません ✿",
     "dmLabel": "メッセージ",
@@ -146,7 +146,6 @@
   "sidebar": {
     "im": "メッセージ",
     "cyberEgg": "サイバーエッグ",
-    "cyberEggHint": "ブラウザでサイバーエッグを開く",
     "title": "チャット",
     "newChat": "新しいチャット",
     "collapse": "サイドバーを折りたたむ",
@@ -199,7 +198,7 @@
   },
   "cyberegg": {
     "title": "サイバーエッグ",
-    "subtitle": "無料で使える LLM 枠、自動収集＋毎日の人的検証",
+    "subtitle": "無料で使える LLM 枠を、ひとつずつ整理",
     "refresh": "更新",
     "refreshing": "更新中…",
     "updatedAt": "{time} 更新",
@@ -208,7 +207,6 @@
     "claim": "受け取る",
     "claimed": "受取済み",
     "appliesTo": "適用モデル",
-    "details": "詳細を見る",
     "section": {
       "all": "すべて"
     },
@@ -263,13 +261,8 @@
       "status": "収集ステータス（status.json）",
       "copy": "コピー",
       "copied": "コピーしました",
-      "hint": "データは自動収集と毎日の人による検証の二本立てで更新されます。高頻度のポーリングは避け、商用利用の際は各ソースの規約をご確認ください。",
-      "open": "開く",
-      "chips": "ログイン不要 · Key 不要 · CORS 対応",
-      "cardItems": "件",
-      "examples": "呼び出し例",
-      "examplesHint": "curl はターミナル、fetch はブラウザのコンソール向け",
-      "live": "最後に成功した取得"
+      "hint": "15 分ごとに更新されます。高頻度のポーリングは避け、商用利用の際は各ソースの規約をご確認ください。",
+      "open": "開く"
     },
     "err": {
       "badData": "応答データが不正です",
