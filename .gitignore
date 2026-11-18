@@ -96,3 +96,5 @@ im/.flutter_tool_state
 
 desktop/dist-renderer/
 desktop/dist-splash/
+
+desktop/preload.bundle.cjs
