@@ -86,13 +86,18 @@ jobs:
           echo "$MAC_DEVELOPER_ID_P12_BASE64" | base64 --decode > "$CERT_PATH"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          # Do not lock on sleep; keep a long idle timeout so dual-arch signing
+          # does not block on a keychain password dialog.
+          security set-keychain-settings -t 21600 -u "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           # Prefer -A without -t so both cert + private key land in the keychain.
           security import "$CERT_PATH" -P "$MAC_DEVELOPER_ID_P12_PASSWORD" -A -f pkcs12 \
             -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          # -s applies ACL to keys; codesign: avoids interactive unlock prompts.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | sed -e s/\"//g)
+          security default-keychain -s "$KEYCHAIN_PATH"
 
           if [[ -n "${MAC_CSC_IDENTITY_NAME}" ]]; then
             IDENTITY="$MAC_CSC_IDENTITY_NAME"
@@ -120,6 +125,8 @@ jobs:
           # even when the same file imports fine via `security` above.
           echo "CSC_NAME=$CSC_NAME" >> "$GITHUB_ENV"
           echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> "$GITHUB_ENV"
+          # Point @electron/osx-sign at our unlocked custom keychain (avoids hang).
+          echo "CSC_KEYCHAIN=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
       - name: Write seed signing key
@@ -190,18 +197,34 @@ jobs:
               fi
             done
           fi
-          # Keep signing keychain unlocked for the long dual-arch build.
-          if [[ -n "${KEYCHAIN_PATH:-}" && -n "${KEYCHAIN_PASSWORD:-}" ]]; then
-            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-            security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | sed -e s/\"//g)
+          # Keep signing keychain unlocked / default for the long dual-arch build.
+          if [[ -z "${KEYCHAIN_PATH:-}" || -z "${KEYCHAIN_PASSWORD:-}" ]]; then
+            echo "Missing KEYCHAIN_PATH or KEYCHAIN_PASSWORD"
+            exit 1
           fi
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | sed -e s/\"//g)
+          security default-keychain -s "$KEYCHAIN_PATH"
+          # Fail fast if codesign would otherwise hang on a keychain prompt.
+          SMOKE="$RUNNER_TEMP/codesign-smoke.bin"
+          printf 'bj' > "$SMOKE"
+          if ! codesign --force --sign "$JARVIS_MACHO_SIGN_IDENTITY" --keychain "$KEYCHAIN_PATH" "$SMOKE"; then
+            echo "codesign smoke test failed — keychain ACL / identity unusable"
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+            exit 1
+          fi
+          rm -f "$SMOKE"
           # Ensure electron-builder does not try to re-import a .p12.
           unset CSC_LINK CSC_KEY_PASSWORD || true
           # Per-arch output dirs so merge-latest-mac-yml.cjs can find arch in the path.
           npx electron-builder --mac dmg zip --arm64 --publish never \
-            --config.directories.output=dist-mac/arm64
+            --config.directories.output=dist-mac/arm64 \
+            --config.mac.keychain="$KEYCHAIN_PATH"
           npx electron-builder --mac dmg zip --x64 --publish never \
-            --config.directories.output=dist-mac/x64
+            --config.directories.output=dist-mac/x64 \
+            --config.mac.keychain="$KEYCHAIN_PATH"
 
       - name: Merge latest-mac.yml and stage release files
         run: |
