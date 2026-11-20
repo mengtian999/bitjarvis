@@ -63,6 +63,26 @@ node scripts/artifact-keygen.mjs --out .dev-keys/sign-key.pem
 # stdout 的公钥 JSON → 并入客户端 pinned keyset（发布典礼）
 ```
 
+## 远程 dry-run 前置条件
+
+当前开发环境曾遇到：
+
+1. **HTTPS** 访问 `github.com:443` 超时，无法用 `origin` HTTPS 推送  
+2. **SSH** 可连通，但账号对 `mengtian999/bitjarvis` **无写权限**（曾以 `George070200` 认证）  
+3. macOS 专用 Secrets（Developer ID / 公证）多半尚未配置  
+
+因此「点一次 Actions 就出 DMG」需要：有写权限的账号推送本分支/提交到默认分支 → 配齐 Secrets → 再 `workflow_dispatch`。
+
+本地已校验：`mac-release.yml` 可解析；`merge-latest-mac-yml.cjs` 双架构合并产物形状正确。
+
+推送示例（有权限的账号）：
+
+```bash
+git push -u origin chore/mac-release-workflow
+# 合并进 main 后：
+gh workflow run "macOS Release" -R mengtian999/Bitjarvis -f tag=v0.0.4 -f skip_notarize=false
+```
+
 ## 如何触发
 
 **手动（推荐，与 iOS 一致）：**
