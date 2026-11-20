@@ -107,12 +107,18 @@ jobs:
             exit 1
           fi
           echo "Using codesign identity: $IDENTITY"
+          # codesign wants the full "Developer ID Application: …" string.
           echo "JARVIS_MACHO_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          # electron-builder rejects the "Developer ID Application:" prefix on CSC_NAME
+          # ("Please remove prefix … from the specified name").
+          CSC_NAME="${IDENTITY#Developer ID Application: }"
+          CSC_NAME="${CSC_NAME#Developer ID Application:}"
+          echo "Using electron-builder CSC_NAME: $CSC_NAME"
           # Use the already-imported keychain identity. Do NOT set CSC_LINK /
           # CSC_KEY_PASSWORD — electron-builder would re-import the .p12 into a
           # temp keychain and can fail with "MAC verification failed / wrong password"
           # even when the same file imports fine via `security` above.
-          echo "CSC_NAME=$IDENTITY" >> "$GITHUB_ENV"
+          echo "CSC_NAME=$CSC_NAME" >> "$GITHUB_ENV"
           echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> "$GITHUB_ENV"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
