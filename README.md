@@ -148,6 +148,15 @@ npm run dist:win       # 打包 Windows（nsis）
 npm run dist:linux     # 打包 Linux（AppImage / deb）
 ```
 
+### macOS 云发布
+
+与 iOS 一样可在 GitHub Actions 一键云打包（**Developer ID 签名 + 公证 → GitHub Releases**，非 Mac App Store）：
+
+1. 配置 Secrets（见 [docs/MAC_RELEASE.md](docs/MAC_RELEASE.md)）
+2. Actions → **macOS Release** → Run workflow，填写 release tag（如 `v0.0.4`）
+
+本地正式外发同样需要 Developer ID 与公证账号；仅自测可用 `SKIP_NOTARIZE=true` / `npm run install:local`。
+
 ## 相关链接
 
 - 官网：<https://bitjarvis.chat>

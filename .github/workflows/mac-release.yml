@@ -1,0 +1,215 @@
+# macOS Release — GitHub-hosted cloud build (mirror of Linux Release + iOS-style dispatch)
+# Trigger: Actions → "macOS Release" → Run workflow
+#
+# Required GitHub Secrets (外发 DMG + 公证；不是 Mac App Store / Apple Distribution):
+#   JARVIS_SIGN_KEY              — ed25519 PKCS8 PEM private key (same as Linux Release)
+#   MAC_DEVELOPER_ID_P12_BASE64  — Developer ID Application .p12 (base64)
+#   MAC_DEVELOPER_ID_P12_PASSWORD — .p12 password
+#   MAC_CSC_IDENTITY_NAME        — optional override, e.g. "Developer ID Application: … (TEAMID)"
+#                                  If empty, workflow picks the first Developer ID Application identity
+#   APPLE_ID                     — Apple ID used for notarization
+#   APPLE_APP_SPECIFIC_PASSWORD  — App-specific password for notarization
+#   APPLE_TEAM_ID                — Team ID (e.g. 4VPXQ6C88H)
+#   KEYCHAIN_PASSWORD            — any random string for the temporary CI keychain
+#
+# Note: Apple Distribution certificates (App Store / MAS) cannot notarize outside-store DMGs.
+
+name: macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload to (e.g. v0.0.4)"
+        required: true
+      skip_notarize:
+        description: "Skip Apple notarization (debug only; do not ship)"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mac-release
+  cancel-in-progress: true
+
+jobs:
+  mac-build:
+    name: Build macOS packages (arm64 + x64)
+    runs-on: macos-14
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import Developer ID signing assets
+        env:
+          MAC_DEVELOPER_ID_P12_BASE64: ${{ secrets.MAC_DEVELOPER_ID_P12_BASE64 }}
+          MAC_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          MAC_CSC_IDENTITY_NAME: ${{ secrets.MAC_CSC_IDENTITY_NAME }}
+        run: |
+          set -euo pipefail
+          for v in MAC_DEVELOPER_ID_P12_BASE64 MAC_DEVELOPER_ID_P12_PASSWORD KEYCHAIN_PASSWORD; do
+            if [[ -z "${!v}" ]]; then
+              echo "Missing secret: $v"
+              exit 1
+            fi
+          done
+
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/mac-signing.keychain-db"
+          echo "$MAC_DEVELOPER_ID_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MAC_DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | sed -e s/\"//g)
+
+          # electron-builder uses CSC_LINK / CSC_KEY_PASSWORD for .app signing
+          echo "CSC_LINK=$CERT_PATH" >> "$GITHUB_ENV"
+          echo "CSC_KEY_PASSWORD=$MAC_DEVELOPER_ID_P12_PASSWORD" >> "$GITHUB_ENV"
+
+          if [[ -n "${MAC_CSC_IDENTITY_NAME}" ]]; then
+            IDENTITY="$MAC_CSC_IDENTITY_NAME"
+          else
+            IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+              | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' \
+              | head -1)
+          fi
+          if [[ -z "$IDENTITY" ]]; then
+            echo "No Developer ID Application identity found after importing p12"
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+            exit 1
+          fi
+          echo "Using codesign identity: $IDENTITY"
+          echo "JARVIS_MACHO_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "CSC_NAME=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Write seed signing key
+        env:
+          JARVIS_SIGN_KEY_CONTENT: ${{ secrets.JARVIS_SIGN_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${JARVIS_SIGN_KEY_CONTENT}" ]]; then
+            echo "Missing secret: JARVIS_SIGN_KEY"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/jarvis-ci"
+          printf '%s' "$JARVIS_SIGN_KEY_CONTENT" > "$RUNNER_TEMP/jarvis-ci/sign-key.pem"
+          chmod 600 "$RUNNER_TEMP/jarvis-ci/sign-key.pem"
+          echo "JARVIS_SIGN_KEY=$RUNNER_TEMP/jarvis-ci/sign-key.pem" >> "$GITHUB_ENV"
+
+      - name: Prepare server Mach-O entitlements
+        run: |
+          set -euo pipefail
+          # build/ is gitignored; CI materializes the plist required by
+          # scripts/build-server-artifact.mjs when JARVIS_MACHO_SIGN_IDENTITY is set.
+          mkdir -p build
+          cp desktop/entitlements.mac.plist build/server-macho-entitlements.plist
+
+      - name: Build desktop renderer (vite)
+        run: |
+          npm run build:main
+          npm run build:preload
+          npm run build:renderer
+          npm run build:splash
+          npm run build:theme
+
+      - name: Build IM web (flutter)
+        run: |
+          cd im
+          flutter pub get
+          flutter build web --release --base-href "/im/" --no-wasm-dry-run
+
+      - name: Stage sherpa models
+        run: npm run stage:sherpa
+
+      - name: Build computer-use helpers (arm64 + x64)
+        run: |
+          node scripts/build-computer-use-helper.mjs arm64
+          node scripts/build-computer-use-helper.mjs x64
+
+      - name: Build server seeds (arm64 + x64)
+        run: |
+          node scripts/build-server.mjs darwin arm64
+          node scripts/verify-seed-kit.mjs darwin arm64
+          node scripts/build-server.mjs darwin x64
+          node scripts/verify-seed-kit.mjs darwin x64
+
+      - name: Build macOS packages (dmg + zip, arm64 + x64)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SKIP_NOTARIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_notarize && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "${SKIP_NOTARIZE}" != "true" ]]; then
+            for v in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+              if [[ -z "${!v}" ]]; then
+                echo "Missing secret: $v (required unless skip_notarize=true)"
+                exit 1
+              fi
+            done
+          fi
+          # Per-arch output dirs so merge-latest-mac-yml.cjs can find arch in the path.
+          npx electron-builder --mac dmg zip --arm64 --publish never \
+            --config.directories.output=dist-mac/arm64
+          npx electron-builder --mac dmg zip --x64 --publish never \
+            --config.directories.output=dist-mac/x64
+
+      - name: Merge latest-mac.yml and stage release files
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          node scripts/merge-latest-mac-yml.cjs dist-mac dist/latest-mac.yml
+          # Stage installers next to the merged update metadata for upload.
+          find dist-mac -maxdepth 2 \( -name '*-macOS-*.dmg' -o -name '*-macOS-*.zip' \) \
+            -exec cp -f {} dist/ \;
+          echo '=== dist/ ==='
+          ls -lh dist/ || true
+          echo '=== dist-mac/ ==='
+          find dist-mac -maxdepth 3 \( -name '*.dmg' -o -name '*.zip' -o -name 'latest-mac*.yml' \) -print || true
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            dist/*-macOS-*.dmg
+            dist/*-macOS-*.zip
+            dist/latest-mac.yml
+          fail_on_unmatched_files: false
