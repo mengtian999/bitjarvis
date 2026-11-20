@@ -40,7 +40,9 @@ concurrency:
 jobs:
   mac-build:
     name: Build macOS packages (arm64 + x64)
-    runs-on: macos-14
+    # Match mobile ios-appstore.yml. macos-14 fails here with:
+    # "The configuration 'macos-14-arm64-us-default' is not supported".
+    runs-on: macos-26
     timeout-minutes: 240
     steps:
       - name: Checkout
