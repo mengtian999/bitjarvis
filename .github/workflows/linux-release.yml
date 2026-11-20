@@ -32,6 +32,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Keep in sync with im/.tool_versions.yaml and im/snap/snapcraft.yaml
+          flutter-version: "3.44.9"
           channel: stable
 
       - name: Install dependencies
