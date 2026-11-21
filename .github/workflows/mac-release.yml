@@ -217,14 +217,14 @@ jobs:
           fi
           rm -f "$SMOKE"
           # Ensure electron-builder does not try to re-import a .p12.
+          # Keychain selection: CSC_KEYCHAIN + default-keychain (mac.keychain is not a
+          # valid electron-builder config option and fails validateConfiguration).
           unset CSC_LINK CSC_KEY_PASSWORD || true
           # Per-arch output dirs so merge-latest-mac-yml.cjs can find arch in the path.
           npx electron-builder --mac dmg zip --arm64 --publish never \
-            --config.directories.output=dist-mac/arm64 \
-            --config.mac.keychain="$KEYCHAIN_PATH"
+            --config.directories.output=dist-mac/arm64
           npx electron-builder --mac dmg zip --x64 --publish never \
-            --config.directories.output=dist-mac/x64 \
-            --config.mac.keychain="$KEYCHAIN_PATH"
+            --config.directories.output=dist-mac/x64
 
       - name: Merge latest-mac.yml and stage release files
         run: |
