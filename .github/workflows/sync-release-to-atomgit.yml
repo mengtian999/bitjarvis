@@ -57,8 +57,9 @@ jobs:
 
           # ---------- 1. GitHub 侧 release 信息 ----------
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" > gh_release.json
-          NAME=$(jq -r '.name' gh_release.json)
-          BODY=$(jq -r '.body // ""' gh_release.json)
+          # GitHub Release 标题/正文可能为空，AtomGit 两者都必填，空时回退
+          NAME=$(jq -r 'if (.name // "") == "" then .tag_name else .name end' gh_release.json)
+          BODY=$(jq -r 'if (.body // "") == "" then "发布说明见 GitHub Release" else .body end' gh_release.json)
           PRERELEASE=$(jq -r 'if .prerelease then "pre" else "latest" end' gh_release.json)
 
           # ---------- 2. 让 AtomGit 侧尽快拿到这个 tag ----------
@@ -102,7 +103,9 @@ jobs:
 
           # ---------- 4. 下载 GitHub 附件并逐个上传 ----------
           rm -rf assets && mkdir -p assets
-          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir assets --clobber
+          # Release 没有附件时 gh 会报错退出，这属正常情况
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir assets --clobber \
+            || echo "（该 Release 没有附件，跳过下载）"
 
           shopt -s nullglob
           uploaded=0
