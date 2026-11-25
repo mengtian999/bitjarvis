@@ -37,7 +37,7 @@ concurrency:
 jobs:
   sync-release:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 300
     env:
       ATOMGIT_OWNER: gcw_KxmcQJPr        # AtomGit 仓库空间地址
       ATOMGIT_REPO: bitjarvis            # AtomGit 仓库路径
@@ -108,7 +108,8 @@ jobs:
             || echo "（该 Release 没有附件，跳过下载）"
 
           shopt -s nullglob
-          uploaded=0
+          failfile=$(mktemp)
+          # OBS 对境外链路限速明显，4 路并发上传提速；重跑会跳过已存在的同名附件（断点补传）
           for f in assets/*; do
             fname=$(basename "$f")
             # 已存在的同名附件跳过（断点补传 / 重复运行安全）
@@ -126,10 +127,20 @@ jobs:
               [ -n "$row" ] && args+=( -H "$row" )
             done < <(jq -r '.headers // {} | to_entries[] | "\(.key): \(.value)"' <<< "$up")
             echo "上传 ${fname} ..."
-            curl -sfS -X PUT "$url" "${args[@]}" --data-binary "@$f"
-            uploaded=$(( uploaded + 1 ))
+            (
+              if curl -sfS --retry 2 -X PUT "$url" "${args[@]}" --data-binary "@$f"; then
+                echo "完成 ${fname}"
+              else
+                echo "${fname}" >> "$failfile"
+              fi
+            ) &
+            while [ "$(jobs -rp | wc -l)" -ge 4 ]; do sleep 3; done
           done
-          echo "新上传附件数：${uploaded}"
+          wait
+          if [ -s "$failfile" ]; then
+            echo "::error::以下附件上传失败：$(paste -sd, "$failfile")"
+            exit 1
+          fi
 
           # ---------- 5. 校验 ----------
           echo "AtomGit 发行版当前附件："
