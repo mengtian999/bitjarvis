@@ -1,0 +1,134 @@
+# 把 GitHub Release 的产物附件自动同步到 AtomGit 镜像仓库
+#
+# 背景：AtomGit 的 Pull 镜像只同步 git 数据（分支 / 标签 / 提交），
+#       Release 和附件不属于 git 数据，永远不会被镜像带过来。
+# 做法：GitHub Release 发布时，用 AtomGit 开放 API 创建同 tag 的 Release，
+#       下载 GitHub Release 的附件并逐个上传到 AtomGit。
+#
+# 首次使用（只需做一次）：
+#   1. 到 https://atomgit.com/setting/token-classic 创建个人访问令牌，
+#      勾选仓库（projects/repo）读写权限，令牌只放进 GitHub Secrets，不要写进代码。
+#   2. GitHub 仓库 Settings → Secrets and variables → Actions → New repository secret，
+#      名字填 ATOMGIT_TOKEN，值为上面的令牌。
+#   3. 把本文件放到 GitHub 仓库的 .github/workflows/sync-release-to-atomgit.yml。
+#
+# 历史版本补传：Actions 页面手动运行本工作流（workflow_dispatch），填 GitHub release 的 tag（如 v0.0.3）。
+# 重复运行安全：AtomGit 上已存在的同名附件会跳过，不会重复上传。
+
+name: Sync release to AtomGit
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要补传的 GitHub Release tag，例如 v0.0.3'
+        required: true
+
+permissions:
+  contents: read
+
+# 同一个 tag 的同步任务不并行，避免重复上传
+concurrency:
+  group: atomgit-sync-${{ github.event.release.tag_name || github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  sync-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ATOMGIT_OWNER: gcw_KxmcQJPr        # AtomGit 仓库空间地址
+      ATOMGIT_REPO: bitjarvis            # AtomGit 仓库路径
+      ATOMGIT_TOKEN: ${{ secrets.ATOMGIT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+      # 镜像追赶超时（分钟）。仅当直推 AtomGit 失败且镜像滞后时才会等满这个时间。
+      MIRROR_WAIT_MINUTES: '30'
+    steps:
+      - name: Create AtomGit release and upload assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          API="https://api.atomgit.com/api/v5/repos/${ATOMGIT_OWNER}/${ATOMGIT_REPO}"
+          AUTH="access_token=${ATOMGIT_TOKEN}"
+
+          # ---------- 1. GitHub 侧 release 信息 ----------
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" > gh_release.json
+          NAME=$(jq -r '.name' gh_release.json)
+          BODY=$(jq -r '.body // ""' gh_release.json)
+          PRERELEASE=$(jq -r 'if .prerelease then "pre" else "latest" end' gh_release.json)
+
+          # ---------- 2. 让 AtomGit 侧尽快拿到这个 tag ----------
+          #   快路径：直接用令牌把 tag（连同 commit 对象）推到 AtomGit，绕开镜像延迟。
+          #   对象与 GitHub 完全一致（同一 SHA），镜像之后拉到相同内容不会产生分叉。
+          git init -q .
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch -q --depth=1 origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          git remote add atomgit "https://${ATOMGIT_OWNER}:${ATOMGIT_TOKEN}@atomgit.com/${ATOMGIT_OWNER}/${ATOMGIT_REPO}.git"
+          if ! git push -q atomgit "refs/tags/${TAG}:refs/tags/${TAG}" 2>/dev/null; then
+            echo "::notice::直推 AtomGit 未成功（镜像仓库可能禁止推送），改为等待镜像同步 tag"
+            # 慢路径：轮询等镜像把 release 对应的 commit 带过来
+            COMMIT=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}" --jq '.object.sha')
+            objtype=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${COMMIT}" --jq '.object.type' 2>/dev/null || true)
+            [ "$objtype" = "commit" ] && COMMIT=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${COMMIT}" --jq '.object.sha')
+            tries=$(( MIRROR_WAIT_MINUTES * 2 ))
+            for i in $(seq 1 "$tries"); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "${API}/commits/${COMMIT}?${AUTH}" || echo 000)
+              [ "$code" = "200" ] && { echo "镜像已同步到 release commit（第 $i 次探测）"; break; }
+              [ "$i" = "$tries" ] && { echo "::error::等待 ${MIRROR_WAIT_MINUTES} 分钟后镜像仍未同步 ${TAG}，可稍后手动重跑本工作流（填 tag=${TAG}），已有附件会自动跳过"; exit 1; }
+              echo "镜像尚未同步（第 $i/$tries 次），60 秒后重试"
+              sleep 60
+            done
+          fi
+
+          # ---------- 3. AtomGit 侧：按 tag 查 Release，不存在则创建 ----------
+          code=$(curl -sS -o atomgit_rel.json -w '%{http_code}' "${API}/releases/tags/${TAG}?${AUTH}")
+          if [ "$code" != "200" ]; then
+            echo "AtomGit 上还没有 ${TAG} 的 Release（HTTP $code），创建中"
+            jq -n --arg tag "$TAG" --arg name "$NAME" --arg body "$BODY" --arg st "$PRERELEASE" \
+              '{tag_name:$tag, name:$name, body:$body, release_status:$st}' > create.json
+            code=$(curl -sS -o atomgit_rel.json -w '%{http_code}' -X POST \
+              -H 'Content-Type: application/json' --data-binary @create.json \
+              "${API}/releases?${AUTH}")
+            if [ "$code" != "200" ]; then
+              echo "::error::创建 AtomGit Release 失败（HTTP $code）"
+              cat atomgit_rel.json
+              exit 1
+            fi
+          fi
+
+          # ---------- 4. 下载 GitHub 附件并逐个上传 ----------
+          rm -rf assets && mkdir -p assets
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --dir assets --clobber
+
+          shopt -s nullglob
+          uploaded=0
+          for f in assets/*; do
+            fname=$(basename "$f")
+            # 已存在的同名附件跳过（断点补传 / 重复运行安全）
+            if jq -e --arg n "$fname" '.assets[]? | select(.type == "attach" and .name == $n)' atomgit_rel.json > /dev/null; then
+              echo "$fname 已存在于 AtomGit，跳过"
+              continue
+            fi
+            enc=$(jq -rn --arg s "$fname" '$s | @uri')
+            up=$(curl -sS "${API}/releases/${TAG}/upload_url?${AUTH}&file_name=${enc}")
+            url=$(jq -r '.url // empty' <<< "$up")
+            [ -n "$url" ] || { echo "::error::获取 $fname 上传地址失败：$up"; exit 1; }
+            # 平台返回的 headers（Content-Type / x-obs-* 等）必须原样带上，否则 OBS 预签名校验不过
+            args=()
+            while IFS= read -r row; do
+              [ -n "$row" ] && args+=( -H "$row" )
+            done < <(jq -r '.headers // {} | to_entries[] | "\(.key): \(.value)"' <<< "$up")
+            echo "上传 ${fname} ..."
+            curl -sfS -X PUT "$url" "${args[@]}" --data-binary "@$f"
+            uploaded=$(( uploaded + 1 ))
+          done
+          echo "新上传附件数：${uploaded}"
+
+          # ---------- 5. 校验 ----------
+          echo "AtomGit 发行版当前附件："
+          curl -sS "${API}/releases/tags/${TAG}?${AUTH}" | jq -r '.assets[]? | select(.type == "attach") | .name'
+          echo "完成。查看：https://atomgit.com/${ATOMGIT_OWNER}/${ATOMGIT_REPO}/releases"
