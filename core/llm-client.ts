@@ -22,10 +22,15 @@ const EMPTY_AFTER_THINKING_MESSAGE = "模型未回复正文，请检查思考内
  *
  * 历史值 60s 对思考型模型（reasoning / thinking）不够用：上游首 token 之前要先跑完
  * 思考链，长上下文下常见 1-3 分钟，60s 硬切会把本来能成功的轮次判成 LLM_TIMEOUT，
- * 于是重试 → 再超时 → 用户看到连续失败。放宽到 300s 作为安全网，真正需要快速失败
- * 的短任务（标题 / 摘要 / 校验）由调用方显式传更小的 timeoutMs。
+ * 于是重试 → 再超时 → 用户看到连续失败。
+ *
+ * 300s 依然不够：实测长回复（长 markdown / 长代码）上游生成 5m47s ~ 9m13s（网关
+ * dur 实测 2026-11-26），300s 硬切直接把生成中的回复拦腰斩断——用户看到“话没说完就断”。
+ * 放宽到 900s：总时长天花板只兜“上游真挂死”的底，不再是“生成慢”的刀。
+ * 中间层 idle 断连已由网关 SSE 心跳 + Caddy flush_interval -1 消除。
+ * 真正需要快速失败的短任务（标题 / 摘要 / 校验）由调用方显式传更小的 timeoutMs。
  */
-export const DEFAULT_CALL_TEXT_TIMEOUT_MS = 300_000;
+export const DEFAULT_CALL_TEXT_TIMEOUT_MS = 900_000;
 
 const DEFAULT_CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 const CODEX_ACCOUNT_CLAIM_PATH = "https://api.openai.com/auth";
